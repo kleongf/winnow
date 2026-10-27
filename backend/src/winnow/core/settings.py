@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=REPO_ROOT / ".env", extra="ignore")
 
     model_api_key: SecretStr | None = None
+    meta_base_url: str = "https://api.meta.ai/v1"
+    meta_budget_usd: float = 5.0  # hard stop on total recorded Meta API spend
     data_dir: Path = REPO_ROOT / "data"
 
 

@@ -1,0 +1,43 @@
+{
+  "criteria": [
+    {
+      "check": "Binarize gripper state at 0.5. Count rising edges from open (<0.5) to closed (>0.5). PASS iff count == 1 in full episode; FAIL if 0 or >=2, indicating missed grasp and retry.",
+      "hard": true,
+      "kind": "measured",
+      "name": "Single grasp attempt on first try",
+      "signals": [
+        "gripper state"
+      ]
+    },
+    {
+      "check": "After first gripper close until gripper re-opens for release, compute per-frame pixel distance between gripper bbox center and object bbox center. PASS iff distance stays <100 pixels and/or bbox IoU >0.05 in all frames. FAIL if distance >100 pixels for >5 consecutive frames, indicating slip or drop.",
+      "hard": true,
+      "kind": "tracked",
+      "name": "No drop - object stays with gripper during transport",
+      "signals": [
+        "gripper state",
+        "gripper bounding box",
+        "object bounding box"
+      ]
+    },
+    {
+      "check": "Watch exterior cameras and wrist camera: PASS iff object is released over the target and comes to rest fully inside target boundaries at episode end, not on rim, outside, or falling out. FAIL otherwise.",
+      "hard": true,
+      "kind": "visual",
+      "name": "Object placed inside target",
+      "signals": [
+        "exterior camera video",
+        "wrist camera video"
+      ]
+    },
+    {
+      "check": "From xyz at 15 Hz compute Euclidean end-effector speed per step and smooth with 5-sample (0.33 s) moving average. A pause is speed <0.02 m/s continuously for >2.0 s (>30 samples). Require zero such pauses for full score.",
+      "hard": false,
+      "kind": "measured",
+      "name": "No long pauses",
+      "signals": [
+        "end-effector position x, y, z"
+      ]
+    }
+  ]
+}

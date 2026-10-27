@@ -1,0 +1,80 @@
+{
+  "42:muse-spark-1.3-contributor:high": {
+    "answer": {
+      "failure_time_s": 17.0,
+      "reason": "Robot attempted to grasp the black remote but failed to secure it; the gripper lifted empty around 17s and the remote remained in its original position on the pillow, never moved to the left.",
+      "success": false
+    },
+    "input_tokens": 4952,
+    "output_tokens": 2466,
+    "usd": 0.0009884000000000002,
+    "latency_s": 18.308829999994487,
+    "duration_s": 22.0,
+    "label_success": true
+  },
+  "3:muse-spark-1.3-contributor:high": {
+    "answer": {
+      "failure_time_s": null,
+      "reason": "Robot grasped the blue Doritos pack from the counter, transported it over the sink, and released it into the left sink basin where it remained at the end.",
+      "success": true
+    },
+    "input_tokens": 2955,
+    "output_tokens": 842,
+    "usd": 0.0004639,
+    "latency_s": 10.91455445799511,
+    "duration_s": 13.600000381469727,
+    "label_success": true
+  },
+  "16:muse-spark-1.3-contributor:high": {
+    "answer": {
+      "failure_time_s": null,
+      "reason": "Robot picked the blue block from the middle saucer and inserted it into the small white mug on the right foreground. Final exterior and wrist views show the gripper empty with the blue block seated inside the uprighted white mug.",
+      "success": true
+    },
+    "input_tokens": 2517,
+    "output_tokens": 3343,
+    "usd": 0.0009203000000000001,
+    "latency_s": 23.081772000005003,
+    "duration_s": 11.466666221618652,
+    "label_success": true
+  },
+  "48:muse-spark-1.3-contributor:high": {
+    "answer": {
+      "failure_time_s": 12.0,
+      "reason": "Robot lifted the grey cup with black beans but tilted/poured outside the red bowl, spilling the beans onto the white tray with almost none landing in the red bowl.",
+      "success": false
+    },
+    "input_tokens": 3402,
+    "output_tokens": 3117,
+    "usd": 0.0009636000000000001,
+    "latency_s": 22.18486066699552,
+    "duration_s": 15.199999809265137,
+    "label_success": false
+  },
+  "49:muse-spark-1.3-contributor:high": {
+    "answer": {
+      "failure_time_s": 9.0,
+      "reason": "Robot dropped the small jar onto the table instead of placing it on top of the can, leaving the can empty.",
+      "success": false
+    },
+    "input_tokens": 2289,
+    "output_tokens": 4292,
+    "usd": 0.0010873000000000002,
+    "latency_s": 30.368205209000735,
+    "duration_s": 10.733333587646484,
+    "label_success": false
+  },
+  "42:muse-spark-1.3:max": {
+    "answer": {
+      "failure_time_s": 17.33,
+      "reason": "Robot attempted to grasp the black remote for ~10s but never secured it; at ~17s it lifted with an empty gripper and retracted, leaving the remote on the pillows without a controlled move to the left.",
+      "success": false
+    },
+    "input_tokens": 4952,
+    "output_tokens": 3170,
+    "usd": 0.0196625,
+    "latency_s": 20.504784124990692,
+    "duration_s": 22.0,
+    "label_success": true
+  }
+}
