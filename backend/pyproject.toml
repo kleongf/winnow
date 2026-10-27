@@ -1,0 +1,70 @@
+[project]
+name = "winnow"
+version = "0.1.0"
+description = "Filter robot demonstration Episodes against a plain-English Rubric."
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.162.0",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+winnow-openapi = "winnow.openapi:main"
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "pyright>=1.1.414",
+    "pytest>=9.1.1",
+    "ruff>=0.17.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "SIM",      # simplify
+    "N",        # naming
+    "RUF",
+    "C90",      # mccabe complexity
+    "PLR",      # pylint refactor: too many branches/statements/args
+    "PTH",      # pathlib over os.path
+    "T20",      # no print
+    "ANN",      # annotations everywhere
+]
+ignore = ["PLR2004"]  # magic numbers are fine in thresholds and tests
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-args = 6
+max-branches = 10
+max-statements = 40
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "PLR"]
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
