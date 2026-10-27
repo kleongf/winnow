@@ -1,0 +1,33 @@
+{"tag": "ep16_ext2_f0", "ep": 16, "cam": "ext2", "seed": 0, "stride": 1, "direction": "forward", "frames": 173, "processed": 173, "tracked": 173, "ids": {"1": 173}, "mean_conf": 0.78, "min_conf": 0.4, "usd": 0.0346, "latency_s": 17.6, "first_missing": [], "n_missing": 0}
+{"tag": "ep16_wrist_f75", "ep": 16, "cam": "wrist", "seed": 75, "stride": 1, "direction": "both", "frames": 173, "processed": 173, "tracked": 165, "ids": {"1": 165}, "mean_conf": 0.95, "min_conf": 0.29, "usd": 0.0346, "latency_s": 17.0, "first_missing": [0, 1, 2, 3, 4, 5, 6, 7], "n_missing": 8}
+{"tag": "ep16_ext1_f80", "ep": 16, "cam": "ext1", "seed": 80, "stride": 1, "direction": "both", "frames": 173, "processed": 173, "tracked": 173, "ids": {"1": 173}, "mean_conf": 0.65, "min_conf": 0.39, "usd": 0.0346, "latency_s": 16.3, "first_missing": [], "n_missing": 0}
+{"tag": "ep42_ext2_f0", "ep": 42, "cam": "ext2", "seed": 0, "stride": 1, "direction": "forward", "frames": 331, "processed": 331, "tracked": 331, "ids": {"1": 331}, "mean_conf": 0.82, "min_conf": 0.31, "usd": 0.0662, "latency_s": 26.1, "first_missing": [], "n_missing": 0}
+{"tag": "ep42_wrist_f276", "ep": 42, "cam": "wrist", "seed": 276, "stride": 1, "direction": "both", "frames": 331, "processed": 331, "tracked": 311, "ids": {"1": 311}, "mean_conf": 0.85, "min_conf": 0.02, "usd": 0.0662, "latency_s": 29.1, "first_missing": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "n_missing": 20}
+{"tag": "ep16_ext2_f0_5fps", "ep": 16, "cam": "ext2", "seed": 0, "stride": 3, "direction": "forward", "frames": 58, "processed": 58, "tracked": 58, "ids": {"1": 58}, "mean_conf": 0.76, "min_conf": 0.44, "usd": 0.0116, "latency_s": 8.9, "first_missing": [], "n_missing": 0}
+{"tag": "ep16_wrist_f75_5fps", "ep": 16, "cam": "wrist", "seed": 75, "stride": 3, "direction": "both", "frames": 58, "processed": 58, "tracked": 55, "ids": {"1": 55}, "mean_conf": 0.95, "min_conf": 0.89, "usd": 0.0116, "latency_s": 8.6, "first_missing": [0, 3, 6], "n_missing": 3}
+{"tag": "ep42_ext2_f0_5fps", "ep": 42, "cam": "ext2", "seed": 0, "stride": 3, "direction": "forward", "frames": 111, "processed": 111, "tracked": 111, "ids": {"1": 111}, "mean_conf": 0.68, "min_conf": 0.04, "usd": 0.0222, "latency_s": 12.4, "first_missing": [], "n_missing": 0}
+{"tag": "ep42_wrist_f276_5fps", "ep": 42, "cam": "wrist", "seed": 276, "stride": 3, "direction": "both", "frames": 111, "processed": 111, "tracked": 77, "ids": {"1": 77}, "mean_conf": 0.86, "min_conf": 0.0, "usd": 0.0222, "latency_s": 12.9, "first_missing": [0, 3, 6, 9, 12, 183, 186, 189, 192, 195], "n_missing": 34}
+{"tag": "ep3_ext1_bag_spark_5fps", "ep": 3, "cam": "ext1", "seed": 0, "stride": 3, "direction": "forward", "frames": 69, "processed": 69, "tracked": 69, "ids": {"1": 69}, "mean_conf": 0.7, "min_conf": 0.43, "usd": 0.0138, "latency_s": 9.0, "first_missing": [], "n_missing": 0}
+{"tag": "ep3_ext1_gripper_spark_5fps", "ep": 3, "cam": "ext1", "seed": 0, "stride": 3, "direction": "forward", "frames": 69, "processed": 69, "tracked": 69, "ids": {"1": 69}, "mean_conf": 0.61, "min_conf": 0.32, "usd": 0.0138, "latency_s": 10.0, "first_missing": [], "n_missing": 0}
+{"tag": "ep16_ext2_spark_5fps", "ep": 16, "cam": "ext2", "seed": 0, "stride": 3, "direction": "forward", "frames": 58, "processed": 58, "tracked": 52, "ids": {"1": 52}, "mean_conf": 0.3, "min_conf": 0.0, "usd": 0.0116, "latency_s": 7.5, "first_missing": [150, 153, 156, 159, 162, 165], "n_missing": 6}
+{"tag": "d1_ep1_wrist_fixedpt", "frames": 89, "tracked": 77, "ids": {"1": 77}, "mean_conf": 0.69, "usd": 0.0178, "latency_s": 11.6}
+{"tag": "d1_ep9_wrist_fixedpt", "frames": 75, "tracked": 73, "ids": {"1": 73}, "mean_conf": 0.88, "usd": 0.015, "latency_s": 9.8}
+{"tag": "d1_ep17_wrist_fixedpt", "frames": 53, "tracked": 37, "ids": {"1": 37}, "mean_conf": 0.96, "usd": 0.0106, "latency_s": 10.8}
+{"tag": "ep16_wrist_fixedpt", "frames": 58, "tracked": 55, "ids": {"1": 55}, "mean_conf": 0.95, "usd": 0.0116, "latency_s": 8.3}
+{"tag": "ep42_wrist_fixedpt", "frames": 111, "tracked": 111, "ids": {"1": 111}, "mean_conf": 0.94, "usd": 0.0222, "latency_s": 13.0}
+{"tag": "d1_ep9_ext1_projpt", "frames": 75, "tracked": 75, "ids": {"1": 75}, "mean_conf": 0.82, "usd": 0.015, "latency_s": 8.2}
+{"tag": "d1_ep9_ext2_projpt", "frames": 75, "tracked": 75, "ids": {"1": 75}, "mean_conf": 0.78, "usd": 0.015, "latency_s": 9.1}
+{"tag": "d1_ep17_ext1_projpt", "frames": 53, "tracked": 41, "ids": {"1": 41}, "mean_conf": 0.84, "usd": 0.0106, "latency_s": 7.2}
+{"tag": "d1_ep17_ext2_projpt", "frames": 53, "tracked": 39, "ids": {"1": 39}, "mean_conf": 0.82, "usd": 0.0106, "latency_s": 7.5}
+{"tag": "ep42_wrist_fixedneg", "frames": 111, "tracked": 106, "ids": {"1": 106}, "mean_conf": 0.75, "usd": 0.0222, "latency_s": 14.3}
+{"tag": "d1_ep1_wrist_fixedneg", "frames": 89, "tracked": 68, "ids": {"1": 68}, "mean_conf": 0.88, "usd": 0.0178, "latency_s": 12.5}
+{"tag": "d1_ep9_exterior_1_projneg", "frames": 75, "tracked": 75, "ids": {"1": 75}, "mean_conf": 0.81, "usd": 0.015, "latency_s": 12.2}
+{"tag": "d1_ep9_exterior_2_projneg", "frames": 75, "tracked": 75, "ids": {"1": 75}, "mean_conf": 0.74, "usd": 0.015, "latency_s": 10.1}
+{"tag": "d1_ep17_exterior_1_projneg", "frames": 53, "tracked": 41, "ids": {"1": 41}, "mean_conf": 0.81, "usd": 0.0106, "latency_s": 7.4}
+{"tag": "d1_ep17_exterior_2_projneg", "frames": 53, "tracked": 39, "ids": {"1": 39}, "mean_conf": 0.77, "usd": 0.0106, "latency_s": 10.1}
+{"tag": "d1_ep9_exterior_1_graspf0", "frames": 75, "tracked": 75, "ids": {"1": 75}, "mean_conf": 0.8, "usd": 0.015, "latency_s": 9.3}
+{"tag": "d1_ep9_exterior_2_graspf0", "frames": 75, "tracked": 75, "ids": {"1": 75}, "mean_conf": 0.94, "usd": 0.015, "latency_s": 11.9}
+{"tag": "d1_ep17_exterior_1_graspf0", "frames": 53, "tracked": 53, "ids": {"1": 53}, "mean_conf": 0.94, "usd": 0.0106, "latency_s": 7.1}
+{"tag": "d1_ep17_exterior_2_graspf0", "frames": 53, "tracked": 53, "ids": {"1": 53}, "mean_conf": 0.94, "usd": 0.0106, "latency_s": 12.0}
+{"tag": "d1_ep1_exterior_1_graspf0", "frames": 89, "tracked": 89, "ids": {"1": 89}, "mean_conf": 0.95, "usd": 0.0178, "latency_s": 9.0}
+{"tag": "d1_ep1_exterior_2_graspf0", "frames": 89, "tracked": 89, "ids": {"1": 89}, "mean_conf": 0.77, "usd": 0.0178, "latency_s": 10.1}

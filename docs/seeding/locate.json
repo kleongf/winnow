@@ -1,0 +1,310 @@
+[
+ {
+  "ep": 42,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the black TV remote control",
+  "model": "muse-spark-1.3",
+  "hand": [
+   197,
+   132,
+   227,
+   164
+  ],
+  "spark": [
+   197,
+   130,
+   228,
+   161
+  ],
+  "iou": 0.83,
+  "usd": 0.0062,
+  "latency_s": 6.1
+ },
+ {
+  "ep": 42,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the black TV remote control",
+  "model": "muse-spark-1.3-contributor",
+  "hand": [
+   197,
+   132,
+   227,
+   164
+  ],
+  "spark": [
+   197,
+   130,
+   237,
+   162
+  ],
+  "iou": 0.67,
+  "usd": 0.0002,
+  "latency_s": 7.3
+ },
+ {
+  "ep": 42,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the black TV remote control",
+  "model": "muse-spark-1.3",
+  "hand": [
+   217,
+   103,
+   241,
+   121
+  ],
+  "spark": [
+   215,
+   121,
+   237,
+   146
+  ],
+  "iou": 0.0,
+  "usd": 0.0053,
+  "latency_s": 5.4
+ },
+ {
+  "ep": 42,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the black TV remote control",
+  "model": "muse-spark-1.3-contributor",
+  "hand": [
+   217,
+   103,
+   241,
+   121
+  ],
+  "spark": [
+   215,
+   112,
+   237,
+   128
+  ],
+  "iou": 0.3,
+  "usd": 0.0002,
+  "latency_s": 8.8
+ },
+ {
+  "ep": 16,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the small blue object on the saucer",
+  "model": "muse-spark-1.3",
+  "hand": [
+   214,
+   66,
+   222,
+   75
+  ],
+  "spark": [
+   212,
+   76,
+   220,
+   84
+  ],
+  "iou": 0.0,
+  "usd": 0.0072,
+  "latency_s": 7.8
+ },
+ {
+  "ep": 16,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the small blue object on the saucer",
+  "model": "muse-spark-1.3-contributor",
+  "hand": [
+   214,
+   66,
+   222,
+   75
+  ],
+  "spark": [
+   211,
+   75,
+   220,
+   83
+  ],
+  "iou": 0.0,
+  "usd": 0.0004,
+  "latency_s": 14.0
+ },
+ {
+  "ep": 16,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the small blue object on the saucer",
+  "model": "muse-spark-1.3",
+  "hand": [
+   137,
+   107,
+   157,
+   118
+  ],
+  "spark": [
+   144,
+   116,
+   160,
+   126
+  ],
+  "iou": 0.07,
+  "usd": 0.0054,
+  "latency_s": 5.3
+ },
+ {
+  "ep": 16,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the small blue object on the saucer",
+  "model": "muse-spark-1.3-contributor",
+  "hand": [
+   137,
+   107,
+   157,
+   118
+  ],
+  "spark": [
+   144,
+   117,
+   160,
+   125
+  ],
+  "iou": 0.04,
+  "usd": 0.0003,
+  "latency_s": 9.7
+ },
+ {
+  "ep": 16,
+  "cam": "wrist_imag",
+  "frame": 75,
+  "noun": "the blue object",
+  "model": "muse-spark-1.3",
+  "hand": [
+   176,
+   64,
+   212,
+   138
+  ],
+  "spark": [
+   193,
+   73,
+   229,
+   144
+  ],
+  "iou": 0.31,
+  "usd": 0.0041,
+  "latency_s": 3.9
+ },
+ {
+  "ep": 16,
+  "cam": "wrist_imag",
+  "frame": 75,
+  "noun": "the blue object",
+  "model": "muse-spark-1.3-contributor",
+  "hand": [
+   176,
+   64,
+   212,
+   138
+  ],
+  "spark": [
+   184,
+   63,
+   220,
+   145
+  ],
+  "iou": 0.58,
+  "usd": 0.0003,
+  "latency_s": 13.8
+ },
+ {
+  "ep": 3,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the bag of chips",
+  "model": "muse-spark-1.3",
+  "hand": [
+   177,
+   135,
+   202,
+   152
+  ],
+  "spark": [
+   185,
+   143,
+   215,
+   160
+  ],
+  "iou": 0.2,
+  "usd": 0.0038,
+  "latency_s": 4.1
+ },
+ {
+  "ep": 3,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the bag of chips",
+  "model": "muse-spark-1.3-contributor",
+  "hand": [
+   177,
+   135,
+   202,
+   152
+  ],
+  "spark": [
+   176,
+   143,
+   206,
+   160
+  ],
+  "iou": 0.32,
+  "usd": 0.0003,
+  "latency_s": 12.5
+ },
+ {
+  "ep": 3,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the robot gripper's two fingers",
+  "model": "muse-spark-1.3",
+  "hand": [
+   187,
+   47,
+   219,
+   81
+  ],
+  "spark": [
+   194,
+   56,
+   224,
+   91
+  ],
+  "iou": 0.41,
+  "usd": 0.0055,
+  "latency_s": 7.4
+ },
+ {
+  "ep": 3,
+  "cam": "exterior_i",
+  "frame": 0,
+  "noun": "the robot gripper's two fingers",
+  "model": "muse-spark-1.3-contributor",
+  "hand": [
+   187,
+   47,
+   219,
+   81
+  ],
+  "spark": [
+   194,
+   56,
+   223,
+   90
+  ],
+  "iou": 0.43,
+  "usd": 0.0003,
+  "latency_s": 12.7
+ }
+]
