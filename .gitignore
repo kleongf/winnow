@@ -1,0 +1,21 @@
+# dependencies and builds
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# secrets and local data
+.env
+data/
+
+# run output
+artifacts/
+test-results/
+playwright-report/
+
+# tooling
+.claude/worktrees/
+.DS_Store

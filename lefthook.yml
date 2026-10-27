@@ -1,0 +1,18 @@
+# Fast checks on every commit; `pnpm verify` (and CI) runs the full suite.
+pre-commit:
+  parallel: true
+  commands:
+    backend:
+      glob: "backend/**/*.py"
+      run: cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright
+    frontend:
+      glob: "frontend/**/*.{ts,tsx,js,json}"
+      run: >-
+        pnpm --filter winnow-frontend run typecheck &&
+        pnpm --filter winnow-frontend run lint &&
+        pnpm --filter winnow-frontend run format:check
+    api-types:
+      glob: "backend/**/*.py"
+      run: bash scripts/gen-api.sh --check
+    file-size:
+      run: python3 scripts/check_file_size.py
