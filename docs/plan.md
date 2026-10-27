@@ -28,14 +28,14 @@
 | Cost of teleoperation data (standard pick-and-place, fully loaded) | ~$118 / hour (early 2026), down from ~$340 in early 2024 | Robotics Center, State of Robotics 2026 |
 | Share of collected demos rejected in quality review | 15–30% | Axis Robotics guide |
 | How much of the data humans actually review | 1–5% weekly random sample, or 10–20% per session | Robotics Center checklist; Claru guide |
-| Best AI success judge on 2,197 robot attempts (~1,600 real, ~600 simulated; FailBench) | 0.77 mean balanced accuracy; catches only 40% of true failures on the failure-only subset. A lean toward "success" under ambiguity is reported qualitatively (one model's reasoning traces), not measured | FailBench (Sep 2026) |
-| Where AI judges fail | Strong on some visible-object-motion sources (0.89–0.95), but only 0.72 on the DROID robot slice; no model exceeds 0.60 on contact-heavy tasks | FailBench |
+| Best AI success judge on 2,197 robot attempts (~1,600 real, ~600 simulated; FailBench) | 0.77 mean balanced accuracy; the best overall judge (Gemini 3 Flash) catches only 40% of failures on a 30-episode failure-only subset (REFLECT; other models range 0–100% there). A lean toward "success" under ambiguity is reported qualitatively (one model's reasoning traces), not measured | FailBench (Sep 2026) |
+| Where AI judges fail | Strong on some visible-object-motion sources (0.89–0.95), but only 0.72 on the DROID robot slice; no model exceeds 0.60 on contact-heavy tasks. Cropping to the region that decides the outcome raises the DROID slice from 0.740 to 0.810 (+7 points) | FailBench |
 | Gain from curating demos (Demo-SCORE) | 15–35% higher absolute policy success vs training on all demos | Demo-SCORE paper |
 | Gain from filtering to the top 25% of demos | 30–50% higher success on contact-rich tasks | Mandlekar et al., via Claru |
 | Effect of low-quality data | 20% low-quality examples → 30% worse training loss (Open X-Embodiment) | Hugging Face blog |
 | Robot training data market | Estimates: >$242M (2025) → $5.25B (2030); or $536M (2025) → $750M (2026) | ResearchInChina; LP Information |
 
-**Pitch line:** *Teams watch only a fraction of their robot demos, and today's best AI judges still miss most real failures in hard cases: 40% caught on FailBench's failure-only set, 0.72 balanced accuracy on DROID robots. That's exactly backwards for cleaning data.*
+**Pitch line:** *Teams watch only a fraction of their robot demos, and today's best AI judges still miss most real failures in hard cases: the best judge caught 40% on FailBench's 30-episode failure-only set and scored 0.72 balanced accuracy on DROID robots. That's exactly backwards for cleaning data.*
 
 > ⚠️ Do NOT claim "1 in 5 failures in droid_100 were never flagged." Those 19 episodes came from DROID's raw `/failure/` folders; their outcome survives in `next.reward` (0 on the last frame), but their task instructions were dropped during format conversion. It's a real data-quality issue but not "undetected failures." Episode 42 (marked success: three failed grasps, then the object released ~10 cm above the target) is still a fair example.
 
@@ -45,7 +45,7 @@
 
 1. **Robot-learning teams at labs and student clubs** (primary user in the pitch). No QA staff; curation = someone scrubbing videos. Firsthand story: Triton Droids.
 2. **Humanoid / robotics companies' data operations.** Figure is hiring dedicated TeleOps Quality Support staff to review teleop sessions. 1X reportedly has 700+ gig operators collecting data at home. Volume grows faster than anyone can watch.
-3. **Data platforms and vendors** (Encord, Labelbox, Claru). Encord reports 10x growth in physical-AI revenue in 12 months — evidence of a growing market, and potential future customers or competitors.
+3. **Data platforms and vendors** (Encord, Labelbox, Claru). Encord reports total revenue up more than 10× in the 18 months before its Feb 2026 round (not physical-AI revenue specifically) — evidence of a growing market, and potential future customers or competitors.
 
 ---
 
@@ -54,12 +54,14 @@
 | Approach | Examples | What it misses |
 |---|---|---|
 | Motion-quality metrics | FiftyOne episode quality (smoothness, jerk, idle time) | Measures *how* it moved, not whether it did the task the way your team means "expert" |
-| Teleop feedback | DQAF (May 2026) | Fixed signals; not user-definable |
+| Teleop feedback | DQAF (May 2026) | Fixed metric set (telemetry + VLM subtask progress) for live operator feedback; no arbitrary criteria, no abstention |
 | Rollout-based curation | Demo-SCORE, CUPID | Needs a trained policy + 25–100 robot rollouts; fails when demos are too poor for a first policy to succeed |
-| Failure detectors | RoboFAC, Instance (YC S26) | Pass/fail only; fine-tuned detectors underperform general models on FailBench |
+| Failure detectors | RoboFAC, Guardian, RoboReward, Instance (YC S26) | Pass/fail only; FailBench's fine-tuned detectors (Guardian, RoboReward-8B, ViFailback-8B, RoboFAC-7B, FailSense) underperform general models. Instance isn't in FailBench |
+| Rubric-based QA services | Shotwell AI (YC Spring 2026) | Step-by-step pass/fail against the customer's SOP with timestamps, LeRobot input; a 24-hour service, with no stated use of robot telemetry or uncertainty (vendor claims) |
+| Natural-language search | Roboto Agents (Jul 2026) | Finds *moments* from a plain-language description across logs and video; doesn't judge Episodes against a quality bar |
 | Data platforms | Encord, Labelbox | General infrastructure, not task-semantic judgment |
 
-**Gap:** No tool found that filters robot demos from *user-written* "expert" criteria, before training, with evidence and calibrated uncertainty.
+**Gap:** Tools now exist that score or search robot Episodes (Shotwell, Roboto, DQAF, commercial scoring services). None that we found turns a team's own English definition of "expert" into checks over robot data, object tracks *and* video, or reports how often its "keep" is wrong and abstains when unsure. An independent audit of one commercial scorer found it gave robot telemetry zero weight and its human corrections only raised scores (CosmicBrain, Oct 2026).
 
 **Nuance to design for:** CUPID found "higher quality" doesn't always mean "better robot" (quality filtering can favor brittle strategies). This supports user-defined criteria (e.g., "always uses the same grasp strategy") over generic smoothness scores.
 
@@ -67,22 +69,23 @@
 
 ## 5. How Winnow works
 
-1. **Describe** — e.g. *"Expert pick-and-place: grasps on the first try, never drops the object, places it inside the target, no long pauses."*
-2. **Compile** — Spark turns the description into a rubric of separate criteria, each tagged:
-   - **Measured from robot data** (end-effector pose + gripper in droid_100; joint states too in droid_1.0.1): completion time, pauses, smoothness/jerk, re-grasp count, path efficiency.
-   - **Measured from SAM 3.1 tracks**: object dropped, object ends in target, gripper–object contact over time.
-   - **Visual judgment** (Spark on video, steered by SAM masks): e.g. "grasped by the handle."
-   - Each criterion is **hard** (fail = reject) or **soft** (adds to a quality score). Rubric is shown back for editing before running.
-3. **Score** — every episode gets per-criterion results with evidence (timestamps, track plots, the frame where it slipped).
-4. **Triage with self-monitoring** — confident episodes auto-kept/rejected; uncertain ones go to "needs review." Uncertainty signals:
-   - measurement close to a threshold
-   - robot data and video disagree (gripper "closed on something" but SAM shows nothing in it)
-   - Spark unsure or vague
-   - SAM lost tracking
-   - **Rubric sanity monitor:** a criterion rejecting ~0% or ~95% of episodes is probably mis-specified → warn.
-5. **Calibrate** — label 10–20 episodes; thresholds tune to your judgment; reports estimated precision with an error bar. Active learning: asks about the episodes it's least sure of. *"Label 20 episodes, curate 2,000."*
-6. **Output** — filtered dataset in the same (LeRobot) format + a report explaining every rejection.
-7. **Iterate** — edit one sentence, re-sort instantly (tracks/measurements cached; only thresholds re-applied).
+1. **Describe (an interview)** — e.g. *"Expert pick-and-place: grasps on the first try, never drops the object, places it inside the target, no long pauses."* Spark drafts the Rubric, then Winnow's code checks coverage: phrases no Criterion covers, and values Spark had to assume. Spark asks questions anchored on real Episodes ("Is this 1.8 s pause long?"), highest impact first, until every phrase is mapped and nothing is assumed, or the user stops. Every answer is also a label.
+2. **Compile** — each Criterion is a **typed call** to a fixed primitive (params, threshold, unit, margin, window, camera views, source phrase), and the English shown to the user is rendered from those fields, so the Rubric and the code can't drift apart. Spark composes checks from building blocks (condition × time pattern × phase × views) and routes each to the cheapest source that can decide it:
+   - **Measured from robot data** (end-effector pose + gripper in droid_100; joint states and camera extrinsics too in droid_1.0.1): failed grasp attempts, pauses, completion time, release height, path efficiency.
+   - **Tracked from SAM 3.1** across the views each Criterion needs (wrist for in-hand, both exteriors for placement): object lifted with the gripper, dropped, moved, ends inside the target.
+   - **Visual** (Spark on a specific moment the measurements point to, cropped to the SAM box): what geometry can't decide, e.g. "grasped by the handle", spills, upright.
+   - Each Criterion is **hard** (fail = reject) or **soft** (adds to a quality score; scored relative to the dataset, never rejects alone). A free dry run shows each Criterion's pass rate before the user confirms.
+3. **Score** — every Episode gets per-Criterion results with Evidence (value, threshold, time window, track plot, the frame where it went wrong). Spark reads the robot-data and SAM event timeline, investigates with tools (crop a view at a time, track another concept), and writes the **Reason**.
+4. **Triage with self-monitoring** — any clear hard fail → Reject; all hard Criteria clearly pass → Keep; otherwise Needs review, with why. Uncertainty signals:
+   - measurement within a Criterion's margin of its threshold
+   - Spark's answers disagree across 3 paraphrased samples, or Spark answers "unsure" (not its stated confidence, which ranks errors near chance)
+   - sources disagree (robot data vs SAM vs Spark) or camera views disagree
+   - poor tracking health in every relevant view
+   - **Rubric sanity monitor:** a Criterion rejecting ~0% or ~95% of Episodes is probably mis-specified → warn; also show *what* it removes.
+   - Before a Reject, Spark tries to refute the claimed failure.
+5. **Calibrate** — two label streams. **Review labels** (Needs review, least confident first) tune the margins and *suggest* threshold changes the user accepts. **Audit labels** (a seeded random sample of auto-Keeps) are the only input to precision, reported as a count plus an interval ("14/15 good, 95% CI 0.70–0.99"), never "±" from 20 labels. Labels can move Episodes either way. *"Label 20 Episodes, curate 2,000."*
+6. **Output** — filtered dataset in the same (LeRobot) format + a Reason for every rejection.
+7. **Iterate** — edit one sentence, re-sort instantly (cache keyed by Criterion, params and Episode; only changed Criteria re-run; dragging a threshold calls no model).
 
 ---
 
@@ -90,14 +93,14 @@
 
 | Model | Role | What makes it more than a basic integration |
 |---|---|---|
-| **SAM 3.1** (Model API, `sam-3.1`) | Tracks gripper and objects from text prompts; each call takes one concept and one camera and returns per-frame boxes, masks, track ids, and confidence | Used as *physical evidence* for verdicts, and to steer Spark's attention (masks/crops) → fewer hallucinations, fewer video tokens |
-| **Muse Spark 1.3** | Compiles English → rubric; judges visual criteria on video; writes explanations | Natively understands video; measured criteria run in Winnow's own code (the API has no hosted code execution), which Spark can call as function tools |
+| **SAM 3.1** (Model API, `sam-3.1`) | Tracks the gripper and objects from a seed box (text prompts fail on the gripper and small objects at 320×180); each call takes one concept and one camera and returns per-frame boxes, masks, track ids, and confidence | The *measurement backbone*: with robot data, it decides physical facts (lifted, dropped, moved, inside target) across camera views, and steers Spark to the right moment and crop |
+| **Muse Spark 1.3** | Runs the Describe interview; composes typed Criteria; picks what SAM tracks; investigates the event timeline; judges only what geometry can't; challenges failures before Reject; writes Reasons; proposes missing Criteria | Never the holistic judge (that's the baseline). Checks run in Winnow's own code (the API has no hosted code execution), which Spark calls as function tools |
 | **Muse Voice Transcribe** | Talk-while-watching labeling: narrate verdicts while watching an episode | Moment labels from speech (turn-level timestamps aligned to the video playhead; the API has no word-level timestamps); can draft the rubric from spoken critique |
 | **Muse Glimmer** (open weights; hosted via OpenRouter, not on the Meta Model API) | Independent second-opinion judge on keyframes of borderline episodes (images only, no video); running locally is roadmap (needs a 32 GB+ Mac) | Different model than Spark catches different mistakes; open-weights bonus |
 | **Muse Wonder** | (Stretch / roadmap) agent that improves the rubric against labeled episodes, with budget and stopping rules | Applies my self-monitoring research-agent architecture |
 | **Muse Image** | (Roadmap) edit a keyframe to insert an obvious failure; check whether the judge's verdict flips | An image model auditing another model's attention |
 
-**Cost cascade:** robot-data measurements are free; first-pass judging on Spark's cheaper tier; only uncertain episodes escalate. Pitch metric: cost per 1,000 episodes curated. Pricing: Spark contributor $0.10 / $0.20 per 1M tokens (150 RPM, no `max` reasoning), standard $1.25 / $4.25 (3,000 RPM); SAM 3.1 $0.20 per 1,000 frames. Spark's video token cost is undocumented — measure it.
+**Cost cascade:** robot-data measurements are free; first-pass judging on Spark's cheaper tier; only uncertain episodes escalate. Pitch metric: cost per 1,000 episodes curated. Pricing: Spark contributor $0.10 / $0.20 per 1M tokens (150 RPM, no `max` reasoning), standard $1.25 / $4.25 (3,000 RPM); SAM 3.1 $0.20 per 1,000 frames. Measured on Day 1: Spark video is ~72 input tokens per camera-second, and reasoning output is 50–80% of the per-Episode cost, so escalate by changing the input (crop, keyframes, Glimmer), not with `max`. SAM dominates spend: ~$0.40 per Episode at full fps for 3 views × 3 concepts, ~$0.08 with the gripper taken from robot data and SAM at ~5 fps (untested).
 
 ---
 
@@ -119,7 +122,7 @@
 
 - **Track:** Indie. **Theme:** Push the Frontier (robotics).
 - **Hero demo:** pick-and-place on public data.
-- **Bar to beat:** same episodes, same Meta model — **Spark alone vs. Winnow**. Win on accuracy, especially on failures Spark alone calls "success".
+- **Bar to beat:** same episodes, same Meta model — **Spark alone vs. Winnow**. Win on **right decision for the right reason**: decision accuracy and false-keep rate on true failures, plus whether each Reject's Reason matches what happened (failure type and time). On Day 1, Spark alone got all 5 decisions right but told the wrong story on episode 42.
 - **Ping pong:** motivation and "what's next," not the product.
 - **Cost tier:** contributor tier is fine (public data); escalated judging needs the standard tier (contributor has no `max` reasoning and a 150 RPM cap).
 - **Philosophy:** somewhat functional + very well presented. Not everything needs to be built.
@@ -179,8 +182,9 @@
 ## 12. Evaluation plan
 
 - **Datasets:** `lerobot/droid_100` (only ~40 clear pick-and-place episodes, all successes) filled to ~100 from `lerobot/droid_1.0.1` (same format, explicit success flag); RoboFAC real-world split (`MINT-SJTU/RoboFAC-dataset`, 480 failures + 122 successes, subtask-level failure labels) as a secondary video-only check only — it has no robot data, staged failures, and judges are near-saturated on it.
-- **Headline comparison:** Spark alone vs Winnow on the same episodes — balanced accuracy, and how often each says "success" on true failures.
-- **Curation metrics:** precision on kept episodes; coverage at fixed precision (risk–coverage curve); human review minutes saved; cost per 1,000 episodes.
+- **Headline comparison:** Spark alone vs Winnow on the same Episodes — false-keep rate on true failures (Wilson CI), Reason correctness, and Keep precision **at matched coverage**; plus Winnow's worst case with every Needs review forced to Keep, risk–coverage curves for both, and McNemar discordant counts (show counts; ~100 Episodes won't reach significance on small gaps).
+- **Baselines:** Spark alone (FailBench protocol) and **episode length alone** (5 of 7 curation metrics exploit length; in droid_100 failures are *shorter*).
+- **Curation metrics:** audited precision on kept Episodes (count + interval); false keeps and false rejects reported separately; coverage at fixed precision (risk–coverage curve); human review minutes saved; cost per 1,000 episodes.
 - **Later:** adjudicate disagreements with provider labels (labels can be wrong — "dataset said success, Winnow said failure, here's the video" could be a demo moment).
 - **Not in scope:** training a policy on filtered data (needs GPUs) → "next steps."
 
@@ -193,9 +197,10 @@
 | Vague descriptions → vague filter | Compile → confirm → calibrate loop; rubric shown before running |
 | AI judges weak on contact-heavy tasks | Hero demo on pick-and-place (object motion visible); route ambiguity to review |
 | Video token cost | Measure on day 1; compute measured criteria from robot data; send video only for visual criteria; crop to SAM boxes in our own code (savings unproven until measured) |
-| SAM loses small/fast objects | droid_100 video is only 320×180; pick clear pick-and-place clips; treat lost tracking as an uncertainty signal |
+| SAM loses small/fast objects; text prompts fail | All LeRobot DROID video is 320×180. Seed SAM with boxes (candidates under evaluation: project the gripper from robot data + droid_1.0.1 camera extrinsics, a small gripper detector, one hand-drawn box per Episode as the fallback); track the views each Criterion needs (wrist for in-hand); poor tracking health in every view → Needs review |
 | "Infra for ML people" perception | Lead with the simple pitch and a concrete clip; firsthand club story |
-| Competition (Instance, RoboFAC, data platforms) | Differentiate on plain-English criteria, evidence, calibrated triage, no training or rollouts |
+| Competition (Shotwell, Roboto, Instance, RoboFAC, data platforms) | "Plain-English criteria" alone is no longer unique. Lead with fusing robot data, tracks and video, calibrated Needs review, and reported false-keep rates |
+| Quality filtering hurts diversity (CUPID; Bedi) | Keep re-grasp and smoothness Criteria soft by default; the sanity monitor shows *what* a Criterion removes; claim review time saved, not better policies |
 | Rules: new work only | Fresh public repo; no club code; club data only with permission |
 
 ---

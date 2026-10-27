@@ -28,6 +28,10 @@ _Avoid_: Explanation, justification
 The per-Episode outcome after all Criterion results are combined: Keep, Reject, or Needs review.
 _Avoid_: Verdict, label, classification
 
+**Reason**:
+The one-sentence account of why an Episode got its Triage decision, written from its Evidence.
+_Avoid_: Explanation, rationale, justification
+
 **Needs review**:
 The Triage decision for an Episode Winnow isn't confident about, routed to a human instead of being kept or rejected automatically.
 _Avoid_: Uncertain, flagged, borderline
