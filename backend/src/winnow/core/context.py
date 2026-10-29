@@ -11,6 +11,7 @@ from winnow.baseline.store import BaselineStore
 from winnow.boxes.store import BoxStore
 from winnow.core.db import open_db
 from winnow.core.settings import Settings
+from winnow.episodes.droid101 import Droid101
 from winnow.episodes.service import ingest_step
 from winnow.episodes.sources import Source, sources_from
 from winnow.episodes.store import EpisodeStore
@@ -20,6 +21,8 @@ from winnow.jobs.store import JobStore
 from winnow.meta.client import MetaClient
 from winnow.meta.costs import CostLog
 from winnow.meta.transport import Transport
+from winnow.selection.service import select_step
+from winnow.selection.store import SelectionStore
 
 
 @dataclass(frozen=True)
@@ -30,6 +33,7 @@ class AppContext:
     episodes: EpisodeStore
     boxes: BoxStore
     baseline: BaselineStore
+    selection: SelectionStore
     jobs: JobStore
     runner: JobRunner
     meta: MetaClient | None  # None without a Meta API key: no step that calls Meta runs
@@ -51,13 +55,19 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     episodes = EpisodeStore(db, settings.data_dir)
     boxes = BoxStore(db)
     baseline = BaselineStore(db)
+    selection = SelectionStore(db)
     jobs = JobStore(db)
     meta = _meta(settings, db, transport)
     steps: dict[str, Step] = {"ingest": ingest_step(episodes, sources)}
+    droid101 = sources.get("droid_1.0.1")
     if meta is not None:
         steps["baseline"] = baseline_step(meta, baseline, episodes)
+        if isinstance(droid101, Droid101):
+            steps["select"] = select_step(meta, selection, droid101, settings.data_dir)
     runner = JobRunner(jobs, steps, concurrency=settings.ingest_concurrency)
-    return AppContext(settings, db, sources, episodes, boxes, baseline, jobs, runner, meta)
+    return AppContext(
+        settings, db, sources, episodes, boxes, baseline, selection, jobs, runner, meta
+    )
 
 
 def get_context(request: Request) -> AppContext:

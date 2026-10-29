@@ -11,6 +11,7 @@ from winnow.dataset.routes import router as dataset_router
 from winnow.episodes.routes import router as episodes_router
 from winnow.jobs.routes import router as jobs_router
 from winnow.meta.transport import Transport
+from winnow.selection.routes import router as selection_router
 
 
 def create_app(settings: Settings | None = None, transport: Transport | None = None) -> FastAPI:
@@ -24,7 +25,14 @@ def create_app(settings: Settings | None = None, transport: Transport | None = N
         ctx.db.close()
 
     app = FastAPI(title="Winnow", lifespan=lifespan)
-    for router in (core_router, dataset_router, episodes_router, boxes_router, jobs_router):
+    for router in (
+        core_router,
+        dataset_router,
+        episodes_router,
+        boxes_router,
+        selection_router,
+        jobs_router,
+    ):
         app.include_router(router, prefix="/api")
     return app
 

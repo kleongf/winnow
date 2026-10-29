@@ -3,6 +3,7 @@ import { usePage } from "./features/core/pages";
 import { Sidebar } from "./features/core/Sidebar";
 import { PreparePage } from "./features/dataset/PreparePage";
 import { EpisodesPage } from "./features/episodes/EpisodesPage";
+import { SelectionPage } from "./features/selection/SelectionPage";
 
 export function App() {
   const [page, setPage] = usePage();
@@ -11,8 +12,11 @@ export function App() {
       <Sidebar page={page} onPage={setPage} />
       <main className="flex-1 overflow-y-auto">
         {page === "prepare" && <PreparePage />}
+        {page === "select" && <SelectionPage />}
         {page === "episodes" && <EpisodesPage />}
-        {page !== "prepare" && page !== "episodes" && <NotBuiltYet page={page} />}
+        {page !== "prepare" && page !== "select" && page !== "episodes" && (
+          <NotBuiltYet page={page} />
+        )}
       </main>
     </div>
   );

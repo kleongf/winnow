@@ -1,11 +1,14 @@
 """Ingested Episodes: a row each in SQLite, and their robot data and clips under the data dir."""
 
 import sqlite3
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 
+from winnow.core.db import ensure_column
 from winnow.episodes.models import Episode, EpisodeSignals, SourceEpisode
 
 SCHEMA = """
@@ -43,13 +46,23 @@ def cameras_with_clips(folder: Path) -> list[str]:
     return sorted(p.stem for p in folder.glob("*.mp4") if "." not in p.stem)
 
 
+# numpy's stubs read **arrays as its own keyword arguments; pin the call we make.
+_savez = cast(Callable[..., None], np.savez)
+
+
 def save_signals(folder: Path, signals: EpisodeSignals) -> None:
     folder.mkdir(parents=True, exist_ok=True)
-    np.savez(
+    optional = (
+        {"joint_positions": signals.joint_positions} if signals.joint_positions is not None else {}
+    )
+    for camera, extrinsics in (signals.camera_extrinsics or {}).items():
+        optional[f"extrinsics.{camera}"] = extrinsics
+    _savez(
         folder / "signals.npz",
         timestamps=signals.timestamps,
         position=signals.position,
         gripper=signals.gripper,
+        **optional,
     )
 
 
@@ -58,6 +71,8 @@ class EpisodeStore:
         self._db = db
         self._root = data_dir / "episodes"
         db.executescript(SCHEMA)
+        ensure_column(db, "episodes", "task_object", "TEXT")
+        ensure_column(db, "episodes", "task_target", "TEXT")
 
     def folder(self, source: str, index: int) -> Path:
         return self._root / source / f"{index:06d}"
@@ -77,7 +92,9 @@ class EpisodeStore:
         s = episode.signals
         duration = float(s.timestamps[-1] - s.timestamps[0]) + 1 / s.fps if len(s.timestamps) else 0
         self._db.execute(
-            "INSERT OR REPLACE INTO episodes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO episodes (id, source, source_index, instruction, "
+            "dataset_outcome, frames, fps, duration_s, ingested_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 episode_id(source, index),
                 source,
@@ -89,6 +106,12 @@ class EpisodeStore:
                 round(duration, 3),
                 datetime.now(UTC).isoformat(),
             ),
+        )
+
+    def set_task(self, id: str, task_object: str | None, task_target: str | None) -> None:
+        self._db.execute(
+            "UPDATE episodes SET task_object = ?, task_target = ? WHERE id = ?",
+            (task_object, task_target, id),
         )
 
     def list(self) -> list[Episode]:
@@ -111,6 +134,13 @@ class EpisodeStore:
                 position=saved["position"],
                 gripper=saved["gripper"],
                 dataset_outcome=episode.dataset_outcome,
+                joint_positions=saved.get("joint_positions"),
+                camera_extrinsics={
+                    name.removeprefix("extrinsics."): saved[name]
+                    for name in saved.files
+                    if name.startswith("extrinsics.")
+                }
+                or None,
             )
 
     def count_by_source(self) -> dict[str, int]:
@@ -129,4 +159,6 @@ class EpisodeStore:
             fps=row["fps"],
             duration_s=row["duration_s"],
             cameras=cameras_with_clips(self.folder(row["source"], row["source_index"])),
+            task_object=row["task_object"],
+            task_target=row["task_target"],
         )

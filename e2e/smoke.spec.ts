@@ -21,3 +21,11 @@ test("each page is reachable from the sidebar and kept in the URL", async ({ pag
   await page.reload();
   await expect(page.getByRole("heading", { name: "Review" })).toBeVisible();
 });
+
+test("the Selection page explains how to draw a sample when there is none", async ({ page }) => {
+  // e2e has no Meta API key, so no selection pass runs and there are no candidates.
+  await page.goto("/?page=select");
+
+  await expect(page.getByRole("heading", { name: "droid_1.0.1 selection" })).toBeVisible();
+  await expect(page.getByText("winnow select droid_1.0.1 --size 300 --seed 0")).toBeVisible();
+});

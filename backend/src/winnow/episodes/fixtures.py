@@ -17,7 +17,7 @@ from winnow.episodes.droid100 import CAMERAS, FPS
 INSTRUCTIONS = ("Put the marker in the pot", "Move the black remote control to the left", "")
 
 
-def _state(frames: int) -> np.ndarray:
+def state(frames: int) -> np.ndarray:
     """End-effector xyz + roll/pitch/yaw + gripper per frame (droid_100's `observation.state`)."""
     t = np.linspace(0.0, 1.0, frames)
     x = 0.4 + 0.2 * t
@@ -30,7 +30,7 @@ def _state(frames: int) -> np.ndarray:
 
 
 def _write_parquet(root: Path, episodes: int, frames: int) -> None:
-    states = [_state(frames) for _ in range(episodes)]
+    states = [state(frames) for _ in range(episodes)]
     rows = episodes * frames
     episode_index = np.repeat(np.arange(episodes), frames)
     frame_index = np.tile(np.arange(frames), episodes)
@@ -57,7 +57,7 @@ def _write_parquet(root: Path, episodes: int, frames: int) -> None:
     pq.write_table(tasks, meta / "tasks.parquet")  # pyright: ignore[reportUnknownMemberType]
 
 
-def _write_clip(path: Path, frames: int, pattern: str) -> None:
+def write_clip(path: Path, frames: int, pattern: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     source = f"{pattern}=size=320x180:rate={FPS:g}"
     subprocess.run(
@@ -88,5 +88,5 @@ def write_fixture_source(
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(b"not a video")
             else:
-                _write_clip(path, frames, pattern)
+                write_clip(path, frames, pattern)
     return root

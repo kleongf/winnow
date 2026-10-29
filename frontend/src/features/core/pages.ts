@@ -1,12 +1,13 @@
 // The workspace's pages. The current one lives in `?page=` so reloads and links land there.
 import { navigate, useSearchParams } from "./url";
 
-export const datasetPages = ["prepare"] as const;
+export const datasetPages = ["prepare", "select"] as const;
 export const projectPages = ["describe", "episodes", "review", "evaluation"] as const;
 export type Page = (typeof datasetPages)[number] | (typeof projectPages)[number];
 
 export const pageLabels: Record<Page, string> = {
   prepare: "Prepare",
+  select: "Selection",
   describe: "Describe",
   episodes: "Episodes",
   review: "Review",

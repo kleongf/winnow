@@ -34,6 +34,12 @@ ASSUMED_TOKENS_PER_VIDEO = 100_000
 ATTEMPTS = 3  # for 429s, 5xx and dropped connections
 BACKOFF_S = 2.0  # first retry waits 2-4 s, the second 4-8 s
 
+
+class IncompleteReplyError(RuntimeError):
+    """The model stopped before finishing (e.g. at the token cap). Paid for, never cached, so
+    running again retries it."""
+
+
 Estimate = Callable[[MetaContent], Awaitable[float]]
 Price = Callable[[Reply], float]
 
@@ -175,8 +181,10 @@ class MetaClient:
                 reply = await self._respond(call.model, content, call.options)
             latency = self._clock() - started
             usd = call.price(reply)
-            self._cache.put(CachedReply(key, call.model, reply, usd))
             self.costs.record(CostEntry(call.model, call.purpose, usd, latency, dict(reply.usage)))
+            if reply.incomplete:
+                raise IncompleteReplyError(f"{call.model} stopped early: {reply.incomplete}")
+            self._cache.put(CachedReply(key, call.model, reply, usd))
         return _Outcome(reply, usd, latency, cached=False)
 
     async def _respond(self, model: str, content: MetaContent, options: dict[str, object]) -> Reply:

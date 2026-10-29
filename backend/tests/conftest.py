@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from winnow.app import create_app
 from winnow.core.settings import Settings
 from winnow.episodes.fixtures import write_fixture_source
+from winnow.episodes.fixtures_droid101 import write_droid101_fixture
 
 # Episode 3 of the fixture source has unreadable video.
 CORRUPT_EPISODE = 3
@@ -20,9 +21,19 @@ def droid100_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return write_fixture_source(root, episodes=4, corrupt=(CORRUPT_EPISODE,))
 
 
+@pytest.fixture(scope="session")
+def droid101_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    return write_droid101_fixture(tmp_path_factory.mktemp("droid_1.0.1"))
+
+
 @pytest.fixture
-def settings(tmp_path: Path, droid100_root: Path) -> Settings:
-    return Settings(model_api_key=None, data_dir=tmp_path / "data", droid100_root=droid100_root)
+def settings(tmp_path: Path, droid100_root: Path, droid101_root: Path) -> Settings:
+    return Settings(
+        model_api_key=None,
+        data_dir=tmp_path / "data",
+        droid100_root=droid100_root,
+        droid101_root=droid101_root,
+    )
 
 
 @pytest.fixture

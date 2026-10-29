@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     data_dir: Path = REPO_ROOT / "data"
     # Read droid_100 from a local copy laid out like the repo (test fixtures), not the Hub.
     droid100_root: Path | None = None
+    droid101_root: Path | None = None  # likewise for droid_1.0.1
     ingest_concurrency: int = 4  # Episodes transcoded at once
 
     @field_validator("model_api_key", mode="before")

@@ -1,6 +1,7 @@
 """`winnow`: the pipeline from the command line, for bulk precompute without the browser.
 
 winnow ingest droid_100 3 16 42
+winnow select droid_1.0.1 [--size 300] [--seed 0]
 winnow fixtures <dir> [--episodes N]
 """
 
@@ -11,25 +12,32 @@ from pathlib import Path
 
 from winnow.core.context import AppContext, build_context
 from winnow.core.settings import Settings, get_settings
+from winnow.episodes.droid101 import Droid101
 from winnow.episodes.fixtures import write_fixture_source
 from winnow.episodes.service import ingest_items
+from winnow.jobs.models import WorkItem
+from winnow.meta.transport import Transport
+from winnow.selection.service import sample_indices, selection_items
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="winnow")
     commands = parser.add_subparsers(dest="command", required=True)
     ingest = commands.add_parser("ingest", help="ingest Episodes into the Dataset")
-    ingest.add_argument("source", choices=["droid_100"])
+    ingest.add_argument("source", choices=["droid_100", "droid_1.0.1"])
     ingest.add_argument("indices", nargs="+", type=int)
+    select = commands.add_parser("select", help="the droid_1.0.1 selection pass")
+    select.add_argument("source", choices=["droid_1.0.1"])
+    select.add_argument("--size", type=int, default=300)
+    select.add_argument("--seed", type=int, default=0)
     fixtures = commands.add_parser("fixtures", help="write synthetic droid_100-layout Episodes")
     fixtures.add_argument("root", type=Path)
     fixtures.add_argument("--episodes", type=int, default=3)
     return parser
 
 
-async def _ingest(ctx: AppContext, source: str, indices: list[int]) -> int:
-    items = ingest_items(source, indices, with_baseline=ctx.meta is not None)
-    job_id = ctx.jobs.create("ingest", items)
+async def _run(ctx: AppContext, kind: str, items: list[WorkItem]) -> int:
+    job_id = ctx.jobs.create(kind, items)
     await ctx.runner.run(job_id)
     job = ctx.jobs.get(job_id)
     assert job is not None
@@ -40,15 +48,31 @@ async def _ingest(ctx: AppContext, source: str, indices: list[int]) -> int:
     return 1 if job.failed else 0
 
 
-def main(argv: list[str] | None = None, settings: Settings | None = None) -> int:
+def _items(ctx: AppContext, args: argparse.Namespace) -> list[WorkItem]:
+    if args.command == "ingest":
+        return ingest_items(args.source, args.indices, with_baseline=ctx.meta is not None)
+    source = ctx.sources[args.source]
+    assert isinstance(source, Droid101)
+    sample = sample_indices([*source.index.values()], args.size, args.seed)
+    return selection_items(source.name, sample, args.seed)
+
+
+def main(
+    argv: list[str] | None = None,
+    settings: Settings | None = None,
+    transport: Transport | None = None,
+) -> int:
     args = _parser().parse_args(argv)
     if args.command == "fixtures":
         write_fixture_source(args.root, episodes=args.episodes)
         sys.stdout.write(f"wrote {args.episodes} fixture Episodes to {args.root}\n")
         return 0
-    ctx = build_context(settings or get_settings())
+    ctx = build_context(settings or get_settings(), transport)
     try:
-        return asyncio.run(_ingest(ctx, args.source, args.indices))
+        if args.command == "select" and ctx.meta is None:
+            sys.stderr.write("The selection pass calls Spark: set MODEL_API_KEY in .env\n")
+            return 2
+        return asyncio.run(_run(ctx, args.command, _items(ctx, args)))
     finally:
         ctx.db.close()
 
