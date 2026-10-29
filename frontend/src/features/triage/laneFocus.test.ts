@@ -26,6 +26,8 @@ function result(overrides: Partial<CriterionResult>): CriterionResult {
     window_name: "whole Episode",
     at_s: 0.9,
     uncertainty: null,
+    margin: 0,
+    p_pass: 0,
     camera: null,
     ...overrides,
   };

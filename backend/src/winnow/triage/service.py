@@ -4,7 +4,7 @@ from winnow.core.context import AppContext
 from winnow.criteria.facts import EpisodeFacts
 from winnow.episodes.models import Episode
 from winnow.rubric.models import RubricVersion
-from winnow.triage.models import EpisodeTriage, TriageList, TriageRow
+from winnow.triage.models import EpisodeTriage, PhraseChip, TriageList, TriageRow
 from winnow.triage.scoring import score
 
 
@@ -25,12 +25,20 @@ def episode_triage(ctx: AppContext, episode: Episode) -> EpisodeTriage:
 
 def triage_list(ctx: AppContext) -> TriageList:
     version = ctx.rubrics.latest()
-    rows = [
-        TriageRow(
-            episode_id=t.episode_id,
-            decision=t.decision,
-            reason="".join(span.text for span in t.reason),
-        )
-        for t in (_triage(ctx, version, e) for e in ctx.episodes.list())
-    ]
+    rows = [_row(_triage(ctx, version, e)) for e in ctx.episodes.list()]
     return TriageList(rubric_version=version.version, rows=rows)
+
+
+def _row(triage: EpisodeTriage) -> TriageRow:
+    return TriageRow(
+        episode_id=triage.episode_id,
+        decision=triage.decision,
+        reason="".join(span.text for span in triage.reason),
+        confidence=triage.confidence,
+        not_passed=[
+            PhraseChip(phrase=p.phrase, status=p.status)
+            for p in triage.phrases
+            if p.status is not None and p.status != "pass"
+        ],
+        uncertainty=list(dict.fromkeys(r.uncertainty for r in triage.criteria if r.uncertainty)),
+    )

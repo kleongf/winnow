@@ -1,11 +1,13 @@
 """The Rubric version every Project starts from, seeded from the frozen Description by hand until
-compile exists. Phrases with no Criterion yet are not checked."""
+compile exists: its measured Criteria. "never drops it" waits for the tracked primitives, and
+"places it ..." gets its conclusive Criteria (target-box overlap, a visual question) with them;
+until then its release height can only send an Episode to review."""
 
 from winnow.baseline.prompts import FROZEN
 from winnow.criteria.models import Criterion, RubricSettings, Setting
 from winnow.rubric.models import Rubric
 
-FIRST_TRY = FROZEN.phrases[0]
+FIRST_TRY, _NEVER_DROPS, PLACES, NO_PAUSES = FROZEN.phrases
 
 SEEDED_SETTINGS = RubricSettings(
     gripper_closed_level=Setting(
@@ -34,6 +36,28 @@ SEEDED = Rubric(
             comparator="<=",
             threshold=1,
             unit="attempts",
-        )
+        ),
+        Criterion(
+            id="release-height",
+            phrase=PLACES,
+            primitive="release_height_m",
+            comparator="<=",
+            threshold=0.05,
+            unit="m",
+            assumptions=[
+                "Placed, not dropped: released within 5 cm above where it was picked up. "
+                "Inconclusive, since placing on top of something is a high release."
+            ],
+        ),
+        Criterion(
+            id="longest-pause",
+            phrase=NO_PAUSES,
+            primitive="longest_still_s",
+            params={"speed_below_m_s": 0.01},
+            comparator="<",
+            threshold=2.0,
+            unit="s",
+            assumptions=["A pause is the arm under 1 cm/s; a long one lasts 2 s or more."],
+        ),
     ],
 )

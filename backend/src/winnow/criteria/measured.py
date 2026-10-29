@@ -1,12 +1,13 @@
-"""Measured primitives: computed from an Episode's robot data alone, no model calls."""
+"""Measured primitives about the grasp: computed from an Episode's robot data alone, no model
+calls. Primitives about the arm's motion live in `criteria.motion`."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
-import numpy as np
-
+from winnow.criteria.comparison import passes
 from winnow.criteria.facts import EpisodeFacts
+from winnow.criteria.grasp_margins import near_closures, readings
 from winnow.criteria.grasps import Grasps, Interval
-from winnow.criteria.models import Criterion, Moment, Status, TextSpan
+from winnow.criteria.models import Criterion, Moment, Status, TextSpan, UncertaintySignal
 
 
 @dataclass(frozen=True)
@@ -17,6 +18,10 @@ class Measurement:
     moments: list[Moment]
     at_s: float | None = None  # where it goes wrong, should the value fail
     status: Status | None = None  # set only when the value alone doesn't decide
+    uncertainty: UncertaintySignal | None = None  # set when the measure itself is unsure
+    # The signed distance from the threshold in effective margins, when the measure knows it
+    # better than its value does (a count near the grasp rule).
+    m: float | None = None
 
 
 def seconds(t: float) -> str:
@@ -33,14 +38,47 @@ def at_times(times: list[float]) -> list[TextSpan]:
     return spans
 
 
-def _plural(n: int, word: str) -> str:
+def plural(n: int, word: str) -> str:
     return f"{n} {word}{'' if n == 1 else 's'}"
 
 
 def grasp_attempts(
     criterion: Criterion, facts: EpisodeFacts, grasps: Grasps, window: Interval
 ) -> Measurement:
-    """Closures up to and including the grasp. With no grasp it fails, whatever the threshold."""
+    """Closures up to and including the grasp. With no grasp it fails, whatever the threshold.
+    Unsure when reading the closures at the edges of the Rubric settings' margins would change
+    the result."""
+    counted = _count_attempts(facts, grasps)
+    nominal = _attempts_status(criterion, grasps)
+    edges = readings(facts.signals, grasps.settings)
+    if all(_attempts_status(criterion, g) == nominal for g in edges):
+        return counted
+    near = near_closures(facts.signals, grasps.settings)
+    evidence = counted.evidence
+    if near:
+        evidence = [
+            *evidence,
+            TextSpan(text=" Unsure: the closure at "),
+            *at_times([facts.t[near[0].start]]),
+            TextSpan(text=f" {near[0].why}."),
+        ]
+    margins = near[0].margins if near else 0.0
+    return replace(
+        counted,
+        evidence=evidence,
+        status="unsure",
+        uncertainty="near threshold (count)",
+        m=margins if nominal == "pass" else -margins,
+    )
+
+
+def _attempts_status(criterion: Criterion, grasps: Grasps) -> Status:
+    if grasps.grasp is None:
+        return "fail"
+    return "pass" if passes(criterion, len(grasps.failed) + 1) else "fail"
+
+
+def _count_attempts(facts: EpisodeFacts, grasps: Grasps) -> Measurement:
     t = facts.t
     failed = [t[c.start] for c in grasps.failed]
     moments = [Moment(t=s, label=f"Attempt {i + 1}") for i, s in enumerate(failed)]
@@ -50,7 +88,7 @@ def grasp_attempts(
         if failed:
             rise = f"{grasps.rise_rule_m * 100:g} cm"
             evidence = [
-                TextSpan(text=f"No grasp: {_plural(len(failed), 'closure')}, at "),
+                TextSpan(text=f"No grasp: {plural(len(failed), 'closure')}, at "),
                 *at_times(failed),
                 TextSpan(text=f", and none lifted the arm {rise}."),
             ]
@@ -62,51 +100,41 @@ def grasp_attempts(
         evidence = [TextSpan(text="Grasped on the first closure, at "), *at_times([t[grasp.start]])]
         return Measurement(1, "1 attempt", [*evidence, TextSpan(text=".")], moments)
     evidence = [
-        TextSpan(text=f"{_plural(len(failed), 'failed grasp attempt')}, at "),
+        TextSpan(text=f"{plural(len(failed), 'failed grasp attempt')}, at "),
         *at_times(failed),
         TextSpan(text=", before the grasp at "),
         *at_times([t[grasp.start]]),
         TextSpan(text="."),
     ]
     attempts = len(failed) + 1
-    return Measurement(attempts, _plural(attempts, "attempt"), evidence, moments, failed[0])
+    return Measurement(attempts, plural(attempts, "attempt"), evidence, moments, failed[0])
 
 
-def _longest_run(still: np.ndarray) -> tuple[int, int]:
-    """(start, length) of the longest run of True."""
-    best = (0, 0)
-    start = 0
-    for i, is_still in enumerate([*still.tolist(), False]):
-        if not is_still:
-            if i - start > best[1]:
-                best = (start, i - start)
-            start = i + 1
-    return best
-
-
-def longest_still_s(
+def release_height_m(
     criterion: Criterion, facts: EpisodeFacts, grasps: Grasps, window: Interval
 ) -> Measurement:
-    """The longest stretch in the window, after the arm first moves and before it last stops,
-    where the end effector is slower than `speed_below_m_s`."""
-    below = criterion.params["speed_below_m_s"]
-    speed = facts.speed[window.start : window.end + 1]
-    moving = np.flatnonzero(speed >= below)
-    if len(moving) == 0:
-        return Measurement(0.0, "0.0 s", [TextSpan(text="The arm never moved here.")], [])
-    first = window.start + int(moving[0])
-    start, length = _longest_run(speed[moving[0] : moving[-1] + 1] < below)
-    still_s = length / facts.signals.fps
-    if length == 0:
-        return Measurement(0.0, "0.0 s", [TextSpan(text="The arm never stopped.")], [])
-    t0 = facts.t[first + start]
-    t1 = facts.t[min(first + start + length, len(facts.t) - 1)]
+    """How far above the height it was picked up at the grasp opened; set by the grasp, not the
+    window. Inconclusive: a high release is right when stacking."""
+    grasp = grasps.the_grasp
+    if grasp is None or not grasps.released:
+        why = "No grasp to release." if grasp is None else "No release: the grasp never opened."
+        return Measurement(
+            None,
+            "no release",
+            [TextSpan(text=why)],
+            [],
+            status="unsure",
+            uncertainty="window empty",
+        )
+    z = facts.signals.position[:, 2]
+    released = grasp.end + 1
+    height = float(z[released] - z[grasp.start])
+    t = facts.t[released]
     evidence = [
-        TextSpan(text=f"Still (under {below:g} m/s) for {seconds(still_s)}, from "),
-        *at_times([t0]),
-        TextSpan(text=" to "),
-        *at_times([t1]),
+        TextSpan(text=f"Released {abs(height) * 100:.1f} cm "),
+        TextSpan(text=f"{'above' if height >= 0 else 'below'} where it was picked up, at "),
+        *at_times([t]),
         TextSpan(text="."),
     ]
-    moments = [Moment(t=t0, label="Stops"), Moment(t=t1, label="Moves again")]
-    return Measurement(round(still_s, 3), seconds(still_s), evidence, moments, t0)
+    moments = [Moment(t=t, label="Release")]
+    return Measurement(round(height, 4), f"{round(height * 100, 1):g} cm", evidence, moments, t)

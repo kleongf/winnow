@@ -1,94 +1,33 @@
 """The pure scoring function: (Rubric, Episode facts, labels) -> Criterion results, Phrase
 results, Triage decision and Reason."""
 
-from collections.abc import Sequence
-
 import numpy as np
 
+from tests.triage.robot_data import (
+    CLEAN_GRIPPER,
+    CLEAN_Z,
+    DOWN,
+    FIRST_TRY,
+    NO_PAUSES,
+    REGRASP_GRIPPER,
+    REGRASP_Z,
+    UP,
+    facts,
+    first_try,
+    frames,
+    rubric,
+    still,
+    text,
+)
 from winnow.criteria.facts import EpisodeFacts
-from winnow.criteria.models import Criterion, RubricSettings, Setting, Window
+from winnow.criteria.models import RubricSettings, Setting, Window
 from winnow.episodes.models import EpisodeSignals
-from winnow.rubric.models import Rubric
-from winnow.triage.models import Label, Triage
+from winnow.triage.models import Label
 from winnow.triage.scoring import score
 
-FIRST_TRY = "grasps the object on the first try"
-NO_PAUSES = "no long pauses"
-SETTINGS = RubricSettings(
-    gripper_closed_level=Setting(value=0.2, margin=0.1),
-    grasp_rise_m=Setting(value=0.02, margin=0.01),
+CRISP = RubricSettings(
+    gripper_closed_level=Setting(value=0.2, margin=0), grasp_rise_m=Setting(value=0.02, margin=0)
 )
-UP, DOWN = 0.10, 0.0  # end-effector heights, m
-
-
-def facts(gripper: Sequence[float], z: Sequence[float] | None = None) -> EpisodeFacts:
-    """Robot data at 15 Hz; the arm keeps moving along x so it is never still."""
-    n = len(gripper)
-    zs = np.asarray(z if z is not None else [DOWN] * n, dtype=np.float64)
-    position = np.stack([np.linspace(0, 1, n), np.zeros(n), zs], axis=1)
-    signals = EpisodeSignals(
-        episode_index=0,
-        fps=15.0,
-        timestamps=np.arange(n) / 15.0,
-        position=position,
-        gripper=np.asarray(gripper, dtype=np.float64),
-        dataset_outcome=True,
-    )
-    return EpisodeFacts(signals)
-
-
-def frames(*runs: tuple[float, int]) -> list[float]:
-    return [value for value, count in runs for _ in range(count)]
-
-
-def first_try(threshold: float = 1, hard: bool = True, id: str = "grasp-attempts") -> Criterion:
-    return Criterion(
-        id=id,
-        phrase=FIRST_TRY,
-        primitive="grasp_attempts",
-        comparator="<=",
-        threshold=threshold,
-        unit="attempts",
-        hard=hard,
-    )
-
-
-def still(
-    phrase: str = NO_PAUSES, window: Window | None = None, hard: bool = True, id: str = "still"
-) -> Criterion:
-    return Criterion(
-        id=id,
-        phrase=phrase,
-        primitive="longest_still_s",
-        params={"speed_below_m_s": 0.01},
-        comparator="<",
-        threshold=1.0,
-        unit="s",
-        window=window or Window(),
-        hard=hard,
-    )
-
-
-def rubric(*criteria: Criterion, settings: RubricSettings = SETTINGS) -> Rubric:
-    return Rubric(
-        description=f"Expert: {FIRST_TRY}, {NO_PAUSES}.",
-        phrases=[FIRST_TRY, NO_PAUSES],
-        settings=settings,
-        criteria=list(criteria),
-    )
-
-
-def text(triage: Triage) -> str:
-    return "".join(span.text for span in triage.reason)
-
-
-# One closure (frames 15-29) during which the arm lifts 10 cm, then it opens.
-CLEAN_GRIPPER = frames((0, 15), (1, 15), (0, 15))
-CLEAN_Z = frames((DOWN, 20), (UP, 25))
-# Episode 42's shape: two closures that don't lift (frames 10-14, 20-24), then the grasp
-# (frames 30-44) that does. 3.0 s at 15 Hz.
-REGRASP_GRIPPER = frames((0, 10), (1, 5), (0, 5), (1, 5), (0, 5), (1, 15))
-REGRASP_Z = frames((DOWN, 35), (UP, 10))
 
 
 def test_one_closure_that_lifts_is_a_first_try_grasp_and_is_kept():
@@ -126,12 +65,12 @@ def test_closures_before_the_grasp_are_failed_attempts_and_reject_with_their_tim
 
 def test_the_grasp_is_the_last_closure_that_rises_the_rubrics_grasp_rule():
     # The second closure (frames 15-24) lifts 1.5 cm: an attempt under a 2 cm rule, the grasp
-    # under a 1 cm one.
+    # under a 1 cm one. (No margins, so neither is unsure.)
     gripper = frames((0, 5), (1, 5), (0, 5), (1, 10), (0, 5))
     z = frames((DOWN, 18), (0.015, 12))
-    lenient = SETTINGS.model_copy(update={"grasp_rise_m": Setting(value=0.01, margin=0)})
+    lenient = CRISP.model_copy(update={"grasp_rise_m": Setting(value=0.01, margin=0)})
 
-    strict = score(rubric(first_try(threshold=2)), facts(gripper, z))
+    strict = score(rubric(first_try(threshold=2), settings=CRISP), facts(gripper, z))
     loose = score(rubric(first_try(threshold=2), settings=lenient), facts(gripper, z))
 
     assert (strict.criteria[0].measurement, strict.decision) == ("no grasp", "reject")
@@ -142,9 +81,9 @@ def test_closed_means_above_the_rubrics_gripper_closed_level():
     # A half closure at 0.15 before the grasp: not a closure at the 0.2 level, one at 0.1.
     gripper = frames((0, 5), (0.15, 5), (0, 5), (1, 15), (0, 5))
     z = frames((DOWN, 20), (UP, 15))
-    loose = SETTINGS.model_copy(update={"gripper_closed_level": Setting(value=0.1, margin=0)})
+    loose = CRISP.model_copy(update={"gripper_closed_level": Setting(value=0.1, margin=0)})
 
-    assert score(rubric(first_try()), facts(gripper, z)).decision == "keep"
+    assert score(rubric(first_try(), settings=CRISP), facts(gripper, z)).decision == "keep"
     assert score(rubric(first_try(), settings=loose), facts(gripper, z)).decision == "reject"
 
 
@@ -180,7 +119,7 @@ def test_closures_that_never_lift_are_all_failed_attempts_with_no_grasp():
 def test_a_phrase_passes_only_when_all_its_criteria_pass():
     both = score(rubric(first_try(), still(phrase=FIRST_TRY)), facts(CLEAN_GRIPPER, CLEAN_Z))
 
-    assert [p.status for p in both.phrases] == ["pass", None]
+    assert [p.status for p in both.phrases] == ["pass", None, None]
     assert both.decision == "keep"
 
 
@@ -216,7 +155,7 @@ def test_weakest_link_any_failing_hard_phrase_rejects_over_an_unsure_one():
 
     triage = score(rubric(first_try(), unsure_pause), holds)
 
-    assert [p.status for p in triage.phrases] == ["fail", "unsure"]
+    assert [p.status for p in triage.phrases] == ["fail", None, "unsure"]
     assert triage.decision == "reject"
 
 
@@ -242,7 +181,7 @@ def test_the_reject_reason_starts_from_the_earliest_failure_and_lists_the_others
         EpisodeSignals(0, 15.0, data.signals.timestamps, position, data.signals.gripper, True)
     )
 
-    triage = score(rubric(still(), first_try()), paused)
+    triage = score(rubric(still(threshold=0.5), first_try()), paused)
 
     assert [r.status for r in triage.criteria] == ["fail", "fail"]
     assert text(triage).startswith(f'Rejected: "{FIRST_TRY}" failed. 2 failed grasp attempts')

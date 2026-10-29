@@ -13,6 +13,16 @@ from winnow.criteria.primitives import PRIMITIVES, Kind, Primitive
 Comparator = Literal["<", "<=", ">=", ">", "=="]
 WindowKind = Literal["whole", "before_grasp", "holding", "after_release", "last_n_s"]
 Status = Literal["pass", "fail", "unsure"]
+# Why a result is unsure (or, for "unconfirmed fail", why its fail can't reject on its own).
+# Samples split, Spark said unsure and track lost join with the visual and tracked primitives.
+UncertaintySignal = Literal[
+    "near threshold",
+    "near threshold (count)",
+    "unconfirmed fail",
+    "window empty",
+    "source missing",
+    "step failed",
+]
 
 
 class Window(BaseModel):

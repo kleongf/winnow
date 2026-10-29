@@ -8,13 +8,14 @@ from collections.abc import Sequence
 
 from winnow.criteria.catalog import CATALOG
 from winnow.criteria.english import english
-from winnow.criteria.facts import EpisodeFacts
-from winnow.criteria.grasps import Grasps, find_grasps
+from winnow.criteria.facts import EpisodeFacts, SourceProblem
+from winnow.criteria.grasps import Grasps, Interval, find_grasps
 from winnow.criteria.measured import Measurement
 from winnow.criteria.models import Criterion, Status, TextSpan, Window
 from winnow.criteria.primitives import PRIMITIVES
 from winnow.criteria.windows import resolve_window, window_name
 from winnow.rubric.models import Rubric
+from winnow.triage.confidence import confidence, effective_margin, judge, p_keep, phrase_p
 from winnow.triage.models import (
     CriterionResult,
     Label,
@@ -35,47 +36,44 @@ def score(rubric: Rubric, facts: EpisodeFacts, labels: Sequence[Label] = ()) -> 
         for p in rubric.phrases
     ]
     decision = weakest_link(phrases)
+    keep = p_keep([p.p_pass for p in phrases if p.hard])
     return Triage(
         decision=decision,
         reason=reason_for(decision, results, phrases),
         criteria=results,
         phrases=phrases,
+        p_keep=keep,
+        confidence=confidence(keep),
     )
-
-
-def _passes(criterion: Criterion, value: float) -> bool:
-    match criterion.comparator:
-        case "<":
-            return value < criterion.threshold
-        case "<=":
-            return value <= criterion.threshold
-        case ">=":
-            return value >= criterion.threshold
-        case ">":
-            return value > criterion.threshold
-        case "==":
-            return value == criterion.threshold
 
 
 def _empty_window(window: Window, grasps: Grasps) -> Measurement:
     why = "no grasp" if grasps.grasp is None else "the grasp never opened"
     evidence = [TextSpan(text=f"No window {window_name(window)}: {why}.")]
-    return Measurement(None, "no window", evidence, [], status="unsure")
+    return Measurement(None, "no window", evidence, [], status="unsure", uncertainty="window empty")
+
+
+def _unavailable(problem: SourceProblem, criterion: Criterion) -> Measurement:
+    source = PRIMITIVES[criterion.primitive].source
+    evidence = [TextSpan(text=f"Can't measure: {source} {problem.split()[-1]}.")]
+    return Measurement(None, source, evidence, [], status="unsure", uncertainty=problem)
+
+
+def _measure(
+    criterion: Criterion, facts: EpisodeFacts, grasps: Grasps, frames: Interval | None
+) -> Measurement:
+    problem = facts.unavailable.get(PRIMITIVES[criterion.primitive].source)
+    if problem is not None:
+        return _unavailable(problem, criterion)
+    if frames is None:
+        return _empty_window(criterion.window, grasps)
+    return CATALOG[criterion.primitive].measure(criterion, facts, grasps, frames)
 
 
 def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) -> CriterionResult:
     frames = resolve_window(criterion.window, grasps, facts.signals.fps)
-    if frames is None:
-        measured = _empty_window(criterion.window, grasps)
-    else:
-        measured = CATALOG[criterion.primitive].measure(criterion, facts, grasps, frames)
-    status: Status = measured.status or (
-        "unsure"
-        if measured.value is None
-        else "pass"
-        if _passes(criterion, measured.value)
-        else "fail"
-    )
+    measured = _measure(criterion, facts, grasps, frames)
+    judged = judge(criterion, measured)
     return CriterionResult(
         criterion_id=criterion.id,
         phrase=criterion.phrase,
@@ -83,7 +81,7 @@ def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) 
         kind=criterion.kind,
         hard=criterion.hard,
         english=english(criterion),
-        status=status,
+        status=judged.status,
         value=measured.value,
         measurement=measured.shown,
         comparator=criterion.comparator,
@@ -95,8 +93,10 @@ def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) 
         if frames is None
         else TimeWindow(start=facts.t[frames.start], end=facts.t[frames.end]),
         window_name=window_name(criterion.window),
-        at_s=measured.at_s if status == "fail" else None,
-        uncertainty="window empty" if frames is None else None,
+        at_s=measured.at_s if judged.status == "fail" else None,
+        uncertainty=judged.uncertainty,
+        margin=effective_margin(criterion),
+        p_pass=judged.p_pass,
         camera=criterion.views[0] if criterion.views else None,
     )
 
@@ -112,13 +112,15 @@ def phrase_result(phrase: str, results: list[CriterionResult], label: Label | No
     hard = [r for r in results if r.hard]
     deciding = hard or results
     status: Status | None = None
+    p = phrase_p([r.p_pass for r in deciding])
     if label is not None:
         status = label.value
+        p = 1.0 if label.value == "pass" else 0.0
     elif any(conclusive_fail(r) for r in deciding):
         status = "fail"
     elif deciding:
         status = "pass" if all(r.status == "pass" for r in deciding) else "unsure"
-    return PhraseResult(phrase=phrase, hard=bool(hard), status=status, label=label)
+    return PhraseResult(phrase=phrase, hard=bool(hard), status=status, label=label, p_pass=p)
 
 
 def weakest_link(phrases: list[PhraseResult]) -> TriageDecision:

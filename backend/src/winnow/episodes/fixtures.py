@@ -25,6 +25,14 @@ def failed(index: int) -> bool:
     return index % 3 == 2
 
 
+def carry_climb(index: int) -> float:
+    """How fast the arm climbs while carrying, in m per Episode length. Episodes with
+    i % 3 == 1 climb faster, a little more each, so they release 4.4 cm, 5.3 cm, ... above
+    where they picked up: inside the seeded release height's margin (5 cm ± 1 cm), so each
+    needs review with its own confidence. Robot data only: recorded Meta replies still hold."""
+    return 0.17 + 0.01 * index if index % 3 == 1 else 0.10
+
+
 def sliding_block(index: int) -> str:
     """A red block sliding right over grey, under the wrist seed point (190,105) at about 1 s.
     Its start shifts a little per Episode."""
@@ -35,7 +43,9 @@ def sliding_block(index: int) -> str:
     )
 
 
-def state(frames: int, closes: bool = True, regrasps: bool = False) -> np.ndarray:
+def state(
+    frames: int, closes: bool = True, regrasps: bool = False, climb: float = 0.10
+) -> np.ndarray:
     """End-effector xyz + roll/pitch/yaw + gripper per frame (droid_100's `observation.state`).
 
     One closure while carrying by default. With `regrasps`, Episode 42's shape: two closures at
@@ -45,7 +55,7 @@ def state(frames: int, closes: bool = True, regrasps: bool = False) -> np.ndarra
     t = np.linspace(0.0, 1.0, frames)
     x = 0.4 + 0.2 * t
     z = 0.25 - 0.15 * np.sin(np.pi * np.clip(t * 2, 0, 1))  # dip to the object, then lift
-    z = np.where(t > 0.5, 0.10 + 0.10 * (t - 0.5), z)
+    z = np.where(t > 0.5, 0.10 + climb * (t - 0.5), z)
     closed = (t > 0.3) & (t < 0.8)  # closed while carrying
     if regrasps:
         z = np.where(t < 0.3, 0.25 - 0.5 * t, np.where(t < 0.65, 0.10, 0.10 + 0.25 * (t - 0.65)))
@@ -58,7 +68,8 @@ def state(frames: int, closes: bool = True, regrasps: bool = False) -> np.ndarra
 
 def _write_parquet(root: Path, episodes: int, frames: int, open_gripper: tuple[int, ...]) -> None:
     states = [
-        state(frames, closes=i not in open_gripper, regrasps=failed(i)) for i in range(episodes)
+        state(frames, closes=i not in open_gripper, regrasps=failed(i), climb=carry_climb(i))
+        for i in range(episodes)
     ]
     rows = episodes * frames
     episode_index = np.repeat(np.arange(episodes), frames)

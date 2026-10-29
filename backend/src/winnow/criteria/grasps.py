@@ -47,7 +47,12 @@ class Grasps:
     grasp: int | None  # index into `closures`; None when no closure rose enough
     frames: int  # in the Episode
     released: bool  # the grasp opened before the Episode ended
-    rise_rule_m: float  # how far the arm had to rise for a closure to be the grasp
+    settings: RubricSettings  # the gripper-closed level and grasp rule they were read with
+
+    @property
+    def rise_rule_m(self) -> float:
+        """How far the arm had to rise for a closure to be the grasp."""
+        return self.settings.grasp_rise_m.value
 
     @property
     def failed(self) -> list[Interval]:
@@ -62,9 +67,8 @@ class Grasps:
 def find_grasps(signals: EpisodeSignals, settings: RubricSettings) -> Grasps:
     found = closures(signals.gripper, settings.gripper_closed_level.value)
     z = signals.position[:, 2]
-    rule = settings.grasp_rise_m.value
-    lifting = [i for i, c in enumerate(found) if rise_m(z, c) >= rule]
+    lifting = [i for i, c in enumerate(found) if rise_m(z, c) >= settings.grasp_rise_m.value]
     grasp = lifting[-1] if lifting else None
     frames = len(signals.gripper)
     released = grasp is not None and found[grasp].end < frames - 1
-    return Grasps(found, grasp, frames, released, rule)
+    return Grasps(found, grasp, frames, released, settings)

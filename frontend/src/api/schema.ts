@@ -597,7 +597,7 @@ export interface components {
              * Primitive
              * @enum {string}
              */
-            primitive: "grasp_attempts" | "longest_still_s";
+            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency";
             /** Question */
             question?: string | null;
             /** Threshold */
@@ -640,17 +640,21 @@ export interface components {
              * @enum {string}
              */
             kind: "measured" | "tracked" | "visual";
+            /** Margin */
+            margin: number;
             /** Measurement */
             measurement: string;
             /** Moments */
             moments: components["schemas"]["Moment"][];
+            /** P Pass */
+            p_pass: number;
             /** Phrase */
             phrase: string;
             /**
              * Primitive
              * @enum {string}
              */
-            primitive: "grasp_attempts" | "longest_still_s";
+            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency";
             /**
              * Status
              * @enum {string}
@@ -659,7 +663,7 @@ export interface components {
             /** Threshold */
             threshold: number;
             /** Uncertainty */
-            uncertainty: "window empty" | null;
+            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed") | null;
             /** Unit */
             unit: string;
             /** Value */
@@ -734,6 +738,8 @@ export interface components {
         };
         /** EpisodeTriage */
         EpisodeTriage: {
+            /** Confidence */
+            confidence: number;
             /** Criteria */
             criteria: components["schemas"]["CriterionResult"][];
             /**
@@ -743,6 +749,8 @@ export interface components {
             decision: "keep" | "reject" | "needs_review";
             /** Episode Id */
             episode_id: string;
+            /** P Keep */
+            p_keep: number;
             /** Phrases */
             phrases: components["schemas"]["PhraseResult"][];
             /** Reason */
@@ -880,6 +888,16 @@ export interface components {
             /** T */
             t: number;
         };
+        /** PhraseChip */
+        PhraseChip: {
+            /** Phrase */
+            phrase: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "fail" | "unsure";
+        };
         /** PhraseLabel */
         PhraseLabel: {
             interval?: components["schemas"]["FailInterval"] | null;
@@ -893,6 +911,8 @@ export interface components {
             /** Hard */
             hard: boolean;
             label: components["schemas"]["Label"] | null;
+            /** P Pass */
+            p_pass: number | null;
             /** Phrase */
             phrase: string;
             /** Status */
@@ -1085,6 +1105,8 @@ export interface components {
         };
         /** TriageRow */
         TriageRow: {
+            /** Confidence */
+            confidence: number;
             /**
              * Decision
              * @enum {string}
@@ -1092,8 +1114,12 @@ export interface components {
             decision: "keep" | "reject" | "needs_review";
             /** Episode Id */
             episode_id: string;
+            /** Not Passed */
+            not_passed: components["schemas"]["PhraseChip"][];
             /** Reason */
             reason: string;
+            /** Uncertainty */
+            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed")[];
         };
         /** ValidationError */
         ValidationError: {
