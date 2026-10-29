@@ -12,7 +12,7 @@ const root = resolve("artifacts", "e2e-data");
 
 rmSync(root, { recursive: true, force: true });
 const fixtures = ["run", "--project", "backend", "winnow", "fixtures", resolve(root, "droid_100")];
-execFileSync("uv", [...fixtures, "--episodes", "16"], { stdio: "inherit" });
+execFileSync("uv", [...fixtures, "--episodes", "17"], { stdio: "inherit" });
 
 const servers = await startServers({
   frontendPort: E2E_FRONTEND_PORT,

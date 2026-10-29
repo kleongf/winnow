@@ -1,4 +1,5 @@
-"""Gathers each Episode's facts and scores it against the latest Rubric version, on every read."""
+"""Gathers each Episode's facts and labels and scores it against the latest Rubric version, on
+every read."""
 
 from winnow.core.context import AppContext
 from winnow.criteria.facts import EpisodeFacts
@@ -13,7 +14,7 @@ def episode_facts(ctx: AppContext, episode: Episode) -> EpisodeFacts:
 
 
 def _triage(ctx: AppContext, version: RubricVersion, episode: Episode) -> EpisodeTriage:
-    triage = score(version.rubric, episode_facts(ctx, episode))  # no labels until Review
+    triage = score(version.rubric, episode_facts(ctx, episode), ctx.labels.in_force(episode.id))
     return EpisodeTriage(
         **triage.model_dump(), episode_id=episode.id, rubric_version=version.version
     )
@@ -23,17 +24,26 @@ def episode_triage(ctx: AppContext, episode: Episode) -> EpisodeTriage:
     return _triage(ctx, ctx.rubrics.latest(), episode)
 
 
-def triage_list(ctx: AppContext, episodes: list[Episode]) -> TriageList:
+def scored(ctx: AppContext, episodes: list[Episode]) -> tuple[RubricVersion, list[EpisodeTriage]]:
+    """Every one of `episodes` scored against the latest Rubric version, with its labels."""
     version = ctx.rubrics.latest()
-    rows = [_row(_triage(ctx, version, e)) for e in episodes]
-    return TriageList(rubric_version=version.version, rows=rows)
+    return version, [_triage(ctx, version, e) for e in episodes]
+
+
+def triage_list(ctx: AppContext, episodes: list[Episode]) -> TriageList:
+    version, triages = scored(ctx, episodes)
+    return TriageList(rubric_version=version.version, rows=[_row(t) for t in triages])
+
+
+def plain_reason(triage: EpisodeTriage) -> str:
+    return "".join(span.text for span in triage.reason)
 
 
 def _row(triage: EpisodeTriage) -> TriageRow:
     return TriageRow(
         episode_id=triage.episode_id,
         decision=triage.decision,
-        reason="".join(span.text for span in triage.reason),
+        reason=plain_reason(triage),
         confidence=triage.confidence,
         not_passed=[
             PhraseChip(phrase=p.phrase, status=p.status)

@@ -1,10 +1,10 @@
-import { NotBuiltYet } from "./features/core/NotBuiltYet";
 import { usePage } from "./features/core/pages";
 import { Sidebar } from "./features/core/Sidebar";
 import { PreparePage } from "./features/dataset/PreparePage";
 import { EpisodesPage } from "./features/episodes/EpisodesPage";
 import { EvaluationPage } from "./features/evaluation/EvaluationPage";
 import { ReferenceLabelsPage } from "./features/referenceLabels/ReferenceLabelsPage";
+import { ReviewPage } from "./features/review/ReviewPage";
 import { DescribePage } from "./features/rubric/DescribePage";
 import { SelectionPage } from "./features/selection/SelectionPage";
 
@@ -16,11 +16,11 @@ export function App() {
       <main className="flex-1 overflow-y-auto">
         {page === "prepare" && <PreparePage />}
         {page === "select" && <SelectionPage />}
+        {page === "describe" && <DescribePage />}
         {page === "episodes" && <EpisodesPage />}
+        {page === "review" && <ReviewPage />}
         {page === "reference" && <ReferenceLabelsPage />}
         {page === "evaluation" && <EvaluationPage />}
-        {page === "describe" && <DescribePage />}
-        {page === "review" && <NotBuiltYet page={page} />}
       </main>
     </div>
   );

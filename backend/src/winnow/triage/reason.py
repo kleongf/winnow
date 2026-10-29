@@ -55,14 +55,20 @@ def _detail(result: CriterionResult) -> str:
     return f"{result.measurement} against {COMPARATORS[result.comparator]} {threshold}"
 
 
+def signal_text(result: CriterionResult) -> str:
+    """Why a result isn't a pass, e.g. "near threshold (4.4 cm against ≤ 5 cm)"."""
+    return f"{result.uncertainty or result.status} ({_detail(result)})"
+
+
+def undecided(results: list[CriterionResult], phrase: str) -> list[CriterionResult]:
+    """The hard results that keep an unsure Phrase from passing."""
+    return [r for r in results if r.phrase == phrase and r.hard and r.status != "pass"]
+
+
 def _needs_review(results: list[CriterionResult], phrases: list[PhraseResult]) -> list[TextSpan]:
     """Each unsure hard Phrase's Uncertainty signals, in Rubric order."""
-    unsure = {p.phrase for p in phrases if p.hard and p.status == "unsure"}
-    signals = [
-        f'"{r.phrase}": {r.uncertainty or r.status} ({_detail(r)})'
-        for r in results
-        if r.phrase in unsure and r.hard and r.status != "pass"
-    ]
+    unsure = [p.phrase for p in phrases if p.hard and p.status == "unsure"]
+    signals = [f'"{p}": {signal_text(r)}' for p in unsure for r in undecided(results, p)]
     return [TextSpan(text=f"Needs review: {'; '.join(dict.fromkeys(signals))}.")]
 
 

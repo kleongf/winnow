@@ -19,6 +19,7 @@ from winnow.evaluation.store import TestRunLog
 from winnow.jobs.models import Step
 from winnow.jobs.runner import JobRunner
 from winnow.jobs.store import JobStore
+from winnow.labels.store import LabelStore
 from winnow.meta.client import MetaClient
 from winnow.meta.costs import CostLog
 from winnow.meta.replay import ReplayTransport
@@ -52,6 +53,7 @@ class AppContext:
     rubrics: RubricStore
     drafts: DraftStore  # the Describe page's Rubric draft
     reference_labels: ReferenceLabelStore  # never read by scoring
+    labels: LabelStore  # interview and review labels: each overrides its Phrase's result
     test_runs: TestRunLog
     jobs: JobStore
     runner: JobRunner
@@ -83,6 +85,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     rubrics = RubricStore(db, SEEDED)
     drafts = DraftStore(db)
     reference_labels = ReferenceLabelStore(db)
+    labels = LabelStore(db)
     test_runs = TestRunLog(db)
     jobs = JobStore(db)
     meta = _meta(settings, db, transport)
@@ -110,6 +113,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         rubrics,
         drafts,
         reference_labels,
+        labels,
         test_runs,
         jobs,
         runner,

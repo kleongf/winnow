@@ -11,8 +11,6 @@ from winnow.baseline.models import BaselineAnswer
 from winnow.baseline.prompts import FROZEN
 from winnow.cli import main
 from winnow.core.settings import Settings
-from winnow.evaluation.service import evaluation_report
-from winnow.triage.models import Label
 
 FIRST_TRY, NEVER_DROPS = FROZEN.phrases[0], FROZEN.phrases[1]
 # Winnow keeps fixture Episode 0, routes 1 to Needs review and rejects 2 (three grasp attempts).
@@ -160,24 +158,29 @@ def test_an_unknown_rubric_version_is_not_found(test_set: TestClient):
     assert response.status_code == 404
 
 
-def fail_first_try(episode_id: str) -> list[Label]:
-    """An interview or review label that would reject every Episode it touched."""
-    return [Label(phrase=FIRST_TRY, value="fail", source="review")]
+def fail_first_try(api: TestClient) -> None:
+    """Interview and review labels that would reject every labelled Episode they touched."""
+    for episode_id, source in zip(EPISODES[:3], ("review", "interview", "review"), strict=True):
+        response = api.post(
+            f"/api/episodes/{episode_id}/labels",
+            json={"phrase": FIRST_TRY, "value": "fail", "source": source},
+        )
+        assert response.status_code == 201, response.text
 
 
 def test_interview_and_review_labels_never_touch_test_set_episodes(test_set: TestClient):
-    ctx = app_context(test_set)
+    before = run(test_set, "test")
 
-    report = evaluation_report(ctx, "test", tuning_labels=fail_first_try)
+    fail_first_try(test_set)
 
-    assert report == evaluation_report(ctx, "test")
-    assert rows(report.model_dump())["winnow"]["keeps"] == 1
+    assert run(test_set, "test")["comparison"] == before["comparison"]
+    assert rows(before)["winnow"]["keeps"] == 1
 
 
 def test_interview_and_review_labels_apply_to_dev_set_episodes(api: TestClient):
-    ctx = app_context(labelled(api, "dev"))
+    dev = labelled(api, "dev")
+    fail_first_try(dev)
 
-    report = evaluation_report(ctx, "dev", tuning_labels=fail_first_try)
+    winnow = rows(run(dev, "dev"))["winnow"]
 
-    winnow = rows(report.model_dump())["winnow"]
     assert (winnow["keeps"], winnow["rejects"]) == (0, 3)

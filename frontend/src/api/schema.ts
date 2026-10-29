@@ -147,6 +147,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/episodes/{episode_id}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Labels
+         * @description Every label the Episode was given, oldest first; the newest per Phrase is in force.
+         */
+        get: operations["list_labels_api_episodes__episode_id__labels_get"];
+        put?: never;
+        /**
+         * Post Label
+         * @description Overrides one Phrase's result for this Episode; its Triage decision recomputes.
+         */
+        post: operations["post_label_api_episodes__episode_id__labels_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/episodes/{episode_id}/reference-labels": {
         parameters: {
             query?: never;
@@ -360,6 +384,27 @@ export interface paths {
         };
         /** Get Frozen Description */
         get: operations["get_frozen_description_api_reference_labels_description_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Review Queue
+         * @description The Needs review Episodes with a Reference label, least confident first; answer one with
+         *     a `review` label.
+         */
+        get: operations["get_review_queue_api_review_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1321,6 +1366,24 @@ export interface components {
             value: "pass" | "fail";
         };
         /**
+         * LabelDraw
+         * @description What a reviewer (or the interview) submits for one Phrase of one Episode.
+         */
+        LabelDraw: {
+            /** Phrase */
+            phrase: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "interview" | "review" | "audit";
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "pass" | "fail";
+        };
+        /**
          * LengthRule
          * @description Length alone's one duration threshold, chosen in hindsight on the evaluated set.
          */
@@ -1430,6 +1493,26 @@ export interface components {
             reason: string;
             /** Text */
             text: string;
+        };
+        /** ReviewItem */
+        ReviewItem: {
+            /** Confidence */
+            confidence: number;
+            /** Episode Id */
+            episode_id: string;
+            /** Reason */
+            reason: string;
+            /** Unsure */
+            unsure: components["schemas"]["UnsurePhrase"][];
+        };
+        /** ReviewQueue */
+        ReviewQueue: {
+            /** Items */
+            items: components["schemas"]["ReviewItem"][];
+            /** Reviewed */
+            reviewed: number;
+            /** Rubric Version */
+            rubric_version: number;
         };
         /**
          * Rubric
@@ -1546,6 +1629,31 @@ export interface components {
             episodes: number;
             /** Name */
             name: string;
+        };
+        /**
+         * StoredLabel
+         * @description A label as kept: labels hang off the Phrase, so one whose Phrase text changed stays in
+         *     history but no longer applies.
+         */
+        StoredLabel: {
+            /** Episode Id */
+            episode_id: string;
+            /** Labelled At */
+            labelled_at: string;
+            /** Phrase */
+            phrase: string;
+            /** Rubric Version */
+            rubric_version: number | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "interview" | "review" | "audit";
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "pass" | "fail";
         };
         /** SystemRow */
         SystemRow: {
@@ -1722,6 +1830,13 @@ export interface components {
             reason: string;
             /** Uncertainty */
             uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed")[];
+        };
+        /** UnsurePhrase */
+        UnsurePhrase: {
+            /** Phrase */
+            phrase: string;
+            /** Signals */
+            signals: string[];
         };
         /** ValidationError */
         ValidationError: {
@@ -1960,6 +2075,86 @@ export interface operations {
                 content: {
                     "image/jpeg": unknown;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_labels_api_episodes__episode_id__labels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredLabel"][];
+                };
+            };
+            /** @description The Episode has no Reference label yet */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_label_api_episodes__episode_id__labels_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelDraw"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredLabel"];
+                };
+            };
+            /** @description The Episode has no Reference label yet */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2313,6 +2508,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FrozenDescription"];
+                };
+            };
+        };
+    };
+    get_review_queue_api_review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewQueue"];
                 };
             };
         };

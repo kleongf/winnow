@@ -11,8 +11,10 @@ from winnow.dataset.routes import router as dataset_router
 from winnow.episodes.routes import router as episodes_router
 from winnow.evaluation.routes import router as evaluation_router
 from winnow.jobs.routes import router as jobs_router
+from winnow.labels.routes import router as labels_router
 from winnow.meta.transport import Transport
 from winnow.reference_labels.routes import router as reference_labels_router
+from winnow.review.routes import router as review_router
 from winnow.rubric.routes import router as rubric_router
 from winnow.selection.routes import router as selection_router
 from winnow.sets.routes import router as sets_router
@@ -42,6 +44,8 @@ def create_app(settings: Settings | None = None, transport: Transport | None = N
         rubric_router,
         triage_router,
         reference_labels_router,
+        labels_router,
+        review_router,
         evaluation_router,
         jobs_router,
     ):
