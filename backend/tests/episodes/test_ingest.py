@@ -60,7 +60,13 @@ def test_ingesting_the_same_episodes_again_does_no_new_work(api: TestClient, set
     again = ingest(api, 0)
 
     assert again["items"] == [
-        {"position": 0, "label": "droid_100:0", "status": "done", "detail": "already ingested"}
+        {
+            "position": 0,
+            "step": "ingest",
+            "label": "droid_100:0",
+            "status": "done",
+            "detail": "already ingested",
+        }
     ]
     assert clip.stat().st_mtime_ns == written
 

@@ -12,7 +12,7 @@ import { JobProgress } from "../jobs/JobProgress";
 import { useLatestJob } from "../jobs/useLatestJob";
 import { datasetStatusKey, useDatasetStatus, type DatasetStatus } from "./useDatasetStatus";
 
-const LATER_STAGES = ["Wrist tracks", "Exterior tracks", "Target boxes", "Spark-alone baseline"];
+const LATER_STAGES = ["Wrist tracks", "Exterior tracks", "Target boxes"];
 
 export function PreparePage() {
   const status = useDatasetStatus();
@@ -47,7 +47,7 @@ export function PreparePage() {
 }
 
 function StatusGrid(props: { status: DatasetStatus }) {
-  const { episodes, boxes, cost_usd: cost } = props.status;
+  const { episodes, boxes, baseline, cost_usd: cost } = props.status;
   return (
     <>
       <div className="mt-6 grid grid-cols-3 gap-3">
@@ -60,6 +60,15 @@ function StatusGrid(props: { status: DatasetStatus }) {
         <Stat label="Hand-drawn boxes" of={episodes} testId="boxes-drawn">
           {boxes}
         </Stat>
+        {baseline === null ? (
+          <Stat label="Spark-alone baseline" muted note="needs MODEL_API_KEY">
+            —
+          </Stat>
+        ) : (
+          <Stat label="Spark-alone baseline" of={episodes} testId="baseline-done">
+            {baseline}
+          </Stat>
+        )}
         {LATER_STAGES.map((label) => (
           <Stat key={label} label={label} muted>
             —
@@ -76,6 +85,7 @@ function Stat(props: {
   children: number | string;
   of?: number;
   muted?: boolean;
+  note?: string;
   testId?: string;
 }) {
   const value = typeof props.children === "number" ? props.children : null;
@@ -88,7 +98,9 @@ function Stat(props: {
           <span className="text-sm font-normal text-muted-foreground"> of {props.of}</span>
         )}
       </div>
-      {props.muted && <div className="text-[11px] text-muted-foreground">not built yet</div>}
+      {props.muted && (
+        <div className="text-[11px] text-muted-foreground">{props.note ?? "not built yet"}</div>
+      )}
       {props.of !== undefined && value !== null && (
         <Progress value={props.of ? (value / props.of) * 100 : 0} className="mt-2 h-1" />
       )}

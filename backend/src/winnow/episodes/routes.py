@@ -58,5 +58,5 @@ async def get_frame0(episode_id: str, camera: str, ctx: Context) -> FileResponse
 
 @router.post("/episodes/ingest", status_code=status.HTTP_202_ACCEPTED)
 async def start_ingest(request: IngestRequest, ctx: Context) -> IngestStarted:
-    items = ingest_items(request.source, request.indices)
+    items = ingest_items(request.source, request.indices, with_baseline=ctx.meta is not None)
     return IngestStarted(job_id=ctx.runner.submit("ingest", items))

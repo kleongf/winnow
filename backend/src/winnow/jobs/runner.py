@@ -24,17 +24,34 @@ class JobRunner:
         return job_id
 
     async def run(self, job_id: int) -> None:
-        """Run every queued item of a job; one failing item never stops the others."""
-        await asyncio.gather(
-            *(self._run_item(job_id, pos, item) for pos, item in self._store.queued(job_id))
-        )
+        """Run every queued item of a job; one failing item never stops the others, but an item
+        waits for the one it comes `after`, and is skipped if that one fails."""
+        items = self._store.queued(job_id)
+        finished = {pos: asyncio.Event() for pos, _ in items}
+        succeeded: set[int] = set()
+        labels = {pos: item.label for pos, item in items}
+
+        async def run_one(position: int, item: WorkItem) -> None:
+            try:
+                if item.after in finished:
+                    await finished[item.after].wait()
+                    if item.after not in succeeded:
+                        skipped = f"skipped: {labels[item.after]} failed"
+                        self._store.set_status(job_id, position, "failed", skipped)
+                        return
+                if await self._run_item(job_id, position, item):
+                    succeeded.add(position)
+            finally:
+                finished[position].set()
+
+        await asyncio.gather(*(run_one(pos, item) for pos, item in items))
 
     async def shutdown(self) -> None:
         for task in self._tasks:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
 
-    async def _run_item(self, job_id: int, position: int, item: WorkItem) -> None:
+    async def _run_item(self, job_id: int, position: int, item: WorkItem) -> bool:
         async with self._slots:
             self._store.set_status(job_id, position, "running", None)
             try:
@@ -44,5 +61,6 @@ class JobRunner:
                 raise
             except Exception as error:  # the item fails; the job goes on
                 self._store.set_status(job_id, position, "failed", f"{error}")
-                return
+                return False
             self._store.set_status(job_id, position, "done", detail)
+            return True

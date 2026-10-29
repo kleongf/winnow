@@ -3,6 +3,14 @@ import { Progress } from "@/components/ui/progress";
 import type { components } from "../../api/schema";
 
 type Job = components["schemas"]["Job"];
+type JobItem = components["schemas"]["JobItem"];
+
+const STEP_NAMES: Record<string, string> = { baseline: "Spark-alone baseline" };
+
+function itemName(item: JobItem): string {
+  const step = STEP_NAMES[item.step];
+  return step ? `${item.label} · ${step}` : item.label;
+}
 
 export function JobProgress(props: { job: Job }) {
   const { job } = props;
@@ -21,14 +29,14 @@ export function JobProgress(props: { job: Job }) {
       <Progress value={(settled / job.total) * 100} className="mt-2 h-1.5" />
       {running.length > 0 && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Now: {running.map((item) => item.label).join(", ")}
+          Now: {running.map(itemName).join(", ")}
         </p>
       )}
       {failed.length > 0 && (
         <ul className="mt-3 space-y-1 text-xs">
           {failed.map((item) => (
             <li key={item.position}>
-              <span className="font-medium text-destructive">{item.label}</span>{" "}
+              <span className="font-medium text-destructive">{itemName(item)}</span>{" "}
               <span className="text-muted-foreground">{item.detail}</span>
             </li>
           ))}

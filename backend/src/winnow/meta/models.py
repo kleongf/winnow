@@ -56,6 +56,7 @@ class SparkRequest:
     effort: Effort = "medium"
     max_output_tokens: int = 4000
     sample: int = 0  # repeated samples of one prompt cache separately
+    schema_name: str = "answer"  # names the structured-output format
 
 
 @dataclass(frozen=True)

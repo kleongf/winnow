@@ -17,10 +17,12 @@ class WorkItem:
     step: str
     args: Mapping[str, object]  # JSON-serializable
     label: str  # what the item is about, e.g. "droid_100:42"
+    after: int | None = None  # position of an item in the same job that must succeed first
 
 
 class JobItem(BaseModel):
     position: int
+    step: str
     label: str
     status: Status
     detail: str | None
