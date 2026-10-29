@@ -2,11 +2,13 @@
 // video, a lane per Criterion and the robot-data plots, and a right panel with the Triage
 // decision, Reason and Criterion results. Review and Reference label mode put their controls in
 // `actions`. `blind` (Reference label mode) hides every Winnow and baseline output: tracks,
-// lanes, the Triage decision, Reason and Criterion results.
+// lanes, the Triage decision, Reason and Criterion results. An Episode without a Reference label
+// has no lanes or Triage decision to show either: the server withholds them until it's labelled.
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 
+import { AwaitingLabelNote } from "../referenceLabels/AwaitingLabel";
 import { useSignalLevels } from "../rubric/useRubric";
 import { SET_LABELS, setsByEpisode, useSets } from "../sets/useSets";
 import { TrackOverlay } from "../tracking/TrackOverlay";
@@ -36,13 +38,17 @@ export function Workstation(props: {
   const playhead = usePlayhead(episode.duration_s, props.initialT);
   const [camera, setCamera] = useState(episode.cameras[0] ?? null);
   const signals = useSignals(episode.id);
-  const set = setsByEpisode(useSets().data).get(episode.id);
   const blind = props.blind ?? false;
   const tracks = useShownTracks(episode.id, blind);
   const shownTrack = tracks.find((t) => t.camera === camera && t.status === "tracked");
   const levels = useSignalLevels(!blind);
   const { toggle, seek } = playhead;
-  const { triage, openId, setOpenId, focus } = useTriageFocus(episode, blind, seek, setCamera);
+  const { triage, awaiting, openId, setOpenId, focus } = useTriageFocus(
+    episode,
+    blind,
+    seek,
+    setCamera,
+  );
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -111,6 +117,7 @@ export function Workstation(props: {
       </section>
       <aside className="min-w-0 rounded-lg border bg-card p-4">
         {renderActions(props.actions, playhead)}
+        {awaiting && <AwaitingLabelNote />}
         {triage && (
           <TriagePanel
             triage={triage}
@@ -120,27 +127,38 @@ export function Workstation(props: {
             onSeek={seek}
           />
         )}
-        <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-          Instruction
-        </div>
-        <p className="mt-1 text-[15px] leading-snug">
-          {episode.instruction ?? <span className="text-muted-foreground">None recorded</span>}
-        </p>
-        <dl className="mt-4 grid grid-cols-2 gap-y-1 text-xs">
-          <dt className="text-muted-foreground">Frames</dt>
-          <dd className="tabular-nums">
-            {episode.frames} at {episode.fps} Hz
-          </dd>
-          <dt className="text-muted-foreground">Source</dt>
-          <dd>{episode.source}</dd>
-          <dt className="text-muted-foreground">Set</dt>
-          <dd data-testid="episode-set">{set ? SET_LABELS[set] : "None"}</dd>
-          {tracks.map((track) => (
-            <TrackStatus key={track.kind} track={track} />
-          ))}
-        </dl>
+        <EpisodeDetails episode={episode} tracks={tracks} />
       </aside>
     </div>
+  );
+}
+
+/** The Episode's own facts under the panel: instruction, frames, source, set and track health. */
+function EpisodeDetails(props: { episode: Episode; tracks: Track[] }) {
+  const { episode } = props;
+  const set = setsByEpisode(useSets().data).get(episode.id);
+  return (
+    <>
+      <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        Instruction
+      </div>
+      <p className="mt-1 text-[15px] leading-snug">
+        {episode.instruction ?? <span className="text-muted-foreground">None recorded</span>}
+      </p>
+      <dl className="mt-4 grid grid-cols-2 gap-y-1 text-xs">
+        <dt className="text-muted-foreground">Frames</dt>
+        <dd className="tabular-nums">
+          {episode.frames} at {episode.fps} Hz
+        </dd>
+        <dt className="text-muted-foreground">Source</dt>
+        <dd>{episode.source}</dd>
+        <dt className="text-muted-foreground">Set</dt>
+        <dd data-testid="episode-set">{set ? SET_LABELS[set] : "None"}</dd>
+        {props.tracks.map((track) => (
+          <TrackStatus key={track.kind} track={track} />
+        ))}
+      </dl>
+    </>
   );
 }
 

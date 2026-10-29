@@ -1,4 +1,5 @@
-// The Episodes table: one dense row per Episode with its Triage decision and Reason.
+// The Episodes table: one dense row per Episode with its Triage decision and Reason, or, until
+// it has a Reference label, "Awaiting Reference label".
 import {
   Table,
   TableBody,
@@ -8,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { AwaitingLabelTag } from "../referenceLabels/AwaitingLabel";
 import { SetTag } from "../sets/SetTag";
 import type { SetName } from "../sets/useSets";
 import { TriageBadge } from "../triage/TriageBadge";
@@ -58,7 +60,13 @@ export function EpisodeTable(props: {
               <TableCell>
                 <SetTag name={props.setOf.get(e.id)} />
               </TableCell>
-              <TableCell>{row && <TriageBadge decision={row.decision} />}</TableCell>
+              <TableCell>
+                {e.reference_labelled ? (
+                  row && <TriageBadge decision={row.decision} />
+                ) : (
+                  <AwaitingLabelTag />
+                )}
+              </TableCell>
               <TableCell className="max-w-md truncate" title={row?.reason}>
                 {row?.reason}
               </TableCell>

@@ -190,7 +190,7 @@ export interface paths {
         };
         /**
          * Get Triage
-         * @description One Episode's Criterion results, Phrase results, Triage decision and Reason.
+         * @description One labelled Episode's Criterion results, Phrase results, Triage decision and Reason.
          */
         get: operations["get_triage_api_episodes__episode_id__triage_get"];
         put?: never;
@@ -454,7 +454,8 @@ export interface paths {
         };
         /**
          * List Triage
-         * @description Every Episode's Triage decision and Reason, for the Episodes table.
+         * @description The Triage decision and Reason of every Episode with a Reference label, for the Episodes
+         *     table; the rest await theirs.
          */
         get: operations["list_triage_api_triage_get"];
         put?: never;
@@ -711,6 +712,11 @@ export interface components {
             index: number;
             /** Instruction */
             instruction: string | null;
+            /**
+             * Reference Labelled
+             * @default false
+             */
+            reference_labelled: boolean;
             /** Source */
             source: string;
             /** Task Object */
@@ -1440,6 +1446,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EpisodeTriage"];
                 };
+            };
+            /** @description The Episode has no Reference label yet */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

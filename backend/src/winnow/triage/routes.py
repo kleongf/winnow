@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from winnow.core.context import AppContext, get_context
-from winnow.episodes.routes import find_episode
+from winnow.reference_labels.gate import RevealedEpisode, revealed_episodes
 from winnow.triage.models import EpisodeTriage, TriageList
 from winnow.triage.service import episode_triage, triage_list
 
@@ -14,11 +14,15 @@ Context = Annotated[AppContext, Depends(get_context)]
 
 @router.get("/triage")
 async def list_triage(ctx: Context) -> TriageList:
-    """Every Episode's Triage decision and Reason, for the Episodes table."""
-    return triage_list(ctx)
+    """The Triage decision and Reason of every Episode with a Reference label, for the Episodes
+    table; the rest await theirs."""
+    return triage_list(ctx, revealed_episodes(ctx))
 
 
-@router.get("/episodes/{episode_id}/triage")
-async def get_triage(episode_id: str, ctx: Context) -> EpisodeTriage:
-    """One Episode's Criterion results, Phrase results, Triage decision and Reason."""
-    return episode_triage(ctx, find_episode(ctx, episode_id))
+@router.get(
+    "/episodes/{episode_id}/triage",
+    responses={403: {"description": "The Episode has no Reference label yet"}},
+)
+async def get_triage(episode: RevealedEpisode, ctx: Context) -> EpisodeTriage:
+    """One labelled Episode's Criterion results, Phrase results, Triage decision and Reason."""
+    return episode_triage(ctx, episode)

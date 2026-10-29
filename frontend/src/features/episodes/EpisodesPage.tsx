@@ -1,4 +1,5 @@
-// Every ingested Episode in a dense table, sorted into Triage tabs with its Reason; a row opens
+// Every ingested Episode in a dense table, sorted into Triage tabs with its Reason (only once it
+// has a Reference label; until then it's awaiting one and has no Triage decision); a row opens
 // the full-page Workstation. The tab, the open Episode and its start time live in `?triage=`,
 // `?episode=` and `?t=`; J/K step through the tab's Episodes.
 import { navigate, useSearchParams } from "../core/url";
@@ -20,9 +21,16 @@ function useTriagedEpisodes(tab: TriageTab) {
   const episodes = all ?? [];
   const shown =
     tab === "all" ? episodes : episodes.filter((e) => triageOf.get(e.id)?.decision === tab);
-  const counts = countDecisions(triage?.rows.map((r) => r.decision) ?? []);
+  const decided = countDecisions(triage?.rows.map((r) => r.decision) ?? []);
+  const counts = { ...decided, all: episodes.length };
+  const awaiting = episodes.filter((e) => !e.reference_labelled).length;
   const summary = triage
-    ? `${String(counts.all - counts.needs_review)} of ${String(counts.all)} decided automatically · ${String(counts.needs_review)} Needs review · Rubric v${String(triage.rubric_version)}`
+    ? [
+        `${String(decided.all - decided.needs_review)} of ${String(decided.all)} decided automatically`,
+        `${String(decided.needs_review)} Needs review`,
+        ...(awaiting > 0 ? [`${String(awaiting)} awaiting Reference label`] : []),
+        `Rubric v${String(triage.rubric_version)}`,
+      ].join(" · ")
     : `${String(episodes.length)} Episodes in the Dataset.`;
   return { loaded: all !== undefined, episodes, shown, triageOf, counts, summary };
 }

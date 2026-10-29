@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import OPEN_GRIPPER_EPISODE
-from tests.helpers import app_context, wait_for_job
+from tests.helpers import app_context, reference_label, wait_for_job
 from winnow.baseline.prompts import FROZEN
 from winnow.rubric.models import Rubric
 
@@ -20,6 +20,8 @@ def ingested(api: TestClient) -> TestClient:
     indices = [0, REGRASP_EPISODE, OPEN_GRIPPER_EPISODE]
     job = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": indices})
     wait_for_job(api, job.json()["job_id"])
+    for index in indices:  # their outputs show only once labelled
+        reference_label(api, f"droid_100:{index}")
     return api
 
 
