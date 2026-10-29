@@ -5,9 +5,9 @@ import { execFileSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { serveUntilInterrupted, startServers } from "./servers.ts";
+import { PORT_OFFSET, serveUntilInterrupted, startServers } from "./servers.ts";
 
-const E2E_FRONTEND_PORT = 5174;
+const E2E_FRONTEND_PORT = 5174 + PORT_OFFSET;
 const root = resolve("artifacts", "e2e-data");
 
 rmSync(root, { recursive: true, force: true });
@@ -16,7 +16,7 @@ execFileSync("uv", [...fixtures, "--episodes", "5"], { stdio: "inherit" });
 
 const servers = await startServers({
   frontendPort: E2E_FRONTEND_PORT,
-  backendPort: 8001,
+  backendPort: 8001 + PORT_OFFSET,
   // With no key, e2e can never reach the Meta API; replay answers instead.
   env: {
     DATA_DIR: resolve(root, "data"),
