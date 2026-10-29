@@ -24,6 +24,7 @@ export function AnchorHistogram(props: {
 }) {
   const { preview, threshold } = props;
   const measured = preview.values.flatMap((v) => (v.value === null ? [] : [v.value]));
+  const unmeasured = preview.values.length - measured.length;
   // The range follows the values and the saved threshold, never the drag.
   const domain = sliderDomain(measured, props.anchor, preview.margin, preview.unit);
   const bins = binValues(preview.values, domain);
@@ -81,6 +82,7 @@ export function AnchorHistogram(props: {
       </svg>
       <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
         <span>{formatValue(domain.min, preview.unit)}</span>
+        {unmeasured > 0 && <span>{unmeasured} not measured, so unsure</span>}
         <span>{formatValue(domain.max, preview.unit)}</span>
       </div>
       {props.onDrag && (
