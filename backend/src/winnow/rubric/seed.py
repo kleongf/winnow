@@ -55,7 +55,6 @@ SEEDED = Rubric(
             comparator="<=",
             threshold=0.5,
             unit="box-heights",
-            window=Window(kind="after_release"),
             assumptions=["Set down, not dropped: it falls under half its height after release."],
         ),
         Criterion(

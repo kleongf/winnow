@@ -55,7 +55,7 @@ def _fall(drops: dict[int, float], track: Track, released_s: float) -> Measureme
     after = f"in the {FALL_WINDOW_S:g} s after release at "
     if fell == 0:
         evidence = [TextSpan(text=f"Stayed put {after}"), *at_times([released_s])]
-        return Measurement(fell, "0.0", [*evidence, TextSpan(text=".")], moments)
+        return Measurement(fell, "0.0 box-heights", [*evidence, TextSpan(text=".")], moments)
     lowest_s = frame_time(track, lowest)
     evidence = [
         TextSpan(text=f"Fell {fell:.1f} box-heights {after}"),
@@ -65,7 +65,7 @@ def _fall(drops: dict[int, float], track: Track, released_s: float) -> Measureme
         TextSpan(text="."),
     ]
     moments.append(Moment(t=lowest_s, label="Lowest"))
-    return Measurement(fell, f"{fell:.1f}", evidence, moments, lowest_s)
+    return Measurement(fell, f"{fell:.1f} box-heights", evidence, moments, lowest_s)
 
 
 def fall_after_release(
@@ -134,5 +134,5 @@ def object_displacement(
         points=points(track, {f: moved.get(f) for f in frames}),
     )
     moments = [Moment(t=start_s, label="From"), Moment(t=end_s, label="To")]
-    measured = Measurement(value, f"{value:.1f}", evidence, moments, end_s)
+    measured = Measurement(value, f"{value:.1f} box-widths", evidence, moments, end_s)
     return checked(measured, track, frames, plot)

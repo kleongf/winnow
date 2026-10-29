@@ -41,10 +41,8 @@ CATALOG: dict[Primitive, Entry] = {
         in_hand_lost_s, "Time the object is out of the closed gripper (wrist view)"
     ),
     "fall_after_release": Entry(
-        fall_after_release, "How far the object drops in the 1 s after release, in box-heights,"
+        fall_after_release, "How far the object falls within 1 s of release"
     ),
     "final_overlap": Entry(final_overlap, "Share of the object's final box inside the target box"),
-    "object_displacement": Entry(
-        object_displacement, "How far the object moved, start to end, in box-widths,"
-    ),
+    "object_displacement": Entry(object_displacement, "How far the object moved, start to end,"),
 }

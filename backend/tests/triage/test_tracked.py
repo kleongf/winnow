@@ -50,6 +50,16 @@ def test_an_object_gone_from_the_fingers_while_closed_is_lost_for_that_long():
     assert result.at_s == pytest.approx(1.2)
 
 
+def test_the_object_leaving_the_fingers_as_the_gripper_opens_is_the_release_not_a_slip():
+    # The gripper starts opening at 1.6 s (frame 24) but reads closed until 2.0 s; the wrist
+    # view loses the object from 1.6 s (5 fps frames 8 and 9).
+    opening = [*CLEAN_GRIPPER[:24], 0.9, 0.9, 0.9, 0.6, 0.6, 0.6, *CLEAN_GRIPPER[30:]]
+
+    [result] = score_one(in_hand(), with_tracks(facts(opening, CLEAN_Z), wrist=held(range(8))))
+
+    assert (result.value, result.status) == (0.0, "pass")
+
+
 def test_an_object_far_from_the_fingers_is_out_of_hand_and_moving_away_is_no_lost_track():
     # From 1.2 s the box sits 70 px (1.75 box-widths) below the fingers: a leap of over a
     # box-width, but after the object left the hand, so it is the slip, not SAM losing it.

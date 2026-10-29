@@ -1,5 +1,5 @@
 """`in_hand_lost_s`, from the wrist object track: how long the object is gone from the wrist view,
-or far from the fingers, while the gripper is still closed. A slip in transit.
+or far from the fingers, while the gripper is still closed and holding steady. A slip in transit.
 
 The wrist camera is fixed to the gripper, so a held object stays where the wrist track was seeded:
 between the fingertips. Its track's health is judged only while the object is in hand (up to the
@@ -7,6 +7,7 @@ last frame it is seen there), because after a slip, no box is the evidence, not 
 """
 
 import math
+import statistics
 from dataclasses import dataclass, replace
 
 from winnow.criteria.facts import EpisodeFacts
@@ -29,6 +30,10 @@ from winnow.tracking.models import Track
 from winnow.tracking.wrist import OBJECT_POINT, RECIPE_SIZE
 
 FAR_WIDTHS = 1.5  # further than this from the fingers, in the track's box-widths, is out of hand
+# How far below its held reading the gripper may be and still count as holding steady (0 open,
+# 1 closed). Settled on droid_100 16 and droid_1.0.1 9, whose objects leave the fingers only as
+# the gripper opens.
+SETTLED = 0.05
 
 
 @dataclass(frozen=True)
@@ -58,11 +63,24 @@ def _read(track: Track, facts: EpisodeFacts, grasps: Grasps, frames: range) -> _
     for f in frames:
         box = boxes.get(f)
         distance[f] = None if box is None else round(math.dist(centre(box), fingers) / width, 3)
-    level = grasps.settings.gripper_closed_level.value
-    gripper = facts.signals.gripper
-    closed = [f for f in frames if gripper[robot_frame(facts, frame_time(track, f))] > level]
+    closed = _still_closed(track, facts, grasps, frames)
     lost = [f for f in closed if (d := distance[f]) is None or d > FAR_WIDTHS]
     return _Read(closed, lost, distance, track.fps)
+
+
+def _still_closed(track: Track, facts: EpisodeFacts, grasps: Grasps, frames: range) -> list[int]:
+    """Frames where the gripper is closed and holding steady: above the Rubric's closed level and
+    within SETTLED of its median reading while closed. As it closes on the object or opens to let
+    go, the object leaving the fingers is the grasp or the release, not a slip."""
+    level = grasps.settings.gripper_closed_level.value
+    reading = {
+        f: float(facts.signals.gripper[robot_frame(facts, frame_time(track, f))]) for f in frames
+    }
+    closed = [f for f in frames if reading[f] > level]
+    if not closed:
+        return []
+    held = statistics.median(reading[f] for f in closed)
+    return [f for f in closed if reading[f] >= held - SETTLED]
 
 
 def _measurement(read: _Read, track: Track) -> Measurement:
@@ -71,11 +89,9 @@ def _measurement(read: _Read, track: Track) -> Measurement:
     if not read.lost:
         nearest = [(d, f) for f in read.closed if (d := read.distance[f]) is not None]
         furthest, at = max(nearest)
+        held = f"Between the fingers while the gripper was closed: at most {furthest:.1f}"
         evidence = [
-            TextSpan(
-                text=f"Between the fingers while the gripper was closed: at most {furthest:.1f}"
-            ),
-            TextSpan(text=" box-widths from them, at "),
+            TextSpan(text=f"{held} box-widths from them, at "),
             *at_times([frame_time(track, at)]),
             TextSpan(text="."),
         ]

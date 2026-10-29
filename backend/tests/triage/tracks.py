@@ -82,7 +82,6 @@ def fall() -> Criterion:
         comparator="<=",
         threshold=0.5,
         unit="box-heights",
-        window=Window(kind="after_release"),
     )
 
 
