@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from winnow.boxes.routes import router as boxes_router
 from winnow.core.context import build_context
 from winnow.core.routes import router as core_router
 from winnow.core.settings import Settings, get_settings
@@ -22,7 +23,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ctx.db.close()
 
     app = FastAPI(title="Winnow", lifespan=lifespan)
-    for router in (core_router, dataset_router, episodes_router, jobs_router):
+    for router in (core_router, dataset_router, episodes_router, boxes_router, jobs_router):
         app.include_router(router, prefix="/api")
     return app
 

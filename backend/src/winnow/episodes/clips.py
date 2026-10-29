@@ -31,3 +31,10 @@ def to_h264(source: Path, out: Path) -> None:
 
 def to_sam_fps(source: Path, out: Path) -> None:
     _encode(source, out, "-vf", f"fps={SAM_FPS}")
+
+
+def first_frame(clip: Path, out: Path) -> None:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    partial = out.with_suffix(".partial.jpg")
+    _ffmpeg("-i", str(clip), "-frames:v", "1", "-q:v", "2", str(partial))
+    partial.replace(out)

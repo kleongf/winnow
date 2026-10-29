@@ -1,34 +1,32 @@
-// Prepare: Dataset-level work that no Description depends on. Ingest status for now; the
-// hand-drawn boxes, tracks and baseline fill in the later rows as they're built.
+// Prepare: Dataset-level work that no Description depends on: ingest, hand-drawn boxes, and
+// (as they're built) tracks, target boxes and the Spark-alone baseline.
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { Progress } from "@/components/ui/progress";
 
+import { NeedsBox } from "../boxes/NeedsBox";
 import { IngestForm } from "../episodes/IngestForm";
+import { useEpisodes } from "../episodes/useEpisodes";
 import { JobProgress } from "../jobs/JobProgress";
 import { useLatestJob } from "../jobs/useLatestJob";
-import { datasetStatusKey, useDatasetStatus } from "./useDatasetStatus";
+import { datasetStatusKey, useDatasetStatus, type DatasetStatus } from "./useDatasetStatus";
 
-const LATER_STAGES = [
-  "Wrist tracks",
-  "Hand-drawn boxes",
-  "Exterior tracks",
-  "Target boxes",
-  "Spark-alone baseline",
-];
+const LATER_STAGES = ["Wrist tracks", "Exterior tracks", "Target boxes", "Spark-alone baseline"];
 
 export function PreparePage() {
   const status = useDatasetStatus();
+  const episodeList = useEpisodes();
   const job = useLatestJob("ingest");
   const queryClient = useQueryClient();
   const settled = job.data ? job.data.done + job.data.failed : 0;
 
   useEffect(() => {
-    void queryClient.invalidateQueries({ queryKey: datasetStatusKey }); // counts move as items land
+    // Counts and the box grid move as ingest items land.
+    void queryClient.invalidateQueries({ queryKey: datasetStatusKey });
+    void queryClient.invalidateQueries({ queryKey: ["episodes"] });
   }, [settled, queryClient]);
 
-  const episodes = status.data?.episodes ?? 0;
   const running = job.data ? !job.data.finished : false;
   return (
     <div className="mx-auto max-w-5xl p-8">
@@ -38,6 +36,20 @@ export function PreparePage() {
         Everything here belongs to the Dataset, not a Project: clips, tracks and hand-drawn boxes.
         Nothing here depends on a Description.
       </p>
+      {status.data && <StatusGrid status={status.data} />}
+      <div className="mt-8 grid grid-cols-2 gap-4">
+        <IngestForm disabled={running} />
+        {job.data && <JobProgress job={job.data} />}
+      </div>
+      <NeedsBox episodes={episodeList.data ?? []} />
+    </div>
+  );
+}
+
+function StatusGrid(props: { status: DatasetStatus }) {
+  const { episodes, boxes, cost_usd: cost } = props.status;
+  return (
+    <>
       <div className="mt-6 grid grid-cols-3 gap-3">
         <Stat label="Episodes ingested" testId="episodes-ingested">
           {episodes}
@@ -45,20 +57,17 @@ export function PreparePage() {
         <Stat label="Clips (H.264 + 5 fps)" of={episodes}>
           {episodes}
         </Stat>
+        <Stat label="Hand-drawn boxes" of={episodes} testId="boxes-drawn">
+          {boxes}
+        </Stat>
         {LATER_STAGES.map((label) => (
           <Stat key={label} label={label} muted>
             —
           </Stat>
         ))}
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Meta API spend so far ${(status.data?.cost_usd ?? 0).toFixed(2)}
-      </p>
-      <div className="mt-8 grid grid-cols-2 gap-4">
-        <IngestForm disabled={running} />
-        {job.data && <JobProgress job={job.data} />}
-      </div>
-    </div>
+      <p className="mt-2 text-xs text-muted-foreground">Meta API spend so far ${cost.toFixed(2)}</p>
+    </>
   );
 }
 

@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/boxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Boxes */
+        get: operations["list_boxes_api_boxes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dataset": {
         parameters: {
             query?: never;
@@ -55,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/episodes/{episode_id}/box": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Box */
+        put: operations["put_box_api_episodes__episode_id__box_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/episodes/{episode_id}/clips/{camera}": {
         parameters: {
             query?: never;
@@ -64,6 +98,23 @@ export interface paths {
         };
         /** Get Clip */
         get: operations["get_clip_api_episodes__episode_id__clips__camera__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/episodes/{episode_id}/frame0/{camera}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Frame0 */
+        get: operations["get_frame0_api_episodes__episode_id__frame0__camera__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -144,11 +195,56 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Box */
+        Box: {
+            /**
+             * Camera
+             * @enum {string}
+             */
+            camera: "exterior_image_1_left" | "exterior_image_2_left";
+            /** Drawn At */
+            drawn_at: string;
+            /** Episode Id */
+            episode_id: string;
+            /** Frame Height */
+            frame_height: number;
+            /** Frame Width */
+            frame_width: number;
+            /** X1 */
+            x1: number;
+            /** X2 */
+            x2: number;
+            /** Y1 */
+            y1: number;
+            /** Y2 */
+            y2: number;
+        };
+        /**
+         * BoxDraw
+         * @description A box in frame-0 pixels of the chosen view.
+         */
+        BoxDraw: {
+            /**
+             * Camera
+             * @enum {string}
+             */
+            camera: "exterior_image_1_left" | "exterior_image_2_left";
+            /** X1 */
+            x1: number;
+            /** X2 */
+            x2: number;
+            /** Y1 */
+            y1: number;
+            /** Y2 */
+            y2: number;
+        };
         /**
          * DatasetStatus
          * @description Description-independent work on the Dataset so far, for the Prepare page.
          */
         DatasetStatus: {
+            /** Boxes */
+            boxes: number;
             /** Cost Usd */
             cost_usd: number;
             /** Episodes */
@@ -292,6 +388,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_boxes_api_boxes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Box"][];
+                };
+            };
+        };
+    };
     get_dataset_api_dataset_get: {
         parameters: {
             query?: never;
@@ -365,6 +481,41 @@ export interface operations {
             };
         };
     };
+    put_box_api_episodes__episode_id__box_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BoxDraw"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Box"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_clip_api_episodes__episode_id__clips__camera__get: {
         parameters: {
             query?: never;
@@ -384,6 +535,38 @@ export interface operations {
                 };
                 content: {
                     "video/mp4": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_frame0_api_episodes__episode_id__frame0__camera__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+                camera: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": unknown;
                 };
             };
             /** @description Validation Error */
