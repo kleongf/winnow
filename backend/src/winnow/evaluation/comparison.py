@@ -5,7 +5,15 @@ from collections.abc import Sequence
 from typing import Literal
 
 from winnow.evaluation.cases import EvaluationCase
-from winnow.evaluation.models import SYSTEM_LABELS, Comparison, LengthRule, System, SystemRow
+from winnow.evaluation.models import (
+    SYSTEM_LABELS,
+    Comparison,
+    LengthRule,
+    McNemar,
+    PhraseFailures,
+    System,
+    SystemRow,
+)
 from winnow.evaluation.stats import wilson
 
 Decision = Literal["keep", "reject"] | None  # None: not decided automatically
@@ -38,7 +46,56 @@ def system_row(system: System, outcomes: Sequence[Outcome]) -> SystemRow:
         false_keeps=wilson(failures.count("keep"), len(failures)),
         false_rejects=wilson(meeting.count("reject"), len(meeting)),
         coverage=wilson(len(decided), len(outcomes)),
+        balanced_accuracy=balanced_accuracy(outcomes),
     )
+
+
+def balanced_accuracy(outcomes: Sequence[Outcome]) -> float | None:
+    """Over decided Episodes: the mean of failures rejected and meeting Episodes kept."""
+    failures = [d for failed, d in outcomes if failed and d is not None]
+    meeting = [d for failed, d in outcomes if not failed and d is not None]
+    if not failures or not meeting:
+        return None
+    caught = failures.count("reject") / len(failures)
+    kept = meeting.count("keep") / len(meeting)
+    return (caught + kept) / 2
+
+
+def mcnemar(cases: Sequence[EvaluationCase]) -> McNemar:
+    """On the Episodes both Winnow and Spark alone decided, those only one got right."""
+    both = [
+        (c.winnow == "reject", c.spark_alone == "reject", c.description_failure)
+        for c in cases
+        if c.winnow != "needs_review" and c.spark_alone is not None
+    ]
+    right = [(winnow == failed, spark == failed) for winnow, spark, failed in both]
+    return McNemar(
+        compared=len(both),
+        winnow_only_right=right.count((True, False)),
+        spark_alone_only_right=right.count((False, True)),
+    )
+
+
+MIN_PHRASE_FAILURES = 5
+
+
+def phrase_failures(
+    cases: Sequence[EvaluationCase], phrases: Sequence[str]
+) -> list[PhraseFailures]:
+    """Per Phrase of the frozen Description: its labelled failures and how many each system
+    rejected."""
+
+    def row(phrase: str) -> PhraseFailures:
+        failing = [c for c in cases if phrase in c.failed]
+        return PhraseFailures(
+            phrase=phrase,
+            failures=len(failing),
+            winnow_rejects=sum(c.winnow == "reject" for c in failing),
+            spark_alone_rejects=sum(c.spark_alone == "reject" for c in failing),
+            too_few=len(failing) < MIN_PHRASE_FAILURES,
+        )
+
+    return [row(p) for p in phrases]
 
 
 def _winnow(case: EvaluationCase, *, review_kept: bool) -> Decision:

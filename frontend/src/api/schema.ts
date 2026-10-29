@@ -967,6 +967,13 @@ export interface components {
             episodes: number;
             /** Labelled */
             labelled: number;
+            matched_coverage: components["schemas"]["MatchedCoverage"];
+            mcnemar: components["schemas"]["McNemar"];
+            /** Phrase Failures */
+            phrase_failures: components["schemas"]["PhraseFailures"][];
+            right_reason: components["schemas"]["RightReason"];
+            /** Risk Coverage */
+            risk_coverage: components["schemas"]["RiskCoverage"][];
             /** Rubric Version */
             rubric_version: number;
             /**
@@ -1147,6 +1154,45 @@ export interface components {
             threshold_s: number;
         };
         /**
+         * MatchedCoverage
+         * @description Keep precision with Spark alone held to Winnow's coverage: its most confident Episodes,
+         *     never splitting a tie, so it covers at most `target`.
+         */
+        MatchedCoverage: {
+            /** Episodes */
+            episodes: number;
+            /** Rows */
+            rows: components["schemas"]["MatchedRow"][];
+            /** Target */
+            target: number;
+        };
+        /** MatchedRow */
+        MatchedRow: {
+            /** Covered */
+            covered: number;
+            keep_precision: components["schemas"]["Proportion"];
+            /** Label */
+            label: string;
+            /**
+             * System
+             * @enum {string}
+             */
+            system: "winnow" | "winnow_review_kept" | "spark_alone" | "length_alone";
+        };
+        /**
+         * McNemar
+         * @description Discordant pairs between Winnow and Spark alone, counts only: on the Episodes both decided,
+         *     how many only one of them got right.
+         */
+        McNemar: {
+            /** Compared */
+            compared: number;
+            /** Spark Alone Only Right */
+            spark_alone_only_right: number;
+            /** Winnow Only Right */
+            winnow_only_right: number;
+        };
+        /**
          * Moment
          * @description A point in time that matters to a Criterion result.
          */
@@ -1165,6 +1211,19 @@ export interface components {
              * @enum {string}
              */
             status: "fail" | "unsure";
+        };
+        /** PhraseFailures */
+        PhraseFailures: {
+            /** Failures */
+            failures: number;
+            /** Phrase */
+            phrase: string;
+            /** Spark Alone Rejects */
+            spark_alone_rejects: number;
+            /** Too Few */
+            too_few: boolean;
+            /** Winnow Rejects */
+            winnow_rejects: number;
         };
         /** PhraseLabel */
         PhraseLabel: {
@@ -1243,6 +1302,55 @@ export interface components {
             reason: string;
             /** Text */
             text: string;
+        };
+        /** RightReason */
+        RightReason: {
+            /** Rows */
+            rows: components["schemas"]["RightReasonRow"][];
+            slack: components["schemas"]["Slack"];
+        };
+        /**
+         * RightReasonRow
+         * @description Of a system's correct Rejects, how many name a failing Phrase at a time inside its labelled
+         *     interval, widened by the slack.
+         */
+        RightReasonRow: {
+            at_slack: components["schemas"]["Proportion"] | null;
+            /** Curve */
+            curve: components["schemas"]["SlackPoint"][];
+            /** Label */
+            label: string;
+            /**
+             * System
+             * @enum {string}
+             */
+            system: "winnow" | "winnow_review_kept" | "spark_alone" | "length_alone";
+        };
+        /** RiskCoverage */
+        RiskCoverage: {
+            /** Episodes */
+            episodes: number;
+            /** Label */
+            label: string;
+            /** Points */
+            points: components["schemas"]["RiskPoint"][];
+            /**
+             * System
+             * @enum {string}
+             */
+            system: "winnow" | "winnow_review_kept" | "spark_alone" | "length_alone";
+        };
+        /**
+         * RiskPoint
+         * @description The Episodes a system is at least this sure about, and how many of them it gets wrong.
+         */
+        RiskPoint: {
+            /** Confidence */
+            confidence: number;
+            /** Covered */
+            covered: number;
+            /** Errors */
+            errors: number;
         };
         /**
          * Rubric
@@ -1337,6 +1445,27 @@ export interface components {
             /** Z */
             z: number[];
         };
+        /**
+         * Slack
+         * @description How far the labeller's own interval edges move between the first pass and the relabel.
+         */
+        Slack: {
+            /** Edges */
+            edges: number;
+            /** Episodes */
+            episodes: number;
+            /** Seconds */
+            seconds: number | null;
+        };
+        /** SlackPoint */
+        SlackPoint: {
+            /** Of */
+            of: number;
+            /** Right */
+            right: number;
+            /** Slack S */
+            slack_s: number;
+        };
         /** SourceCount */
         SourceCount: {
             /** Episodes */
@@ -1346,6 +1475,8 @@ export interface components {
         };
         /** SystemRow */
         SystemRow: {
+            /** Balanced Accuracy */
+            balanced_accuracy: number | null;
             coverage: components["schemas"]["Proportion"];
             false_keeps: components["schemas"]["Proportion"];
             false_rejects: components["schemas"]["Proportion"];

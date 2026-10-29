@@ -12,7 +12,9 @@ from winnow.criteria.primitives import PRIMITIVES
 from winnow.triage.models import CriterionResult, PhraseResult, TriageDecision
 
 
-def _fails(results: list[CriterionResult], phrases: list[PhraseResult]) -> list[CriterionResult]:
+def rejecting_fails(
+    results: list[CriterionResult], phrases: list[PhraseResult]
+) -> list[CriterionResult]:
     """Conclusive fails of hard Criteria whose Phrase failed, earliest first (untimed last)."""
     failed = {p.phrase for p in phrases if p.hard and p.status == "fail"}
     fails = [
@@ -27,7 +29,7 @@ def _fails(results: list[CriterionResult], phrases: list[PhraseResult]) -> list[
 
 
 def _reject(results: list[CriterionResult], phrases: list[PhraseResult]) -> list[TextSpan]:
-    fails = _fails(results, phrases)
+    fails = rejecting_fails(results, phrases)
     labelled = [p for p in phrases if p.hard and p.status == "fail" and p.label is not None]
     if not fails:
         first = labelled[0]

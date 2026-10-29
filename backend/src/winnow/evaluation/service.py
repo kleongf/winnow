@@ -12,11 +12,17 @@ from winnow.baseline.prompts import FROZEN
 from winnow.core.context import AppContext
 from winnow.evaluation.cases import (
     EvaluationCase,
-    description_failure,
+    failed_phrases,
+    spark_alone_claim,
     spark_alone_decision,
+    spark_alone_ranking,
+    winnow_claim,
+    winnow_ranking,
 )
-from winnow.evaluation.comparison import comparison
+from winnow.evaluation.comparison import comparison, mcnemar, phrase_failures
 from winnow.evaluation.models import EvaluationReport, EvaluationRequest
+from winnow.evaluation.right_reason import measured_slack, right_reason
+from winnow.evaluation.risk_coverage import matched_coverage, risk_coverage
 from winnow.reference_labels.gate import revealed_ids
 from winnow.reference_labels.models import ReferenceLabel
 from winnow.rubric.models import RubricVersion
@@ -57,9 +63,13 @@ def _case(
     return EvaluationCase(
         episode_id=episode.id,
         duration_s=episode.duration_s,
-        description_failure=description_failure(label),
+        failed=failed_phrases(label),
         winnow=triage.decision,
         spark_alone=spark_alone_decision(baseline),
+        winnow_claim=winnow_claim(triage),
+        spark_alone_claim=spark_alone_claim(baseline),
+        winnow_ranking=winnow_ranking(triage),
+        spark_alone_ranking=spark_alone_ranking(baseline),
     )
 
 
@@ -90,6 +100,11 @@ def evaluation_report(
         labelled=len(cases),
         description_failures=sum(c.description_failure for c in cases),
         comparison=comparison(cases),
+        right_reason=right_reason(cases, measured_slack(ctx.reference_labels.list())),
+        risk_coverage=risk_coverage(cases),
+        matched_coverage=matched_coverage(cases),
+        mcnemar=mcnemar(cases),
+        phrase_failures=phrase_failures(cases, FROZEN.phrases),
     )
 
 
