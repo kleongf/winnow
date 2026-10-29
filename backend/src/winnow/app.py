@@ -10,12 +10,13 @@ from winnow.core.settings import Settings, get_settings
 from winnow.dataset.routes import router as dataset_router
 from winnow.episodes.routes import router as episodes_router
 from winnow.jobs.routes import router as jobs_router
+from winnow.meta.transport import Transport
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, transport: Transport | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-        ctx = build_context(settings or get_settings())
+        ctx = build_context(settings or get_settings(), transport)
         ctx.jobs.fail_interrupted()
         app.state.context = ctx
         yield

@@ -243,6 +243,8 @@ export interface components {
          * @description Description-independent work on the Dataset so far, for the Prepare page.
          */
         DatasetStatus: {
+            /** Baseline */
+            baseline: number | null;
             /** Boxes */
             boxes: number;
             /** Cost Usd */
@@ -344,6 +346,8 @@ export interface components {
              * @enum {string}
              */
             status: "queued" | "running" | "done" | "failed";
+            /** Step */
+            step: string;
         };
         /**
          * Signals

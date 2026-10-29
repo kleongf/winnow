@@ -1,3 +1,4 @@
+from winnow.baseline.prompts import FROZEN_DESCRIPTION
 from winnow.core.context import AppContext
 from winnow.dataset.models import DatasetStatus, SourceCount
 from winnow.meta.costs import CostLog
@@ -14,5 +15,6 @@ def dataset_status(ctx: AppContext) -> DatasetStatus:
         sources=[SourceCount(name=name, episodes=n) for name, n in sorted(counts.items())],
         episodes=sum(counts.values()),
         boxes=ctx.boxes.count(),
+        baseline=ctx.baseline.complete_count(FROZEN_DESCRIPTION) if ctx.meta else None,
         cost_usd=round(costs.spent_usd(), 4),
     )

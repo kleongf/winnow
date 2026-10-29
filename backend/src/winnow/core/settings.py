@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     # Read droid_100 from a local copy laid out like the repo (test fixtures), not the Hub.
     droid100_root: Path | None = None
     ingest_concurrency: int = 4  # Episodes transcoded at once
+
+    @field_validator("model_api_key", mode="before")
+    @classmethod
+    def _blank_key_is_no_key(cls, value: object) -> object:
+        return None if value == "" else value  # so MODEL_API_KEY= turns Meta off (e2e does)
 
     @property
     def db_path(self) -> Path:

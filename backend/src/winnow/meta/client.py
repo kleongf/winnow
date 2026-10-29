@@ -109,7 +109,13 @@ class MetaClient:
         options: dict[str, object] = {
             "reasoning": {"effort": request.effort},
             "max_output_tokens": request.max_output_tokens,
-            "text": {"format": {"type": "json_schema", "name": "answer", "schema": request.schema}},
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "name": request.schema_name,
+                    "schema": request.schema,
+                }
+            },
         }
 
         async def estimate(content: MetaContent) -> float:

@@ -28,13 +28,14 @@ def _parser() -> argparse.ArgumentParser:
 
 
 async def _ingest(ctx: AppContext, source: str, indices: list[int]) -> int:
-    job_id = ctx.jobs.create("ingest", ingest_items(source, indices))
+    items = ingest_items(source, indices, with_baseline=ctx.meta is not None)
+    job_id = ctx.jobs.create("ingest", items)
     await ctx.runner.run(job_id)
     job = ctx.jobs.get(job_id)
     assert job is not None
     for item in job.items:
         note = f" ({item.detail})" if item.detail else ""
-        sys.stdout.write(f"{item.label}: {item.status}{note}\n")
+        sys.stdout.write(f"{item.label} {item.step}: {item.status}{note}\n")
     sys.stdout.write(f"job {job_id}: {job.done} done, {job.failed} failed\n")
     return 1 if job.failed else 0
 

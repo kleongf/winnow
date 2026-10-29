@@ -3,6 +3,7 @@ import sqlite3
 from collections import Counter
 from datetime import UTC, datetime
 
+from winnow.core.db import ensure_column
 from winnow.jobs.models import Job, JobItem, Status, WorkItem
 
 SCHEMA = """
@@ -20,6 +21,7 @@ CREATE TABLE IF NOT EXISTS job_items (
     status TEXT NOT NULL,
     detail TEXT,
     updated_at TEXT NOT NULL,
+    after_position INTEGER,
     PRIMARY KEY (job_id, position)
 );
 """
@@ -33,6 +35,7 @@ class JobStore:
     def __init__(self, db: sqlite3.Connection) -> None:
         self._db = db
         db.executescript(SCHEMA)
+        ensure_column(db, "job_items", "after_position", "INTEGER")
 
     def create(self, kind: str, items: list[WorkItem]) -> int:
         with self._db:
@@ -42,9 +45,18 @@ class JobStore:
             )
             job_id = int(cursor.lastrowid or 0)
             self._db.executemany(
-                "INSERT INTO job_items VALUES (?, ?, ?, ?, ?, 'queued', NULL, ?)",
+                "INSERT INTO job_items (job_id, position, step, args, label, status, "
+                "updated_at, after_position) VALUES (?, ?, ?, ?, ?, 'queued', ?, ?)",
                 [
-                    (job_id, i, item.step, json.dumps(dict(item.args)), item.label, _now())
+                    (
+                        job_id,
+                        i,
+                        item.step,
+                        json.dumps(dict(item.args)),
+                        item.label,
+                        _now(),
+                        item.after,
+                    )
                     for i, item in enumerate(items)
                 ],
             )
@@ -56,7 +68,10 @@ class JobStore:
             (job_id,),
         )
         return [
-            (int(r["position"]), WorkItem(r["step"], json.loads(r["args"]), r["label"]))
+            (
+                int(r["position"]),
+                WorkItem(r["step"], json.loads(r["args"]), r["label"], r["after_position"]),
+            )
             for r in rows
         ]
 
@@ -87,7 +102,11 @@ class JobStore:
     def _job(self, row: sqlite3.Row) -> Job:
         items = [
             JobItem(
-                position=r["position"], label=r["label"], status=r["status"], detail=r["detail"]
+                position=r["position"],
+                step=r["step"],
+                label=r["label"],
+                status=r["status"],
+                detail=r["detail"],
             )
             for r in self._db.execute(
                 "SELECT * FROM job_items WHERE job_id = ? ORDER BY position", (row["id"],)

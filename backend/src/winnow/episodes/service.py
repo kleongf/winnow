@@ -55,12 +55,16 @@ def ingest_step(store: EpisodeStore, sources: Mapping[str, Source]) -> Step:
     return step
 
 
-def ingest_items(source: str, indices: list[int]) -> list[WorkItem]:
-    """One work item per Episode, each Episode once, in the order given."""
-    return [
-        WorkItem("ingest", {"source": source, "index": i}, episode_id(source, i))
-        for i in dict.fromkeys(indices)
-    ]
+def ingest_items(source: str, indices: list[int], with_baseline: bool) -> list[WorkItem]:
+    """Per Episode (each once, in the order given): ingest it, then, once that has succeeded,
+    run the Spark-alone baseline on it if Meta is configured."""
+    items: list[WorkItem] = []
+    for i in dict.fromkeys(indices):
+        label = episode_id(source, i)
+        items.append(WorkItem("ingest", {"source": source, "index": i}, label))
+        if with_baseline:
+            items.append(WorkItem("baseline", {"episode_id": label}, label, after=len(items) - 1))
+    return items
 
 
 SPEED_SMOOTHING_FRAMES = 5  # a third of a second at 15 Hz

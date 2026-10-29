@@ -16,6 +16,11 @@ execFileSync("uv", [...fixtures, "--episodes", "5"], { stdio: "inherit" });
 const servers = await startServers({
   frontendPort: E2E_FRONTEND_PORT,
   backendPort: 8001,
-  env: { DATA_DIR: resolve(root, "data"), DROID100_ROOT: resolve(root, "droid_100") },
+  // An empty key turns Meta off, so e2e never calls the Meta API.
+  env: {
+    DATA_DIR: resolve(root, "data"),
+    DROID100_ROOT: resolve(root, "droid_100"),
+    MODEL_API_KEY: "",
+  },
 });
 await serveUntilInterrupted(servers);
