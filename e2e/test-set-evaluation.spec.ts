@@ -1,19 +1,17 @@
 import { expect, test } from "@playwright/test";
 
-import { ingest, referenceLabel } from "./helpers.ts";
+import { EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
 
-// reference-labels.spec.ts puts droid_100:2 in the Test set and labels it first, through the UI,
-// and this file runs after it; doing both again here (no-ops then) keeps this test runnable alone.
-// Other specs need Episodes 0, 1, 3 and 4 out of the Test set or unlabelled, so it stays alone.
-const EPISODES = ["droid_100:2"];
+// Labelled as soon as it joins the Test set, so reference-labels.spec.ts never finds it queued.
+const OWN = EPISODES.testSetEvaluation.map(episodeId);
 
 test("the Evaluation page runs the Test set, shows the comparison and logs the run", async ({
   page,
   request,
 }) => {
-  await ingest(request, [0, 1, 2]);
-  await request.post("/api/sets/test/episodes", { data: { episode_ids: EPISODES } });
-  await referenceLabel(request, EPISODES);
+  await ingest(request, EPISODES.testSetEvaluation);
+  await request.post("/api/sets/test/episodes", { data: { episode_ids: OWN } });
+  await referenceLabel(request, OWN);
   const logged = async () =>
     ((await (await request.get("/api/evaluation/test-runs")).json()) as unknown[]).length;
   const before = await logged();

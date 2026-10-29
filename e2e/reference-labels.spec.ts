@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-import { ingest } from "./helpers.ts";
+import { EPISODES, episodeId, ingest } from "./helpers.ts";
 
-// droid_100:2 has no instruction and a failing Dataset outcome. Other specs freeze the Dev set
-// with droid_100:0 in it, so this one labels from the Test set, which nothing freezes.
-const EPISODE = "droid_100:2";
+// It has no instruction and a failing Dataset outcome. sets.spec.ts freezes the Dev set, so this
+// one labels from the Test set, which nothing freezes.
+const EPISODE = episodeId(EPISODES.referenceLabels[0]);
 
 interface Label {
   episode_id: string;
@@ -24,7 +24,7 @@ test("labelling a Test set Episode blind stores its Phrases, interval and instru
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (err) => errors.push(err.message));
-  await ingest(request, [0, 1, 2]);
+  await ingest(request, EPISODES.referenceLabels);
   await request.post("/api/sets/test/episodes", { data: { episode_ids: [EPISODE] } });
 
   await page.goto("/?page=reference");

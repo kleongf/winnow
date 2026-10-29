@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-import { ingest, referenceLabel } from "./helpers.ts";
+import { EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
 
-// No other spec labels droid_100:1, and this file runs first, so it starts unlabelled.
-const EPISODE = "droid_100:1";
-const ROW = /^1 Move the black remote control/;
+const [INDEX] = EPISODES.awaitingLabel;
+const EPISODE = episodeId(INDEX);
+const ROW = new RegExp(`^${String(INDEX)} Move the black remote control`);
 
 test("an Episode's outputs stay hidden until it has a Reference label", async ({
   page,
@@ -12,7 +12,7 @@ test("an Episode's outputs stay hidden until it has a Reference label", async ({
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (err) => errors.push(err.message));
-  await ingest(request, [0, 1, 2]);
+  await ingest(request, EPISODES.awaitingLabel);
 
   await page.goto("/?page=episodes");
   const row = page.getByRole("row", { name: ROW });

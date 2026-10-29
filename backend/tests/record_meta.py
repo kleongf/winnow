@@ -3,7 +3,7 @@
 Runs the real ingest pipeline (Spark-alone baseline and wrist track) against the Meta API on the
 e2e fixture Episodes, then boxes each one with E2E_BOX in each exterior view in turn and runs what
 a saved box queues (exterior track and target box), writing every reply to RECORDINGS. Costs
-about $0.25, which is added to the main cost log. Re-record after changing a prompt, a schema or
+about $0.80, which is added to the main cost log. Re-record after changing a prompt, a schema or
 the fixture Episodes.
 """
 
@@ -26,7 +26,7 @@ from winnow.meta.replay import RecordingTransport
 from winnow.tracking.exterior import box_items
 
 RECORDINGS = Path(__file__).parent / "recordings" / "fixture_episodes.jsonl"
-E2E_EPISODES = 5  # what scripts/e2e-server.ts writes
+E2E_EPISODES = 16  # what scripts/e2e-server.ts writes
 # The box e2e draws (a drag from 40% to 60% of each side of the 320x180 frame) and puts.
 E2E_BOX = {"x1": 128, "y1": 72, "x2": 192, "y2": 108}
 

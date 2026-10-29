@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
-// The e2e server (scripts/e2e-server.ts) runs on its own ports with 5 synthetic Episodes.
+// The e2e server (scripts/e2e-server.ts) runs on its own ports with 16 synthetic Episodes, which
+// the specs share out between them (e2e/helpers.ts EPISODES).
 const portOffset = Number(process.env.WINNOW_PORT_OFFSET ?? "0");
 const baseURL = `http://127.0.0.1:${String(5174 + portOffset)}`;
 
