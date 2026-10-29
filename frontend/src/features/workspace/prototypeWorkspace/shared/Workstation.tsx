@@ -1,7 +1,7 @@
 // PROTOTYPE (throwaway): the winning "Workstation" Episode detail view from #8, ported to
 // shadcn/Tailwind and made embeddable. Only Episode 42 has real clips and signals; other Episodes
 // show their real frame 0 with the hand-drawn box and lanes from simulated moments.
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ export function Workstation(props: {
   hideOutputs?: boolean;
   /** Stack the panel under the video instead of beside it. */
   stacked?: boolean;
+  /** Start the playhead here, e.g. at an interview question's anchor clip. */
+  initialT?: number;
   className?: string;
 }) {
   const { result, actions, footer, hideOutputs = false, stacked = false } = props;
@@ -48,6 +50,10 @@ export function Workstation(props: {
   const playhead = ep.hasClips ? real : { ...real, t: pseudo.t, seek: pseudo.seek };
   const [cam, setCam] = useState<Cam>(ep.box?.view ?? "ext1");
   const [open, setOpen] = useState<string | null>(null);
+  const seekStart = ep.hasClips ? real.seek : pseudo.seek;
+  useEffect(() => {
+    if (props.initialT !== undefined) seekStart(props.initialT);
+  }, [props.initialT, seekStart]);
 
   const focus = (r: CriterionResult) => {
     setOpen(r.criterion.id);

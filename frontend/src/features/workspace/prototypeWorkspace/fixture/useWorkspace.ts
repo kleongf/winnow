@@ -98,7 +98,7 @@ export function useWorkspace(): Workspace {
       );
       const turn = turns.find((t) => t.id === turnId);
       if (turn?.anchor && turn.target?.phraseId) {
-        const pass = /^(no, that's fine|yes, it's on|yes, holding)/i.test(option);
+        const pass = turn.passOptions?.includes(option) ?? false;
         setLabels((ls) => [
           ...ls,
           {

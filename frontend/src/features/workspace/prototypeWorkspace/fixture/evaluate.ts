@@ -1,7 +1,14 @@
 // PROTOTYPE (throwaway): the decision rule from "Triage decision rule and calibration" (#19) as a
 // pure function, so a threshold drag or a label re-sorts every Episode with no calls.
 import type { Episode } from "./episodes";
-import { passes, type Criterion, type Rubric, type Status, type Triage } from "./rubric";
+import {
+  passes,
+  phrases as rubricPhrases,
+  type Criterion,
+  type Rubric,
+  type Status,
+  type Triage,
+} from "./rubric";
 
 export type LabelSource = "interview" | "review" | "audit";
 
@@ -176,14 +183,23 @@ function phraseStatus(rs: CriterionResult[]): { status: Status; signals: string[
   return { status: "unsure", signals };
 }
 
-function reasonFor(triage: Triage, results: CriterionResult[], signals: string[]): string {
+function reasonFor(
+  triage: Triage,
+  results: CriterionResult[],
+  signals: string[],
+  phraseResults: PhraseResult[],
+): string {
   if (triage === "Keep") return "Kept: every hard Phrase passed.";
   if (triage === "Needs review") return `Needs review: ${[...new Set(signals)].join("; ")}.`;
   const fails = results
     .filter((r) => r.status === "fail" && r.crisp && r.criterion.conclusive)
     .sort((a, b) => (a.moments[0]?.t ?? 0) - (b.moments[0]?.t ?? 0));
   const first = fails[0];
-  if (!first) return "Rejected by a human label.";
+  if (!first) {
+    const label = phraseResults.find((p) => p.labelled?.value === "fail")?.labelled;
+    const text = rubricPhrases.find((p) => p.id === label?.phraseId)?.text ?? "a Phrase";
+    return `Rejected by a ${label?.source ?? "human"} label: “${text}” failed.`;
+  }
   const at = first.moments[0] ? ` at ${first.moments[0].t.toFixed(1)} s` : "";
   const more =
     fails.length > 1
@@ -225,18 +241,14 @@ export function evaluateEpisode(
         ? ph.labelled.value === "pass"
           ? 1
           : 0
-        : Math.min(
-            ...results
-              .filter((r) => r.criterion.phraseId === ph.phraseId)
-              .map((r) => (r.status === "pass" ? r.p : r.status === "fail" ? r.p : 0.5)),
-          ),
+        : Math.min(...results.filter((r) => r.criterion.phraseId === ph.phraseId).map((r) => r.p)),
     ),
   );
   const signals = phrases.flatMap((p) => p.signals);
   return {
     episode: ep,
     triage,
-    reason: reasonFor(triage, results, signals),
+    reason: reasonFor(triage, results, signals, phrases),
     confidence: Math.max(pKeep, 1 - pKeep),
     results,
     phrases,

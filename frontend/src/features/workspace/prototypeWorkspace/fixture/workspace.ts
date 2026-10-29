@@ -108,6 +108,8 @@ export interface InterviewTurn {
   anchor?: { episodeId: string; clip: [number, number]; value?: string };
   target?: { criterionId?: string; phraseId?: string; setting?: "gripperClosed" | "graspRiseCm" };
   options?: string[];
+  /** Options that mean the anchor Episode passes the targeted Phrase (the rest mean fail). */
+  passOptions?: string[];
   answered?: string;
   effect?: string;
 }
@@ -134,6 +136,7 @@ export const interview: InterviewTurn[] = [
     anchor: { episodeId: "droid_100:27", clip: [9.6, 12.0], value: "still for 2.4 s" },
     target: { criterionId: "longest-still", phraseId: "no-pauses" },
     options: ["Yes, too long", "No, that's fine"],
+    passOptions: ["No, that's fine"],
     answered: "Yes, too long",
     effect: "“long pause” threshold now between 1.6 s and 2.4 s.",
   },
@@ -144,20 +147,22 @@ export const interview: InterviewTurn[] = [
     anchor: { episodeId: "droid_100:7", clip: [18.0, 19.6], value: "still for 1.6 s" },
     target: { criterionId: "longest-still", phraseId: "no-pauses" },
     options: ["Yes, too long", "No, that's fine"],
+    passOptions: ["No, that's fine"],
     answered: "No, that's fine",
     effect: "Threshold set to 2.0 s, margin ±0.4 s (the bracketing gap). Assumption confirmed.",
   },
   {
     id: "q4",
     kind: "question",
-    text: "Spark says the remote is on the cushion, but the boxes don't overlap. Is it on the cushion?",
+    text: "Spark's 3 samples split 2–1 on whether the remote ends up on the cushion, and the box track is lost here. Is it on the cushion?",
     anchor: {
       episodeId: "droid_100:42",
       clip: [18.3, 22.0],
-      value: "overlap 0.71 · Spark 2 of 3 yes",
+      value: "Spark 2 of 3 yes · overlap 0.71, track lost",
     },
     target: { criterionId: "final-overlap", phraseId: "placed" },
     options: ["Yes, it's on the cushion", "No"],
+    passOptions: ["Yes, it's on the cushion"],
   },
   {
     id: "q5",
@@ -170,6 +175,7 @@ export const interview: InterviewTurn[] = [
     },
     target: { setting: "gripperClosed" },
     options: ["Yes, holding", "No, closed on air"],
+    passOptions: ["Yes, holding"],
   },
 ];
 
