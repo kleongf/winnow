@@ -35,6 +35,10 @@ def sam_clip_path(folder: Path, camera: str) -> Path:
     return folder / f"{camera}.5fps.mp4"
 
 
+def cameras_with_clips(folder: Path) -> list[str]:
+    return sorted(p.stem for p in folder.glob("*.mp4") if "." not in p.stem)
+
+
 def save_signals(folder: Path, signals: EpisodeSignals) -> None:
     folder.mkdir(parents=True, exist_ok=True)
     np.savez(
@@ -85,22 +89,40 @@ class EpisodeStore:
 
     def list(self) -> list[Episode]:
         rows = self._db.execute("SELECT * FROM episodes ORDER BY source, source_index")
-        return [_episode(row) for row in rows]
+        return [self._episode(row) for row in rows]
+
+    def get(self, id: str) -> Episode | None:
+        row = self._db.execute("SELECT * FROM episodes WHERE id = ?", (id,)).fetchone()
+        return None if row is None else self._episode(row)
+
+    def episode_folder(self, episode: Episode) -> Path:
+        return self.folder(episode.source, episode.index)
+
+    def load_signals(self, episode: Episode) -> EpisodeSignals:
+        with np.load(self.episode_folder(episode) / "signals.npz") as saved:
+            return EpisodeSignals(
+                episode_index=episode.index,
+                fps=episode.fps,
+                timestamps=saved["timestamps"],
+                position=saved["position"],
+                gripper=saved["gripper"],
+                dataset_outcome=episode.dataset_outcome,
+            )
 
     def count_by_source(self) -> dict[str, int]:
         rows = self._db.execute("SELECT source, COUNT(*) AS n FROM episodes GROUP BY source")
         return {str(r["source"]): int(r["n"]) for r in rows}
 
-
-def _episode(row: sqlite3.Row) -> Episode:
-    outcome = row["dataset_outcome"]
-    return Episode(
-        id=row["id"],
-        source=row["source"],
-        index=row["source_index"],
-        instruction=row["instruction"],
-        dataset_outcome=None if outcome is None else bool(outcome),
-        frames=row["frames"],
-        fps=row["fps"],
-        duration_s=row["duration_s"],
-    )
+    def _episode(self, row: sqlite3.Row) -> Episode:
+        outcome = row["dataset_outcome"]
+        return Episode(
+            id=row["id"],
+            source=row["source"],
+            index=row["source_index"],
+            instruction=row["instruction"],
+            dataset_outcome=None if outcome is None else bool(outcome),
+            frames=row["frames"],
+            fps=row["fps"],
+            duration_s=row["duration_s"],
+            cameras=cameras_with_clips(self.folder(row["source"], row["source_index"])),
+        )

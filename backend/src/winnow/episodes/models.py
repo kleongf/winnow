@@ -45,6 +45,16 @@ class Episode(BaseModel):
     frames: int
     fps: float
     duration_s: float
+    cameras: list[str]  # cameras with a clip to play
+
+
+class Signals(BaseModel):
+    """Per-frame robot data for the Workstation's plots, on a time axis starting at 0."""
+
+    t: list[float]  # s
+    gripper: list[float]  # 0 open, 1 closed
+    z: list[float]  # end-effector height, m
+    speed: list[float]  # end-effector speed, m/s, smoothed
 
 
 class IngestRequest(BaseModel):

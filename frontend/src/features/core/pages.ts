@@ -1,5 +1,5 @@
 // The workspace's pages. The current one lives in `?page=` so reloads and links land there.
-import { useEffect, useState } from "react";
+import { navigate, useSearchParams } from "./url";
 
 export const datasetPages = ["prepare"] as const;
 export const projectPages = ["describe", "episodes", "review", "evaluation"] as const;
@@ -17,29 +17,16 @@ function isPage(value: string | null): value is Page {
   return value !== null && Object.hasOwn(pageLabels, value);
 }
 
-export function readPage(search: string = globalThis.location.search): Page {
-  const value = new URLSearchParams(search).get("page");
+export function readPage(params: URLSearchParams): Page {
+  const value = params.get("page");
   return isPage(value) ? value : "prepare";
 }
 
 export function usePage(): [Page, (page: Page) => void] {
-  const [page, setPage] = useState(() => readPage());
-
-  useEffect(() => {
-    const onPopState = () => {
-      setPage(readPage());
-    };
-    globalThis.addEventListener("popstate", onPopState);
-    return () => {
-      globalThis.removeEventListener("popstate", onPopState);
-    };
-  }, []);
-
-  const go = (next: Page) => {
-    const url = new URL(globalThis.location.href);
-    url.searchParams.set("page", next);
-    globalThis.history.pushState(null, "", url);
-    setPage(next);
+  const params = useSearchParams();
+  // Changing page leaves any open Episode.
+  const go = (page: Page) => {
+    navigate({ page, episode: null, t: null });
   };
-  return [page, go];
+  return [readPage(params), go];
 }

@@ -1,13 +1,14 @@
 import { pageLabels, type Page } from "./pages";
 
-const coming: Record<Exclude<Page, "prepare">, string> = {
+type Unbuilt = Exclude<Page, "prepare" | "episodes">;
+
+const coming: Record<Unbuilt, string> = {
   describe: "Write a Description, compile it into a Rubric, and answer the interview.",
-  episodes: "Every Episode with its Triage decision and Reason, opening into the Workstation.",
   review: "The Needs review queue, least confident first.",
   evaluation: "Winnow against Spark alone and length alone, scored on Reference labels.",
 };
 
-export function NotBuiltYet(props: { page: Exclude<Page, "prepare"> }) {
+export function NotBuiltYet(props: { page: Unbuilt }) {
   return (
     <div className="mx-auto max-w-3xl p-8">
       <h1 className="text-xl font-semibold">{pageLabels[props.page]}</h1>
