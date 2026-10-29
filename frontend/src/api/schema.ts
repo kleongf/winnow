@@ -4,6 +4,57 @@
  */
 
 export interface paths {
+    "/api/dataset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dataset */
+        get: operations["get_dataset_api_dataset_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/episodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Episodes */
+        get: operations["list_episodes_api_episodes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/episodes/ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Ingest */
+        post: operations["start_ingest_api_episodes_ingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -21,10 +72,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/jobs/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest Job */
+        get: operations["latest_job_api_jobs_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Job */
+        get: operations["get_job_api_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * DatasetStatus
+         * @description Description-independent work on the Dataset so far, for the Prepare page.
+         */
+        DatasetStatus: {
+            /** Cost Usd */
+            cost_usd: number;
+            /** Episodes */
+            episodes: number;
+            /** Name */
+            name: string;
+            /** Sources */
+            sources: components["schemas"]["SourceCount"][];
+        };
+        /**
+         * Episode
+         * @description An ingested Episode, as the app lists it.
+         */
+        Episode: {
+            /** Dataset Outcome */
+            dataset_outcome: boolean | null;
+            /** Duration S */
+            duration_s: number;
+            /** Fps */
+            fps: number;
+            /** Frames */
+            frames: number;
+            /** Id */
+            id: string;
+            /** Index */
+            index: number;
+            /** Instruction */
+            instruction: string | null;
+            /** Source */
+            source: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** Health */
         Health: {
             /** Meta Api Key Configured */
@@ -35,6 +161,78 @@ export interface components {
              */
             status: "ok";
         };
+        /** IngestRequest */
+        IngestRequest: {
+            /** Indices */
+            indices: number[];
+            /**
+             * Source
+             * @constant
+             */
+            source: "droid_100";
+        };
+        /** IngestStarted */
+        IngestStarted: {
+            /** Job Id */
+            job_id: number;
+        };
+        /** Job */
+        Job: {
+            /** Created At */
+            created_at: string;
+            /** Done */
+            done: number;
+            /** Failed */
+            failed: number;
+            /** Finished */
+            finished: boolean;
+            /** Id */
+            id: number;
+            /** Items */
+            items: components["schemas"]["JobItem"][];
+            /** Kind */
+            kind: string;
+            /** Queued */
+            queued: number;
+            /** Running */
+            running: number;
+            /** Total */
+            total: number;
+        };
+        /** JobItem */
+        JobItem: {
+            /** Detail */
+            detail: string | null;
+            /** Label */
+            label: string;
+            /** Position */
+            position: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "failed";
+        };
+        /** SourceCount */
+        SourceCount: {
+            /** Episodes */
+            episodes: number;
+            /** Name */
+            name: string;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -44,6 +242,79 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_dataset_api_dataset_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetStatus"];
+                };
+            };
+        };
+    };
+    list_episodes_api_episodes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Episode"][];
+                };
+            };
+        };
+    };
+    start_ingest_api_episodes_ingest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_health_api_health_get: {
         parameters: {
             query?: never;
@@ -60,6 +331,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    latest_job_api_jobs_latest_get: {
+        parameters: {
+            query: {
+                kind: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_api_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

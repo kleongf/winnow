@@ -16,11 +16,11 @@ Runs backend and frontend typecheck, lint, format check, and tests; checks the g
 
 **Done means** `pnpm verify` passes **and** you have exercised the change in the running app: `pnpm exercise <path> [--click <text>]...` saves screenshots plus console and network errors to `artifacts/exercise/`. Look at the screenshots.
 
-Setup: `pnpm install && uv sync --project backend && pnpm exec playwright install chromium`; copy `.env.example` to `.env`. Run the app with `pnpm dev` (http://127.0.0.1:5173).
+Setup: `pnpm install && uv sync --project backend && pnpm exec playwright install chromium`, plus `ffmpeg` on the PATH; copy `.env.example` to `.env`. Run the app with `pnpm dev` (http://127.0.0.1:5173).
 
 ## Conventions
 
-- **Layout:** `backend/` is Python 3.13 (uv, FastAPI, Pydantic, pyright strict, ruff, pytest). `frontend/` is React + strict TypeScript (Vite, TanStack Query, ESLint, Prettier, Vitest). `e2e/` is Playwright; `scripts/` is repo tooling.
+- **Layout:** `backend/` is Python 3.13 (uv, FastAPI, Pydantic, pyright strict, ruff, pytest). `frontend/` is React + strict TypeScript (Vite, TanStack Query, shadcn/ui on Radix with Tailwind, ESLint, Prettier, Vitest); add components with `pnpm dlx shadcn add`, which writes the generated, unlinted `src/components/ui/`. `e2e/` is Playwright; `scripts/` is repo tooling.
 - **One directory per feature,** named after the glossary: `backend/src/winnow/<feature>/` with `models.py` (Pydantic types), `service.py` (logic), `routes.py` (FastAPI router, mounted under `/api` in `app.py`); tests in `backend/tests/<feature>/`. The frontend mirrors it in `frontend/src/features/<feature>/`. `core/` holds settings and app-level routes. Create a feature directory when its first code lands.
 - **Meta API:** every call goes through `backend/src/winnow/meta/` (auth, retries, rate limits, cost log). Tests and CI never call it; use fixtures.
 - **Secrets:** read through `winnow.core.settings`, loaded from `.env`. Never hard-code or log them.
