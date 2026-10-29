@@ -17,9 +17,9 @@ class Interval:
     end: int  # last frame, inclusive
 
 
-def closures(gripper: FloatArray) -> list[Interval]:
-    """Each stretch of frames where the gripper is closed."""
-    closed = gripper > CLOSED_THRESHOLD
+def closures(gripper: FloatArray, threshold: float = CLOSED_THRESHOLD) -> list[Interval]:
+    """Each stretch of frames where the gripper is closed (above `threshold`)."""
+    closed = gripper > threshold
     intervals: list[Interval] = []
     start: int | None = None
     for i, is_closed in enumerate(closed):

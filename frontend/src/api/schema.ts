@@ -140,6 +140,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/episodes/{episode_id}/tracks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tracks
+         * @description The Episode's SAM tracks so far, each with its health; empty before any has run.
+         */
+        get: operations["get_tracks_api_episodes__episode_id__tracks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -432,6 +452,10 @@ export interface components {
             name: string;
             /** Sources */
             sources: components["schemas"]["SourceCount"][];
+            /** Wrist No Closure */
+            wrist_no_closure: number;
+            /** Wrist Tracks */
+            wrist_tracks: number | null;
         };
         /**
          * Episode
@@ -582,6 +606,66 @@ export interface components {
             episodes: number;
             /** Name */
             name: string;
+        };
+        /** Track */
+        Track: {
+            /** Boxes */
+            boxes: components["schemas"]["TrackBox"][];
+            /** Camera */
+            camera: string;
+            /** Episode Id */
+            episode_id: string;
+            /** Fps */
+            fps: number;
+            /** Frames */
+            frames: number;
+            health: components["schemas"]["TrackHealth"] | null;
+            /** Height */
+            height: number;
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "wrist";
+            /** Seed Frame */
+            seed_frame: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "tracked" | "no_closure";
+            /** Width */
+            width: number;
+        };
+        /**
+         * TrackBox
+         * @description SAM's box on one frame of the 5 fps clip, in that clip's pixels (half-open bounds).
+         */
+        TrackBox: {
+            /** Bottom */
+            bottom: number;
+            /** Frame */
+            frame: number;
+            /** Left */
+            left: number;
+            /** Right */
+            right: number;
+            /** Top */
+            top: number;
+        };
+        /**
+         * TrackHealth
+         * @description Signs SAM lost the object, recomputed on every read. SAM's confidence is never used.
+         */
+        TrackHealth: {
+            /** Area Jumps */
+            area_jumps: number[];
+            /** Centre Jumps */
+            centre_jumps: number[];
+            /** Lost */
+            lost: boolean;
+            /** Missing Fraction */
+            missing_fraction: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -815,6 +899,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Signals"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tracks_api_episodes__episode_id__tracks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Track"][];
                 };
             };
             /** @description Validation Error */

@@ -6,6 +6,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 import { SET_LABELS, setsByEpisode, useSets } from "../sets/useSets";
+import { TrackOverlay } from "../tracking/TrackOverlay";
+import { TrackStatus } from "../tracking/TrackStatus";
+import { useTracks } from "../tracking/useTracks";
 import { EpisodeVideo } from "./EpisodeVideo";
 import { SignalPlots } from "./SignalPlots";
 import { clipUrl, useSignals, type Episode } from "./useEpisodes";
@@ -23,6 +26,8 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
   const [camera, setCamera] = useState(episode.cameras[0] ?? null);
   const signals = useSignals(episode.id);
   const set = setsByEpisode(useSets().data).get(episode.id);
+  const tracks = useTracks(episode.id).data ?? [];
+  const shownTrack = tracks.find((t) => t.camera === camera && t.status === "tracked");
   const { toggle } = playhead;
 
   useEffect(() => {
@@ -60,7 +65,10 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
           </span>
         </div>
         {camera ? (
-          <EpisodeVideo key={camera} src={clipUrl(episode.id, camera)} playhead={playhead} />
+          <div className="relative">
+            <EpisodeVideo key={camera} src={clipUrl(episode.id, camera)} playhead={playhead} />
+            {shownTrack && <TrackOverlay track={shownTrack} playhead={playhead} />}
+          </div>
         ) : (
           <div className="grid aspect-video w-full place-items-center rounded bg-black text-sm text-white/60">
             No clips for this Episode
@@ -88,6 +96,9 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
           <dd>{episode.source}</dd>
           <dt className="text-muted-foreground">Set</dt>
           <dd data-testid="episode-set">{set ? SET_LABELS[set] : "None"}</dd>
+          {tracks.map((track) => (
+            <TrackStatus key={track.kind} track={track} />
+          ))}
         </dl>
         <p className="mt-6 text-xs text-muted-foreground">
           The Triage decision, Reason and Criterion results appear here once the Episode is scored.

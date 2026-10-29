@@ -1,5 +1,5 @@
-// Prepare: Dataset-level work that no Description depends on: ingest, hand-drawn boxes, and
-// (as they're built) tracks, target boxes and the Spark-alone baseline.
+// Prepare: Dataset-level work that no Description depends on: ingest, hand-drawn boxes, wrist
+// tracks, the Spark-alone baseline and (as they're built) exterior tracks and target boxes.
 import { Progress } from "@/components/ui/progress";
 
 import { NeedsBox } from "../boxes/NeedsBox";
@@ -10,7 +10,7 @@ import { useIngestProgress } from "../jobs/useIngestProgress";
 import { SetStatus } from "../sets/SetStatus";
 import { useDatasetStatus, type DatasetStatus } from "./useDatasetStatus";
 
-const LATER_STAGES = ["Wrist tracks", "Exterior tracks", "Target boxes"];
+const LATER_STAGES = ["Exterior tracks", "Target boxes"];
 
 export function PreparePage() {
   const status = useDatasetStatus();
@@ -39,6 +39,7 @@ export function PreparePage() {
 
 function StatusGrid(props: { status: DatasetStatus }) {
   const { episodes, boxes, baseline, cost_usd: cost } = props.status;
+  const { wrist_tracks: wristTracks, wrist_no_closure: noClosure } = props.status;
   return (
     <>
       <div className="mt-6 grid grid-cols-3 gap-3">
@@ -60,6 +61,20 @@ function StatusGrid(props: { status: DatasetStatus }) {
             {baseline}
           </Stat>
         )}
+        {wristTracks === null ? (
+          <Stat label="Wrist tracks" muted note="needs MODEL_API_KEY">
+            —
+          </Stat>
+        ) : (
+          <Stat
+            label="Wrist tracks"
+            of={episodes - noClosure}
+            note={noClosure ? `${String(noClosure)} never closed the gripper` : undefined}
+            testId="wrist-tracks"
+          >
+            {wristTracks}
+          </Stat>
+        )}
         {LATER_STAGES.map((label) => (
           <Stat key={label} label={label} muted>
             —
@@ -76,7 +91,7 @@ function Stat(props: {
   children: number | string;
   of?: number;
   muted?: boolean;
-  note?: string;
+  note?: string | undefined;
   testId?: string;
 }) {
   const value = typeof props.children === "number" ? props.children : null;
@@ -89,7 +104,7 @@ function Stat(props: {
           <span className="text-sm font-normal text-muted-foreground"> of {props.of}</span>
         )}
       </div>
-      {props.muted && (
+      {(props.muted === true || props.note !== undefined) && (
         <div className="text-[11px] text-muted-foreground">{props.note ?? "not built yet"}</div>
       )}
       {props.of !== undefined && value !== null && (

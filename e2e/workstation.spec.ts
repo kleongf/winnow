@@ -32,6 +32,20 @@ test("the playhead moves the plots' readouts, and ?t= opens at that time", async
   await expect(page.getByTestId("readout-gripper")).toHaveText("0.00");
 });
 
+test("the wrist view shows SAM's box following the playhead", async ({ page }) => {
+  await page.goto("/?page=episodes&episode=droid_100%3A0&t=0.2");
+  await page.getByRole("tab", { name: "Wrist" }).click();
+
+  // The fixture's block slides right; its recorded wrist track follows it.
+  const box = page.getByTestId("track-box");
+  const left = () => box.evaluate((el) => parseFloat((el as HTMLElement).style.left));
+  await expect(box).toBeVisible();
+  const before = await left();
+  await page.getByLabel("Playhead").fill("2.4");
+  await expect.poll(left).toBeGreaterThan(before + 10);
+  await expect(page.getByTestId("track-status-wrist")).toHaveText("box on 15 of 15 frames");
+});
+
 test("J and K step through Episodes and Esc goes back to the table", async ({ page }) => {
   await page.goto("/?page=episodes&episode=droid_100%3A0");
   const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });

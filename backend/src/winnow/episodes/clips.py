@@ -33,6 +33,22 @@ def to_sam_fps(source: Path, out: Path) -> None:
     _encode(source, out, "-vf", f"fps={SAM_FPS}")
 
 
+def probe(clip: Path) -> tuple[int, int, int]:
+    """(frames, width, height) of a clip's video stream, counting frames by decoding them."""
+    result = subprocess.run(
+        [
+            *("ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0"),
+            *("-show_entries", "stream=nb_read_frames,width,height", "-of", "csv=p=0"),
+            str(clip),
+        ],
+        capture_output=True, text=True, check=False,
+    )  # fmt: skip
+    if result.returncode != 0:
+        raise RuntimeError(f"ffprobe failed: {result.stderr.strip() or result.returncode}")
+    width, height, frames = (int(v) for v in result.stdout.strip().split(","))
+    return frames, width, height
+
+
 def first_frame(clip: Path, out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     partial = out.with_suffix(".partial.jpg")

@@ -11,14 +11,17 @@ from winnow.core.settings import Settings
 from winnow.episodes.fixtures import write_fixture_source
 from winnow.episodes.fixtures_droid101 import write_droid101_fixture
 
-# Episode 3 of the fixture source has unreadable video.
+# Episode 3 of the fixture source has unreadable video; in Episode 4 the gripper never closes.
 CORRUPT_EPISODE = 3
+OPEN_GRIPPER_EPISODE = 4
 
 
 @pytest.fixture(scope="session")
 def droid100_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
     root = tmp_path_factory.mktemp("droid_100")
-    return write_fixture_source(root, episodes=4, corrupt=(CORRUPT_EPISODE,))
+    return write_fixture_source(
+        root, episodes=5, corrupt=(CORRUPT_EPISODE,), open_gripper=(OPEN_GRIPPER_EPISODE,)
+    )
 
 
 @pytest.fixture(scope="session")

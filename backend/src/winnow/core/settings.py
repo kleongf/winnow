@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     droid100_root: Path | None = None
     droid101_root: Path | None = None  # likewise for droid_1.0.1
     ingest_concurrency: int = 4  # Episodes transcoded at once
+    # Serve Meta calls from responses recorded by `RecordingTransport` instead of the network
+    # (e2e does); no API key needed.
+    meta_replay: Path | None = None
 
     @field_validator("model_api_key", mode="before")
     @classmethod

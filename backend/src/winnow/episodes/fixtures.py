@@ -2,7 +2,9 @@
 
 Writes the same files the droid_100 adapter reads (the v3.0 parquet and tasks on `main`, one mp4
 per Episode per camera on `v2.0`), with a simple pick-and-place motion: reach, close, lift,
-carry, release. Deterministic, so recorded Meta responses keyed by file content stay valid.
+carry, release. The wrist view shows a red block sliding right, under the wrist track's seed
+point once the gripper has closed, so SAM has something to follow. Deterministic, so recorded
+Meta responses stay valid.
 """
 
 import subprocess
@@ -17,20 +19,30 @@ from winnow.episodes.droid100 import CAMERAS, FPS
 INSTRUCTIONS = ("Put the marker in the pot", "Move the black remote control to the left", "")
 
 
-def state(frames: int) -> np.ndarray:
+def sliding_block(index: int) -> str:
+    """A red block sliding right over grey, under the wrist seed point (190,105) at about 1 s.
+    Its start shifts a little per Episode."""
+    return (
+        f"color=c=0x5a6470:size=320x180:rate={FPS:g}[bg];"
+        f"color=c=0xd03030:size=60x40:rate={FPS:g}[fg];"
+        f"[bg][fg]overlay=x='{110 + 4 * index}+40*t':y=85"
+    )
+
+
+def state(frames: int, closes: bool = True) -> np.ndarray:
     """End-effector xyz + roll/pitch/yaw + gripper per frame (droid_100's `observation.state`)."""
     t = np.linspace(0.0, 1.0, frames)
     x = 0.4 + 0.2 * t
     z = 0.25 - 0.15 * np.sin(np.pi * np.clip(t * 2, 0, 1))  # dip to the object, then lift
     z = np.where(t > 0.5, 0.10 + 0.10 * (t - 0.5), z)
-    gripper = ((t > 0.3) & (t < 0.8)).astype(np.float64)  # closed while carrying
+    gripper = ((t > 0.3) & (t < 0.8) & closes).astype(np.float64)  # closed while carrying
     state = np.zeros((frames, 7))
     state[:, 0], state[:, 1], state[:, 2], state[:, 6] = x, 0.0, z, gripper
     return state
 
 
-def _write_parquet(root: Path, episodes: int, frames: int) -> None:
-    states = [state(frames) for _ in range(episodes)]
+def _write_parquet(root: Path, episodes: int, frames: int, open_gripper: tuple[int, ...]) -> None:
+    states = [state(frames, closes=i not in open_gripper) for i in range(episodes)]
     rows = episodes * frames
     episode_index = np.repeat(np.arange(episodes), frames)
     frame_index = np.tile(np.arange(frames), episodes)
@@ -58,8 +70,9 @@ def _write_parquet(root: Path, episodes: int, frames: int) -> None:
 
 
 def write_clip(path: Path, frames: int, pattern: str) -> None:
+    """`pattern` is a lavfi test source's name, or a whole lavfi graph."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    source = f"{pattern}=size=320x180:rate={FPS:g}"
+    source = pattern if "=" in pattern else f"{pattern}=size=320x180:rate={FPS:g}"
     subprocess.run(
         [
             *("ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", source),
@@ -76,12 +89,20 @@ def clip_path(root: Path, index: int, camera: str) -> Path:
 
 
 def write_fixture_source(
-    root: Path, episodes: int = 3, frames: int = 45, corrupt: tuple[int, ...] = ()
+    root: Path,
+    episodes: int = 3,
+    frames: int = 45,
+    corrupt: tuple[int, ...] = (),
+    open_gripper: tuple[int, ...] = (),
 ) -> Path:
-    """Write synthetic Episodes under `root`; those in `corrupt` get unreadable video."""
-    _write_parquet(root, episodes, frames)
-    patterns = ("testsrc", "testsrc2", "smptebars")
+    """Write synthetic Episodes under `root`; those in `corrupt` get unreadable video, and in
+    those in `open_gripper` the gripper never closes."""
+    _write_parquet(root, episodes, frames, open_gripper)
     for index in range(episodes):
+        # No two Episodes share a clip: recordings are replayed by clip path, and the Meta
+        # client uploads and asks about identical clips only once.
+        hue = f"=size=320x180:rate={FPS:g},hue=h={10 * index}"
+        patterns = (f"testsrc{hue}", f"testsrc2{hue}", sliding_block(index))
         for camera, pattern in zip(CAMERAS, patterns, strict=True):
             path = clip_path(root, index, camera)
             if index in corrupt:

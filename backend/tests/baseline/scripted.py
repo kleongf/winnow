@@ -1,10 +1,12 @@
-"""A scripted Spark for baseline tests: canned, valid answers unless told to break one."""
+"""A scripted Spark for baseline tests: canned, valid answers unless told to break one. SAM
+(the wrist track ingest also runs) finds nothing."""
 
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from winnow.meta.models import MetaContent
+from winnow.meta.pricing import SAM
 from winnow.meta.transport import Reply
 
 REASON = "Released the object above the target at 17 s."  # unique, to spot leaks
@@ -24,6 +26,8 @@ class ScriptedSpark:
         return 1000
 
     async def respond(self, model: str, content: MetaContent, options: dict[str, object]) -> Reply:
+        if model == SAM:
+            return Reply("", {"video_frames_processed": 15})
         text_format = options["text"]
         assert isinstance(text_format, dict)
         name = text_format["format"]["name"]  # pyright: ignore[reportUnknownVariableType]
