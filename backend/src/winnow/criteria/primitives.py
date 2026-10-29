@@ -4,6 +4,7 @@ Adding a primitive means a name here, its metadata below, and a measure function
 template in `criteria.catalog`.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
@@ -24,7 +25,9 @@ Source = Literal["robot data"]
 class PrimitiveInfo:
     kind: Kind
     unit: str
-    params: tuple[str, ...]  # the names a Criterion's `params` must have
+    # The names a Criterion's `params` must have, each with the value compile and the
+    # capabilities manifest use when the Description doesn't say.
+    params: Mapping[str, float]
     # A crisp fail of a conclusive primitive fails its Phrase on its own; an inconclusive one
     # (release_height_m, stacking) can only make it unsure.
     conclusive: bool
@@ -35,11 +38,11 @@ class PrimitiveInfo:
 
 
 PRIMITIVES: dict[Primitive, PrimitiveInfo] = {
-    "grasp_attempts": PrimitiveInfo("measured", "attempts", (), conclusive=True, noise_floor=0),
+    "grasp_attempts": PrimitiveInfo("measured", "attempts", {}, conclusive=True, noise_floor=0),
     "longest_still_s": PrimitiveInfo(
-        "measured", "s", ("speed_below_m_s",), conclusive=True, noise_floor=0.2
+        "measured", "s", {"speed_below_m_s": 0.01}, conclusive=True, noise_floor=0.2
     ),
-    "release_height_m": PrimitiveInfo("measured", "m", (), conclusive=False, noise_floor=0.01),
-    "active_duration_s": PrimitiveInfo("measured", "s", (), conclusive=True, noise_floor=0.2),
-    "path_efficiency": PrimitiveInfo("measured", "ratio", (), conclusive=True, noise_floor=0.05),
+    "release_height_m": PrimitiveInfo("measured", "m", {}, conclusive=False, noise_floor=0.01),
+    "active_duration_s": PrimitiveInfo("measured", "s", {}, conclusive=True, noise_floor=0.2),
+    "path_efficiency": PrimitiveInfo("measured", "ratio", {}, conclusive=True, noise_floor=0.05),
 }

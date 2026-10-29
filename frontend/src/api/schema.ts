@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/api/anchor-pool": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Anchor Pool
+         * @description The Episodes the Rubric is written against: the Dev set, never the Test set.
+         */
+        get: operations["get_anchor_pool_api_anchor_pool_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/boxes": {
         parameters: {
             query?: never;
@@ -368,6 +388,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rubric/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Draft
+         * @description The Rubric draft on the Describe page; null until a Description is compiled.
+         */
+        get: operations["get_draft_api_rubric_draft_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rubric/draft/compile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Compile
+         * @description Compile a Description into the Rubric draft, replacing the one there: one Spark call,
+         *     plus one repair turn when its answer fails code's checks.
+         */
+        post: operations["post_compile_api_rubric_draft_compile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/selection": {
         parameters: {
             query?: never;
@@ -552,6 +613,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnchorPool */
+        AnchorPool: {
+            /** Episode Ids */
+            episode_ids: string[];
+            /** Hidden Test Episodes */
+            hidden_test_episodes: number;
+            /**
+             * Set Name
+             * @enum {string}
+             */
+            set_name: "dev" | "test";
+        };
         /** Box */
         Box: {
             /**
@@ -630,6 +703,11 @@ export interface components {
             length_rule: components["schemas"]["LengthRule"] | null;
             /** Rows */
             rows: components["schemas"]["SystemRow"][];
+        };
+        /** CompileRequest */
+        CompileRequest: {
+            /** Description */
+            description: string;
         };
         /** Confirm */
         Confirm: {
@@ -788,6 +866,28 @@ export interface components {
             wrist_no_closure: number;
             /** Wrist Tracks */
             wrist_tracks: number | null;
+        };
+        /**
+         * DraftPhrase
+         * @description One Phrase of a draft's Description and what compile made of it. Its Criteria are the
+         *     draft's Criteria whose `phrase` is its text.
+         */
+        DraftPhrase: {
+            /** End */
+            end: number;
+            /** Reason */
+            reason?: string | null;
+            /** Restatement */
+            restatement: string;
+            /** Start */
+            start: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "checked" | "context" | "unsupported";
+            /** Text */
+            text: string;
         };
         /**
          * Episode
@@ -1135,6 +1235,16 @@ export interface components {
             relabel: boolean;
         };
         /**
+         * RejectedPhrase
+         * @description A Phrase Spark proposed that code refused, e.g. one that isn't in the Description.
+         */
+        RejectedPhrase: {
+            /** Reason */
+            reason: string;
+            /** Text */
+            text: string;
+        };
+        /**
          * Rubric
          * @description A Description's Phrases, the Criteria each became, and what a grasp is.
          */
@@ -1146,6 +1256,39 @@ export interface components {
             /** Phrases */
             phrases: string[];
             settings: components["schemas"]["RubricSettings"];
+        };
+        /**
+         * RubricDraft
+         * @description The Rubric being written on the Describe page: compiled from a Description, edited, and
+         *     frozen into a Rubric version by Run.
+         */
+        RubricDraft: {
+            /** Compiled At */
+            compiled_at: string;
+            /** Criteria */
+            criteria: components["schemas"]["Criterion"][];
+            /** Description */
+            description: string;
+            /**
+             * English
+             * @description Each Criterion as the user reads it, by id.
+             */
+            readonly english: {
+                [key: string]: string;
+            };
+            /** Phrases */
+            phrases: components["schemas"]["DraftPhrase"][];
+            /**
+             * Rejected
+             * @default []
+             */
+            rejected: components["schemas"]["RejectedPhrase"][];
+            settings: components["schemas"]["RubricSettings"];
+            /**
+             * Uncovered
+             * @description Meaningful words outside every Phrase, so nothing written is silently ignored.
+             */
+            readonly uncovered: components["schemas"]["TextRange"][];
         };
         /**
          * RubricSettings
@@ -1265,6 +1408,15 @@ export interface components {
             rubric_version: number;
             /** Run At */
             run_at: string;
+        };
+        /** TextRange */
+        TextRange: {
+            /** End */
+            end: number;
+            /** Start */
+            start: number;
+            /** Text */
+            text: string;
         };
         /**
          * TextSpan
@@ -1405,6 +1557,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_anchor_pool_api_anchor_pool_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnchorPool"];
+                };
+            };
+        };
+    };
     list_boxes_api_boxes_get: {
         parameters: {
             query?: never;
@@ -1959,6 +2131,73 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RubricVersion"];
                 };
+            };
+        };
+    };
+    get_draft_api_rubric_draft_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricDraft"] | null;
+                };
+            };
+        };
+    };
+    post_compile_api_rubric_draft_compile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompileRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricDraft"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Spark's answer couldn't be used */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Meta API isn't configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

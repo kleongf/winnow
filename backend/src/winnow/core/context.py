@@ -24,6 +24,7 @@ from winnow.meta.costs import CostLog
 from winnow.meta.replay import ReplayTransport
 from winnow.meta.transport import Transport
 from winnow.reference_labels.store import ReferenceLabelStore
+from winnow.rubric.draft_store import DraftStore
 from winnow.rubric.seed import SEEDED
 from winnow.rubric.store import RubricStore
 from winnow.selection.service import select_step
@@ -49,6 +50,7 @@ class AppContext:
     tracks: TrackStore
     targets: TargetBoxStore
     rubrics: RubricStore
+    drafts: DraftStore  # the Describe page's Rubric draft
     reference_labels: ReferenceLabelStore  # never read by scoring
     test_runs: TestRunLog
     jobs: JobStore
@@ -79,6 +81,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     tracks = TrackStore(db)
     targets = TargetBoxStore(db)
     rubrics = RubricStore(db, SEEDED)
+    drafts = DraftStore(db)
     reference_labels = ReferenceLabelStore(db)
     test_runs = TestRunLog(db)
     jobs = JobStore(db)
@@ -105,6 +108,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         tracks,
         targets,
         rubrics,
+        drafts,
         reference_labels,
         test_runs,
         jobs,

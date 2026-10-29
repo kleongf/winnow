@@ -1,8 +1,10 @@
-from typing import Self
+from typing import Literal, Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, computed_field, model_validator
 
+from winnow.criteria.english import english
 from winnow.criteria.models import Criterion, RubricSettings
+from winnow.rubric.phrases import TextRange, uncovered_words
 
 
 class Rubric(BaseModel):
@@ -33,3 +35,51 @@ class RubricVersion(BaseModel):
     version: int
     created_at: str
     rubric: Rubric
+
+
+PhraseStatus = Literal["checked", "context", "unsupported"]
+
+
+class DraftPhrase(BaseModel):
+    """One Phrase of a draft's Description and what compile made of it. Its Criteria are the
+    draft's Criteria whose `phrase` is its text."""
+
+    text: str  # an exact substring of the Description
+    start: int  # where it sits in the Description, in characters
+    end: int
+    restatement: str  # what it requires, said precisely
+    status: PhraseStatus
+    # Context: why it checks nothing, which the user can overrule. Unsupported: Spark's reason,
+    # or the validation error that survived the repair turn.
+    reason: str | None = None
+
+
+class RejectedPhrase(BaseModel):
+    """A Phrase Spark proposed that code refused, e.g. one that isn't in the Description."""
+
+    text: str
+    reason: str
+
+
+class RubricDraft(BaseModel):
+    """The Rubric being written on the Describe page: compiled from a Description, edited, and
+    frozen into a Rubric version by Run."""
+
+    description: str
+    phrases: list[DraftPhrase]  # in Description order, never overlapping
+    settings: RubricSettings
+    criteria: list[Criterion]
+    rejected: list[RejectedPhrase] = []
+    compiled_at: str
+
+    @computed_field
+    @property
+    def uncovered(self) -> list[TextRange]:
+        """Meaningful words outside every Phrase, so nothing written is silently ignored."""
+        return uncovered_words(self.description, [(p.start, p.end) for p in self.phrases])
+
+    @computed_field
+    @property
+    def english(self) -> dict[str, str]:
+        """Each Criterion as the user reads it, by id."""
+        return {c.id: english(c) for c in self.criteria}
