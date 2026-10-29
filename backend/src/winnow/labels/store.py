@@ -1,9 +1,11 @@
 import sqlite3
+from datetime import UTC, datetime
 
 from winnow.labels.models import StoredLabel
 
-# Append-only: a new answer for a Phrase supersedes the last one but never erases it, so every
-# label stays in history.
+# Append-only: a new answer for a Phrase supersedes the last one but never erases it, and undoing
+# an interview answer withdraws its label rather than deleting it, so every label stays in
+# history. The newest label per Phrase that isn't withdrawn is in force.
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS labels (
     id INTEGER PRIMARY KEY,
@@ -11,7 +13,7 @@ CREATE TABLE IF NOT EXISTS labels (
     phrase TEXT NOT NULL,
     source TEXT NOT NULL,
     value TEXT NOT NULL,
-    rubric_version INTEGER,
+    rubric_version INTEGER,  -- NULL: given against the Rubric draft (the interview)
     labelled_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS labels_by_episode ON labels (episode_id, phrase);
@@ -19,7 +21,20 @@ CREATE TRIGGER IF NOT EXISTS labels_no_update BEFORE UPDATE ON labels
 BEGIN SELECT RAISE(ABORT, 'Labels are kept as history'); END;
 CREATE TRIGGER IF NOT EXISTS labels_no_delete BEFORE DELETE ON labels
 BEGIN SELECT RAISE(ABORT, 'Labels are kept as history'); END;
+CREATE TABLE IF NOT EXISTS label_withdrawals (
+    label_id INTEGER PRIMARY KEY REFERENCES labels(id),
+    withdrawn_at TEXT NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS label_withdrawals_no_update BEFORE UPDATE ON label_withdrawals
+BEGIN SELECT RAISE(ABORT, 'Labels are kept as history'); END;
+CREATE TRIGGER IF NOT EXISTS label_withdrawals_no_delete BEFORE DELETE ON label_withdrawals
+BEGIN SELECT RAISE(ABORT, 'Labels are kept as history'); END;
 """
+
+SELECT = (
+    "SELECT labels.*, label_withdrawals.withdrawn_at FROM labels "
+    "LEFT JOIN label_withdrawals ON label_withdrawals.label_id = labels.id "
+)
 
 
 class LabelStore:
@@ -27,8 +42,9 @@ class LabelStore:
         self._db = db
         db.executescript(SCHEMA)
 
-    def add(self, label: StoredLabel) -> None:
-        self._db.execute(
+    def add(self, label: StoredLabel) -> StoredLabel:
+        """The label as stored, with its id."""
+        cursor = self._db.execute(
             "INSERT INTO labels (episode_id, phrase, source, value, rubric_version, labelled_at) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             (
@@ -40,29 +56,39 @@ class LabelStore:
                 label.labelled_at,
             ),
         )
+        return label.model_copy(update={"id": cursor.lastrowid})
+
+    def withdraw(self, label_id: int) -> None:
+        """Stops a label applying; the Phrase's previous label, if any, is in force again."""
+        self._db.execute(
+            "INSERT OR IGNORE INTO label_withdrawals (label_id, withdrawn_at) VALUES (?, ?)",
+            (label_id, datetime.now(UTC).isoformat()),
+        )
 
     def history(self, episode_id: str) -> list[StoredLabel]:
-        """Every label the Episode was ever given, oldest first."""
-        rows = self._db.execute(
-            "SELECT * FROM labels WHERE episode_id = ? ORDER BY id", (episode_id,)
-        )
+        """Every label the Episode was ever given, withdrawn or not, oldest first."""
+        rows = self._db.execute(SELECT + "WHERE episode_id = ? ORDER BY labels.id", (episode_id,))
         return [self._label(row) for row in rows]
 
     def in_force(self, episode_id: str) -> list[StoredLabel]:
-        """The newest label for each Phrase, whatever its source: the ones scoring applies."""
+        """The newest label for each Phrase that isn't withdrawn, whatever its source: the ones
+        scoring applies."""
         rows = self._db.execute(
-            "SELECT * FROM labels WHERE id IN "
-            "(SELECT MAX(id) FROM labels WHERE episode_id = ? GROUP BY phrase) ORDER BY id",
+            SELECT + "WHERE labels.id IN (SELECT MAX(id) FROM labels WHERE episode_id = ? "
+            "AND id NOT IN (SELECT label_id FROM label_withdrawals) GROUP BY phrase) "
+            "ORDER BY labels.id",
             (episode_id,),
         )
         return [self._label(row) for row in rows]
 
     def _label(self, row: sqlite3.Row) -> StoredLabel:
         return StoredLabel(
+            id=row["id"],
             episode_id=row["episode_id"],
             phrase=row["phrase"],
             source=row["source"],
             value=row["value"],
             rubric_version=row["rubric_version"],
             labelled_at=row["labelled_at"],
+            withdrawn_at=row["withdrawn_at"],
         )

@@ -1,9 +1,9 @@
-"""Saving a label against the latest Rubric version."""
+"""Saving a label against the latest Rubric version (Review, Audit) or the Rubric draft (the
+interview)."""
 
 from datetime import UTC, datetime
 
 from winnow.core.context import AppContext
-from winnow.episodes.models import Episode
 from winnow.labels.models import LabelDraw, StoredLabel
 
 
@@ -11,16 +11,26 @@ class UnknownPhraseError(ValueError):
     pass
 
 
-def save_label(ctx: AppContext, episode: Episode, draw: LabelDraw) -> StoredLabel:
+def _stored(draw: LabelDraw, episode_id: str, rubric_version: int | None) -> StoredLabel:
+    return StoredLabel(
+        **draw.model_dump(),
+        episode_id=episode_id,
+        rubric_version=rubric_version,
+        labelled_at=datetime.now(UTC).isoformat(),
+    )
+
+
+def save_label(ctx: AppContext, episode_id: str, draw: LabelDraw) -> StoredLabel:
     """Raises UnknownPhraseError unless `draw` names a Phrase of the latest Rubric version."""
     version = ctx.rubrics.latest()
     if draw.phrase not in version.rubric.phrases:
         raise UnknownPhraseError(f"{draw.phrase!r} isn't a Phrase of Rubric v{version.version}")
-    label = StoredLabel(
-        **draw.model_dump(),
-        episode_id=episode.id,
-        rubric_version=version.version,
-        labelled_at=datetime.now(UTC).isoformat(),
-    )
-    ctx.labels.add(label)
-    return label
+    return ctx.labels.add(_stored(draw, episode_id, version.version))
+
+
+def save_draft_label(ctx: AppContext, episode_id: str, draw: LabelDraw) -> StoredLabel:
+    """Raises UnknownPhraseError unless `draw` names a Phrase of the Rubric draft."""
+    draft = ctx.drafts.get()
+    if draft is None or draw.phrase not in (p.text for p in draft.phrases):
+        raise UnknownPhraseError(f"{draw.phrase!r} isn't a Phrase of the Rubric draft")
+    return ctx.labels.add(_stored(draw, episode_id, None))

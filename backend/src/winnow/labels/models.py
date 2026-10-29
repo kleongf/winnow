@@ -1,5 +1,6 @@
 """Labels: a human's pass or fail on one Phrase of one Episode, from the interview, Review or the
-Audit tab. Unlike Reference labels, scoring reads them: each overrides its Phrase's result."""
+Audit tab. Unlike Reference labels, scoring reads them: each overrides its Phrase's result, until
+it is withdrawn (an interview answer undone)."""
 
 from typing import Literal
 
@@ -23,3 +24,5 @@ class StoredLabel(Label):
     episode_id: str
     rubric_version: int | None  # the version it was given against; None: the Rubric draft
     labelled_at: str
+    id: int | None = None  # set once stored
+    withdrawn_at: str | None = None  # undone (an interview answer's): kept, never applied

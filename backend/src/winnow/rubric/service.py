@@ -7,7 +7,7 @@ from winnow.rubric.compile import compile_rubric
 from winnow.rubric.edits import apply_edit
 from winnow.rubric.manifest import capabilities_manifest
 from winnow.rubric.models import AnchorPreview, DraftEdit, RubricDraft, RubricVersion
-from winnow.rubric.preview import anchor_preview, revealed_anchor_facts
+from winnow.rubric.preview import anchor_labels, anchor_preview, revealed_anchor_facts
 from winnow.rubric.seed import SEEDED_SETTINGS
 
 
@@ -44,12 +44,16 @@ def edit_draft(ctx: AppContext, edit: DraftEdit) -> RubricDraft:
 def preview_draft(ctx: AppContext, edit: DraftEdit) -> AnchorPreview:
     """The draft, with `edit` applied but not saved, scored on the anchor pool."""
     draft = apply_edit(_draft(ctx), edit)
-    return anchor_preview(revealed_anchor_facts(ctx), draft.rubric(), draft.criteria, None)
+    facts = revealed_anchor_facts(ctx)
+    labels = anchor_labels(ctx, list(facts))
+    return anchor_preview(facts, draft.rubric(), draft.criteria, None, labels)
 
 
 def preview_version(ctx: AppContext, version: RubricVersion) -> AnchorPreview:
     rubric = version.rubric
-    return anchor_preview(revealed_anchor_facts(ctx), rubric, rubric.criteria, version.version)
+    facts = revealed_anchor_facts(ctx)
+    labels = anchor_labels(ctx, list(facts))
+    return anchor_preview(facts, rubric, rubric.criteria, version.version, labels)
 
 
 def run_draft(ctx: AppContext) -> RubricVersion:
