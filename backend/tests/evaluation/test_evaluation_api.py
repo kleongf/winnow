@@ -6,7 +6,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.helpers import app_context, wait_for_job
+from tests.helpers import app_context, track_cleanly, wait_for_job
 from winnow.baseline.models import BaselineAnswer
 from winnow.baseline.prompts import FROZEN
 from winnow.cli import main
@@ -55,6 +55,7 @@ def spark_alone(api: TestClient, episode_id: str, *decisions: str | None) -> Non
 def labelled(api: TestClient, set_name: str) -> TestClient:
     job = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": [0, 1, 2, 4]})
     wait_for_job(api, job.json()["job_id"])
+    track_cleanly(api, "droid_100:0")  # kept only once its tracked Criteria can pass
     api.post(f"/api/sets/{set_name}/episodes", json={"episode_ids": EPISODES})
     reference_label(api, "droid_100:0")
     reference_label(api, "droid_100:1", NEVER_DROPS)  # a failure Winnow can't see yet

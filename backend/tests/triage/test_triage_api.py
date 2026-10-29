@@ -7,12 +7,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import OPEN_GRIPPER_EPISODE
-from tests.helpers import app_context, reference_label, wait_for_job
+from tests.helpers import app_context, reference_label, track_cleanly, wait_for_job
 from winnow.baseline.prompts import FROZEN
 from winnow.rubric.models import Rubric
 from winnow.rubric.store import RubricStore
 
-FIRST_TRY, _, PLACES, NO_PAUSES = FROZEN.phrases
+FIRST_TRY, NEVER_DROPS, PLACES, NO_PAUSES = FROZEN.phrases
 HIGH_RELEASE_EPISODE = 1  # the fixture's i % 3 == 1 release within the release height's margin
 REGRASP_EPISODE = 2  # the fixture's failures (i % 3 == 2) are Episode 42-shaped
 
@@ -24,6 +24,8 @@ def ingested(api: TestClient) -> TestClient:
     wait_for_job(api, job.json()["job_id"])
     for index in indices:  # their outputs show only once labelled
         reference_label(api, f"droid_100:{index}")
+    for index in (0, HIGH_RELEASE_EPISODE, REGRASP_EPISODE):
+        track_cleanly(api, f"droid_100:{index}")
     return api
 
 
@@ -34,24 +36,22 @@ def test_the_rubric_is_seeded_from_the_frozen_description(api: TestClient):
     rubric = version["rubric"]
     assert rubric["description"] == FROZEN.text
     assert rubric["phrases"] == list(FROZEN.phrases)
-    attempts, release, pause = rubric["criteria"]
-    assert (attempts["primitive"], attempts["phrase"], attempts["kind"]) == (
-        "grasp_attempts",
-        FIRST_TRY,
-        "measured",
-    )
+    criteria = {c["id"]: c for c in rubric["criteria"]}
+    assert {(c["primitive"], c["phrase"], c["kind"]) for c in criteria.values()} == {
+        ("grasp_attempts", FIRST_TRY, "measured"),
+        ("in_hand_lost_s", NEVER_DROPS, "tracked"),
+        ("fall_after_release", NEVER_DROPS, "tracked"),
+        ("release_height_m", NEVER_DROPS, "measured"),
+        ("final_overlap", PLACES, "tracked"),
+        ("longest_still_s", NO_PAUSES, "measured"),
+    }
+    attempts = criteria["grasp-attempts"]
     assert (attempts["comparator"], attempts["threshold"], attempts["hard"]) == ("<=", 1, True)
-    assert (release["primitive"], release["phrase"], release["threshold"]) == (
-        "release_height_m",
-        PLACES,
-        0.05,
-    )
-    assert (pause["primitive"], pause["phrase"], pause["params"]) == (
-        "longest_still_s",
-        NO_PAUSES,
-        {"speed_below_m_s": 0.01},
-    )
-    assert release["assumptions"] and pause["assumptions"]  # guesses until the interview
+    assert criteria["release-height"]["threshold"] == 0.05
+    assert criteria["longest-pause"]["params"] == {"speed_below_m_s": 0.01}
+    assert criteria["final-overlap"]["window"] == {"kind": "last_n_s", "seconds": 1.0}
+    guessed = [c for id_, c in criteria.items() if id_ != "grasp-attempts"]
+    assert all(c["assumptions"] for c in guessed)  # guesses until the interview
     settings = rubric["settings"]
     assert settings["gripper_closed_level"]["value"] == 0.2
     assert settings["grasp_rise_m"]["value"] == 0.02
@@ -97,7 +97,7 @@ def test_an_episodes_triage_has_its_criterion_results_with_moments(ingested: Tes
         "label": None,
         "p_pass": 0.0,
     }
-    assert triage["phrases"][1]["status"] is None  # "never drops it": not checked yet
+    assert triage["phrases"][1]["status"] == "unsure"  # "never drops it": its high release
     assert (triage["p_keep"], triage["confidence"]) == (0.0, 1.0)
 
 
@@ -105,15 +105,17 @@ def test_rows_carry_confidence_signals_and_the_phrases_that_didnt_pass(ingested:
     rows = {r["episode_id"]: r for r in ingested.get("/api/triage").json()["rows"]}
 
     high = rows[f"droid_100:{HIGH_RELEASE_EPISODE}"]
-    assert high["not_passed"] == [{"phrase": PLACES, "status": "unsure"}]
+    assert high["not_passed"] == [{"phrase": NEVER_DROPS, "status": "unsure"}]
     assert high["uncertainty"] == ["near threshold"]
     assert 0.5 < high["confidence"] < 0.95
-    assert high["reason"] == f'Needs review: "{PLACES}": near threshold (4.4 cm against ≤ 5 cm).'
+    assert high["reason"] == (
+        f'Needs review: "{NEVER_DROPS}": near threshold (4.4 cm against ≤ 5 cm).'
+    )
     regrasp = rows[f"droid_100:{REGRASP_EPISODE}"]
     # Like Episode 42 it also releases high (6.3 cm): an unconfirmed fail behind the Reject.
     assert regrasp["not_passed"] == [
         {"phrase": FIRST_TRY, "status": "fail"},
-        {"phrase": PLACES, "status": "unsure"},
+        {"phrase": NEVER_DROPS, "status": "unsure"},
     ]
     assert regrasp["uncertainty"] == ["unconfirmed fail"]
     assert regrasp["confidence"] == 1.0

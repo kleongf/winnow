@@ -14,7 +14,7 @@ Comparator = Literal["<", "<=", ">=", ">", "=="]
 WindowKind = Literal["whole", "before_grasp", "holding", "after_release", "last_n_s"]
 Status = Literal["pass", "fail", "unsure"]
 # Why a result is unsure (or, for "unconfirmed fail", why its fail can't reject on its own).
-# Samples split, Spark said unsure and track lost join with the visual and tracked primitives.
+# Samples split and Spark said unsure join with the visual primitive.
 UncertaintySignal = Literal[
     "near threshold",
     "near threshold (count)",
@@ -22,6 +22,7 @@ UncertaintySignal = Literal[
     "window empty",
     "source missing",
     "step failed",
+    "track lost",
 ]
 
 
@@ -86,6 +87,20 @@ class Moment(BaseModel):
 
     t: float  # s from the Episode's start
     label: str
+
+
+class PlotPoint(BaseModel):
+    t: float  # s from the Episode's start
+    value: float | None  # None where SAM had no box
+
+
+class TrackPlot(BaseModel):
+    """The signal a tracked Criterion is decided on, per 5 fps frame of the stretch it reads."""
+
+    label: str  # e.g. "Object from the fingers"
+    unit: str  # e.g. "box-widths"
+    level: float  # the line the signal is judged against
+    points: list[PlotPoint]
 
 
 class TextSpan(BaseModel):

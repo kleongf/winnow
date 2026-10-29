@@ -14,11 +14,16 @@ Primitive = Literal[
     "release_height_m",
     "active_duration_s",
     "path_efficiency",
+    "in_hand_lost_s",
+    "fall_after_release",
+    "final_overlap",
+    "object_displacement",
 ]
 Kind = Literal["measured", "tracked", "visual"]
-# What a primitive reads. Tracks, the target box and video join with their primitives; when a
-# source is missing or its step failed, every Criterion reading it is unsure.
-Source = Literal["robot data"]
+# What a primitive reads. Video joins with its primitives; when a source is missing or its step
+# failed, every Criterion reading it is unsure. `final_overlap` reads the target box as well as
+# the exterior track, and is unsure without it.
+Source = Literal["robot data", "wrist track", "exterior track"]
 
 
 @dataclass(frozen=True)
@@ -45,4 +50,17 @@ PRIMITIVES: dict[Primitive, PrimitiveInfo] = {
     "release_height_m": PrimitiveInfo("measured", "m", {}, conclusive=False, noise_floor=0.01),
     "active_duration_s": PrimitiveInfo("measured", "s", {}, conclusive=True, noise_floor=0.2),
     "path_efficiency": PrimitiveInfo("measured", "ratio", {}, conclusive=True, noise_floor=0.05),
+    # Tracked: one 5 fps frame, or about what SAM's box jitters by at 320x180.
+    "in_hand_lost_s": PrimitiveInfo(
+        "tracked", "s", {}, conclusive=True, noise_floor=0.2, source="wrist track"
+    ),
+    "fall_after_release": PrimitiveInfo(
+        "tracked", "box-heights", {}, conclusive=True, noise_floor=0.2, source="exterior track"
+    ),
+    "final_overlap": PrimitiveInfo(
+        "tracked", "ratio", {}, conclusive=True, noise_floor=0.1, source="exterior track"
+    ),
+    "object_displacement": PrimitiveInfo(
+        "tracked", "box-widths", {}, conclusive=True, noise_floor=0.25, source="exterior track"
+    ),
 }

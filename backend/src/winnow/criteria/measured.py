@@ -7,7 +7,14 @@ from winnow.criteria.comparison import passes
 from winnow.criteria.facts import EpisodeFacts
 from winnow.criteria.grasp_margins import near_closures, readings
 from winnow.criteria.grasps import Grasps, Interval
-from winnow.criteria.models import Criterion, Moment, Status, TextSpan, UncertaintySignal
+from winnow.criteria.models import (
+    Criterion,
+    Moment,
+    Status,
+    TextSpan,
+    TrackPlot,
+    UncertaintySignal,
+)
 
 
 @dataclass(frozen=True)
@@ -22,6 +29,7 @@ class Measurement:
     # The signed distance from the threshold in effective margins, when the measure knows it
     # better than its value does (a count near the grasp rule).
     m: float | None = None
+    plot: TrackPlot | None = None  # tracked primitives: the signal the value is read from
 
 
 def seconds(t: float) -> str:
