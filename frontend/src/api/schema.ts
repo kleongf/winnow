@@ -160,6 +160,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/episodes/{episode_id}/triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Triage
+         * @description One Episode's Criterion results, Phrase results, Triage decision and Reason.
+         */
+        get: operations["get_triage_api_episodes__episode_id__triage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -203,6 +223,26 @@ export interface paths {
         };
         /** Get Job */
         get: operations["get_job_api_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rubric": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Rubric
+         * @description The latest Rubric version: the one every Episode is scored against.
+         */
+        get: operations["get_rubric_api_rubric_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -350,6 +390,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Triage
+         * @description Every Episode's Triage decision and Reason, for the Episodes table.
+         */
+        get: operations["list_triage_api_triage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -435,6 +495,128 @@ export interface components {
              */
             decision: "confirm";
         };
+        /** Criterion */
+        Criterion: {
+            /**
+             * Assumptions
+             * @default []
+             */
+            assumptions: string[];
+            /**
+             * Comparator
+             * @enum {string}
+             */
+            comparator: "<" | "<=" | ">=" | ">" | "==";
+            /**
+             * Hard
+             * @default true
+             */
+            hard: boolean;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            readonly kind: "measured" | "tracked" | "visual";
+            /**
+             * Margin
+             * @default 0
+             */
+            margin: number;
+            /**
+             * Params
+             * @default {}
+             */
+            params: {
+                [key: string]: number;
+            };
+            /**
+             * Paraphrases
+             * @default []
+             */
+            paraphrases: string[];
+            /** Phrase */
+            phrase: string;
+            /**
+             * Primitive
+             * @enum {string}
+             */
+            primitive: "grasp_attempts" | "longest_still_s";
+            /** Question */
+            question?: string | null;
+            /** Threshold */
+            threshold: number;
+            /** Unit */
+            unit: string;
+            /**
+             * Views
+             * @default []
+             */
+            views: string[];
+            /**
+             * @default {
+             *       "kind": "whole"
+             *     }
+             */
+            window: components["schemas"]["Window"];
+        };
+        /** CriterionResult */
+        CriterionResult: {
+            /** At S */
+            at_s: number | null;
+            /** Camera */
+            camera: string | null;
+            /**
+             * Comparator
+             * @enum {string}
+             */
+            comparator: "<" | "<=" | ">=" | ">" | "==";
+            /** Criterion Id */
+            criterion_id: string;
+            /** English */
+            english: string;
+            /** Evidence */
+            evidence: components["schemas"]["TextSpan"][];
+            /** Hard */
+            hard: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "measured" | "tracked" | "visual";
+            /** Measurement */
+            measurement: string;
+            /** Moments */
+            moments: components["schemas"]["Moment"][];
+            /** Phrase */
+            phrase: string;
+            /**
+             * Primitive
+             * @enum {string}
+             */
+            primitive: "grasp_attempts" | "longest_still_s";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pass" | "fail" | "unsure";
+            /** Threshold */
+            threshold: number;
+            /** Uncertainty */
+            uncertainty: "window empty" | null;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: number | null;
+            /** Window */
+            window: [
+                number,
+                number
+            ] | null;
+            /** Window Name */
+            window_name: string;
+        };
         /**
          * DatasetStatus
          * @description Description-independent work on the Dataset so far, for the Prepare page.
@@ -498,6 +680,24 @@ export interface components {
             name: "dev" | "test";
             /** Size */
             size: number;
+        };
+        /** EpisodeTriage */
+        EpisodeTriage: {
+            /** Criteria */
+            criteria: components["schemas"]["CriterionResult"][];
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "keep" | "reject" | "needs_review";
+            /** Episode Id */
+            episode_id: string;
+            /** Phrases */
+            phrases: components["schemas"]["PhraseResult"][];
+            /** Reason */
+            reason: components["schemas"]["TextSpan"][];
+            /** Rubric Version */
+            rubric_version: number;
         };
         /** Exclude */
         Exclude: {
@@ -581,10 +781,89 @@ export interface components {
             /** Step */
             step: string;
         };
+        /**
+         * Moment
+         * @description A point in time that matters to a Criterion result.
+         */
+        Moment: {
+            /** Label */
+            label: string;
+            /** T */
+            t: number;
+        };
+        /**
+         * PhraseLabel
+         * @description A human's answer for one Phrase of one Episode; it overrides that Phrase's result.
+         */
+        PhraseLabel: {
+            /** Phrase */
+            phrase: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "interview" | "review" | "audit";
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "pass" | "fail";
+        };
+        /** PhraseResult */
+        PhraseResult: {
+            /** Hard */
+            hard: boolean;
+            label: components["schemas"]["PhraseLabel"] | null;
+            /** Phrase */
+            phrase: string;
+            /** Status */
+            status: ("pass" | "fail" | "unsure") | null;
+        };
+        /**
+         * Rubric
+         * @description A Description's Phrases, the Criteria each became, and what a grasp is.
+         */
+        Rubric: {
+            /** Criteria */
+            criteria: components["schemas"]["Criterion"][];
+            /** Description */
+            description: string;
+            /** Phrases */
+            phrases: string[];
+            settings: components["schemas"]["RubricSettings"];
+        };
+        /**
+         * RubricSettings
+         * @description What a grasp is, shared by `grasp_attempts` and every grasp-relative window.
+         */
+        RubricSettings: {
+            grasp_rise_m: components["schemas"]["Setting"];
+            gripper_closed_level: components["schemas"]["Setting"];
+        };
+        /**
+         * RubricVersion
+         * @description A frozen Rubric: every Criterion result names the version it came from.
+         */
+        RubricVersion: {
+            /** Created At */
+            created_at: string;
+            rubric: components["schemas"]["Rubric"];
+            /** Version */
+            version: number;
+        };
         /** SetMembers */
         SetMembers: {
             /** Episode Ids */
             episode_ids: string[];
+        };
+        /** Setting */
+        Setting: {
+            /** Assumption */
+            assumption?: string | null;
+            /** Margin */
+            margin: number;
+            /** Value */
+            value: number;
         };
         /**
          * Signals
@@ -606,6 +885,16 @@ export interface components {
             episodes: number;
             /** Name */
             name: string;
+        };
+        /**
+         * TextSpan
+         * @description A piece of Evidence or Reason text; a span with `t` seeks the playhead there.
+         */
+        TextSpan: {
+            /** T */
+            t?: number | null;
+            /** Text */
+            text: string;
         };
         /** Track */
         Track: {
@@ -667,6 +956,25 @@ export interface components {
             /** Missing Fraction */
             missing_fraction: number;
         };
+        /** TriageList */
+        TriageList: {
+            /** Rows */
+            rows: components["schemas"]["TriageRow"][];
+            /** Rubric Version */
+            rubric_version: number;
+        };
+        /** TriageRow */
+        TriageRow: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "keep" | "reject" | "needs_review";
+            /** Episode Id */
+            episode_id: string;
+            /** Reason */
+            reason: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -679,6 +987,21 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * Window
+         * @description The stretch of the Episode a Criterion looks at. Grasp-relative windows are empty in an
+         *     Episode with no grasp (and `after_release` when the grasp never opens).
+         */
+        Window: {
+            /**
+             * Kind
+             * @default whole
+             * @enum {string}
+             */
+            kind: "whole" | "before_grasp" | "holding" | "after_release" | "last_n_s";
+            /** Seconds */
+            seconds?: number | null;
         };
     };
     responses: never;
@@ -943,6 +1266,37 @@ export interface operations {
             };
         };
     };
+    get_triage_api_episodes__episode_id__triage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EpisodeTriage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_health_api_health_get: {
         parameters: {
             query?: never;
@@ -1021,6 +1375,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_rubric_api_rubric_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricVersion"];
                 };
             };
         };
@@ -1245,6 +1619,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_triage_api_triage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageList"];
                 };
             };
         };

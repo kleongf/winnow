@@ -17,7 +17,7 @@ from meta_sam_parser import (
     build_object_prompt,
 )
 
-from winnow.criteria.measured import closures
+from winnow.criteria.grasps import closures
 from winnow.episodes.clips import SAM_FPS, probe
 from winnow.episodes.models import Episode, EpisodeSignals
 from winnow.episodes.store import EpisodeStore, sam_clip_path
