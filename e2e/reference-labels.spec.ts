@@ -48,7 +48,13 @@ test("labelling a Test set Episode blind stores its Phrases, interval and instru
       .click();
   }
   const drops = page.getByRole("group", { name: "never drops it" });
-  await drops.getByRole("button", { name: "Fail" }).click();
+  await drops.getByRole("button", { name: "Pass" }).click();
+  await drops.getByRole("button", { name: "Fail" }).click(); // a change of mind
+  await expect(drops.getByRole("button", { name: "Fail" })).toHaveAttribute("aria-pressed", "true");
+  await expect(drops.getByRole("button", { name: "Pass" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
   await expect(page.getByText("Mark where “never drops it” fails")).toBeVisible();
   await expect(save).toBeDisabled();
 

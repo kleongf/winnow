@@ -16,7 +16,7 @@ export function PhraseJudgment(props: {
   const choice = (passed: boolean, label: string) => (
     <Button
       size="xs"
-      variant={j.passed === passed ? (passed ? "secondary" : "destructive") : "outline"}
+      variant={j.passed === passed ? (passed ? "default" : "destructive") : "outline"}
       aria-pressed={j.passed === passed}
       onClick={() => {
         onChange({ ...j, passed });
