@@ -9,7 +9,7 @@ from winnow.criteria.facts import EpisodeFacts
 from winnow.criteria.models import Criterion, RubricSettings, Setting, Window
 from winnow.episodes.models import EpisodeSignals
 from winnow.rubric.models import Rubric
-from winnow.triage.models import PhraseLabel, Triage
+from winnow.triage.models import Label, Triage
 from winnow.triage.scoring import score
 
 FIRST_TRY = "grasps the object on the first try"
@@ -250,7 +250,7 @@ def test_the_reject_reason_starts_from_the_earliest_failure_and_lists_the_others
 
 
 def test_a_label_overrides_its_phrase_and_a_label_only_reject_names_it():
-    label = PhraseLabel(phrase=FIRST_TRY, value="fail", source="review")
+    label = Label(phrase=FIRST_TRY, value="fail", source="review")
 
     triage = score(rubric(first_try()), facts(CLEAN_GRIPPER, CLEAN_Z), [label])
 
@@ -261,7 +261,7 @@ def test_a_label_overrides_its_phrase_and_a_label_only_reject_names_it():
 
 
 def test_a_pass_label_keeps_an_episode_its_criteria_rejected():
-    label = PhraseLabel(phrase=FIRST_TRY, value="pass", source="review")
+    label = Label(phrase=FIRST_TRY, value="pass", source="review")
 
     triage = score(rubric(first_try()), facts(REGRASP_GRIPPER, REGRASP_Z), [label])
 

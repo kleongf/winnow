@@ -14,7 +14,7 @@ UncertaintySignal = Literal["window empty"]
 LabelSource = Literal["interview", "review", "audit"]
 
 
-class PhraseLabel(BaseModel):
+class Label(BaseModel):
     """A human's answer for one Phrase of one Episode; it overrides that Phrase's result."""
 
     phrase: str
@@ -53,7 +53,7 @@ class PhraseResult(BaseModel):
     phrase: str
     hard: bool  # has a hard Criterion, so it counts toward the Triage decision
     status: Status | None  # None: no Criterion checks it
-    label: PhraseLabel | None  # the human answer that set `status`, if any
+    label: Label | None  # the human answer that set `status`, if any
 
 
 class Triage(BaseModel):

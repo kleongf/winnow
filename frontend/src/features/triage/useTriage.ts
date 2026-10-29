@@ -29,9 +29,10 @@ export function useTriageList() {
   });
 }
 
-export function useEpisodeTriage(episodeId: string) {
+export function useEpisodeTriage(episodeId: string, enabled = true) {
   return useQuery({
     queryKey: [...triageKey, episodeId],
+    enabled,
     queryFn: async () => {
       const { data, response } = await api.GET("/api/episodes/{episode_id}/triage", {
         params: { path: { episode_id: episodeId } },

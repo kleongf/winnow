@@ -8,6 +8,7 @@ import {
   MessageSquareText,
   ScanSearch,
   SquareDashedMousePointer,
+  Tags,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -26,6 +27,7 @@ const icons: Record<Page, ComponentType<{ className?: string }>> = {
   describe: MessageSquareText,
   episodes: ListChecks,
   review: ScanSearch,
+  reference: Tags,
   evaluation: BarChart3,
 };
 

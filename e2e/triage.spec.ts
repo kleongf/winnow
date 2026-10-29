@@ -12,10 +12,10 @@ test("the table sorts Episodes into Triage tabs with their Reasons", async ({ pa
   await expect(page.getByText(/\d+ of \d+ decided automatically/)).toBeVisible();
   await page.getByRole("tab", { name: /^Keep/ }).click();
   await expect(page.getByRole("row", { name: /^0 Put the marker in the pot/ })).toBeVisible();
-  await expect(page.getByRole("row", { name: /^2 None recorded/ })).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /^2 / })).toHaveCount(0);
 
   await page.getByRole("tab", { name: /^Reject/ }).click();
-  await expect(page.getByRole("row", { name: /^2 None recorded/ })).toContainText(
+  await expect(page.getByRole("row", { name: /^2 / })).toContainText(
     "2 failed grasp attempts, at 0.9 s and 1.3 s, before the grasp at 1.8 s.",
   );
   await expect(page).toHaveURL(/triage=reject/);
@@ -28,7 +28,7 @@ test("a Reject opens from the table, and its lane and Reason seek the playhead",
   page.on("pageerror", (err) => errors.push(err.message));
   await page.goto("/?page=episodes&triage=reject");
 
-  await page.getByRole("row", { name: /^2 None recorded/ }).click();
+  await page.getByRole("row", { name: /^2 / }).click();
 
   await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText("droid_100:2");
   await expect(page.getByTestId("triage-decision")).toHaveText("Reject");

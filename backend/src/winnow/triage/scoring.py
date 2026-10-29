@@ -17,7 +17,7 @@ from winnow.criteria.windows import resolve_window, window_name
 from winnow.rubric.models import Rubric
 from winnow.triage.models import (
     CriterionResult,
-    PhraseLabel,
+    Label,
     PhraseResult,
     TimeWindow,
     Triage,
@@ -26,7 +26,7 @@ from winnow.triage.models import (
 from winnow.triage.reason import reason_for
 
 
-def score(rubric: Rubric, facts: EpisodeFacts, labels: Sequence[PhraseLabel] = ()) -> Triage:
+def score(rubric: Rubric, facts: EpisodeFacts, labels: Sequence[Label] = ()) -> Triage:
     grasps = find_grasps(facts.signals, rubric.settings)
     results = [criterion_result(c, facts, grasps) for c in rubric.criteria]
     by_phrase = {label.phrase: label for label in labels}
@@ -106,9 +106,7 @@ def conclusive_fail(result: CriterionResult) -> bool:
     return result.status == "fail" and PRIMITIVES[result.primitive].conclusive
 
 
-def phrase_result(
-    phrase: str, results: list[CriterionResult], label: PhraseLabel | None
-) -> PhraseResult:
+def phrase_result(phrase: str, results: list[CriterionResult], label: Label | None) -> PhraseResult:
     """Fails on any crisp conclusive fail, passes only when all its Criteria pass, else unsure.
     Only hard Criteria decide a Phrase that has any; a human label overrides them all."""
     hard = [r for r in results if r.hard]

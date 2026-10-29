@@ -19,8 +19,9 @@ export function useRubric() {
   });
 }
 
-/** Reference lines for the Workstation's plots: the gripper-closed level grasps are read at. */
-export function useSignalLevels(): { gripper?: number } {
+/** Reference lines for the Workstation's plots: the gripper-closed level grasps are read at.
+ * None unless `shown` (Reference label mode stays blind to the Rubric). */
+export function useSignalLevels(shown: boolean): { gripper?: number } {
   const level = useRubric().data?.rubric.settings.gripper_closed_level.value;
-  return level === undefined ? {} : { gripper: level };
+  return level === undefined || !shown ? {} : { gripper: level };
 }
