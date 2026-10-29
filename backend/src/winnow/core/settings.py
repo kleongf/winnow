@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     meta_budget_usd: float = 5.0  # hard stop on total recorded Meta API spend
     data_dir: Path = REPO_ROOT / "data"
 
+    @property
+    def db_path(self) -> Path:
+        return self.data_dir / "winnow.db"
+
 
 @lru_cache
 def get_settings() -> Settings:
