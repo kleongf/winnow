@@ -4,7 +4,18 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "src/api/schema.ts"] },
+  // PROTOTYPE branch only: throwaway prototype folders and generated shadcn/ui files skip lint.
+  {
+    ignores: [
+      "dist",
+      "src/api/schema.ts",
+      "src/components/ui/**",
+      "src/features/**/prototype*/**",
+      "src/lib/**",
+      "src/hooks/**",
+      "src/features/core/PrototypeSwitcher.tsx",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
