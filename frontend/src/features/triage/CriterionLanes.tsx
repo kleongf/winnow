@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 
 import { lanePercent } from "./laneFocus";
-import { STATUS_FILL } from "./TriageBadge";
+import { STATUS_FILL, STATUS_TEXT } from "./TriageBadge";
 import type { CriterionResult } from "./useTriage";
 
 export function CriterionLanes(props: {
@@ -15,7 +15,7 @@ export function CriterionLanes(props: {
 }) {
   const pct = (t: number) => lanePercent(t, props.duration);
   return (
-    <div className="grid gap-1" aria-label="Criterion lanes">
+    <div className="mt-1 grid gap-1.5" aria-label="Criterion lanes">
       {props.results.map((r) => (
         <button
           key={r.criterion_id}
@@ -26,13 +26,18 @@ export function CriterionLanes(props: {
             props.onFocus(r);
           }}
           className={cn(
-            "grid grid-cols-[150px_1fr] items-center gap-2 rounded-sm text-left hover:bg-muted/60",
+            "block w-full rounded-sm text-left hover:bg-muted/60",
             props.openId === r.criterion_id && "bg-muted",
           )}
         >
-          <span className="truncate pl-1 text-xs text-muted-foreground">
-            {r.primitive}
-            {!r.hard && " · soft"}
+          {/* Labelled above the bar, like the plots, so lanes and plots share one time axis. */}
+          <span className="mb-0.5 flex items-baseline gap-1.5 text-[11px]">
+            <span className="truncate text-muted-foreground">
+              {r.primitive}
+              {!r.hard && " · soft"}
+            </span>
+            <span className={cn("ml-auto font-medium", STATUS_TEXT[r.status])}>{r.status}</span>
+            <span className="text-muted-foreground tabular-nums">{r.measurement}</span>
           </span>
           <span className="relative block h-4 rounded-sm bg-muted/50">
             {r.window && (
