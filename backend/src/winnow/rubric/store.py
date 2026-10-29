@@ -62,9 +62,15 @@ class RubricStore:
         ).fetchone()
         return self._version(row)
 
+    def list(self) -> list[RubricVersion]:
+        """Every version, newest first."""
+        rows = self._db.execute("SELECT * FROM rubric_versions ORDER BY version DESC")
+        return [self._version(row) for row in rows]
+
     def _version(self, row: sqlite3.Row) -> RubricVersion:
         return RubricVersion(
             version=row["version"],
             created_at=row["created_at"],
+            origin=row["origin"],
             rubric=Rubric.model_validate_json(row["rubric"]),
         )
