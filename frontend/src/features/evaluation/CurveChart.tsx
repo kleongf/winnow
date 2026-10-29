@@ -4,26 +4,38 @@
 import { useState, type PointerEvent } from "react";
 
 import { valueAt, type CurvePoint } from "./curves";
+import type { SystemRow } from "./useEvaluation";
+
+type System = SystemRow["system"];
 
 export interface Series {
-  key: string;
+  system: System;
   label: string;
-  tone: Tone;
   points: CurvePoint[];
 }
-export type Tone = "winnow" | "spark";
 
-// Categorical slots 1 and 2 of the dataviz reference palette, light and dark steps.
-const TONES: Record<Tone, { stroke: string; fill: string; key: string }> = {
+// Each system keeps its own slot of the dataviz reference palette (light and dark steps), in the
+// comparison table's order, so a colour always means the same system.
+const TONES: Record<System, { stroke: string; fill: string; key: string }> = {
   winnow: {
     stroke: "stroke-[#2a78d6] dark:stroke-[#3987e5]",
     fill: "fill-[#2a78d6] dark:fill-[#3987e5]",
     key: "bg-[#2a78d6] dark:bg-[#3987e5]",
   },
-  spark: {
+  spark_alone: {
     stroke: "stroke-[#eb6834] dark:stroke-[#d95926]",
     fill: "fill-[#eb6834] dark:fill-[#d95926]",
     key: "bg-[#eb6834] dark:bg-[#d95926]",
+  },
+  winnow_review_kept: {
+    stroke: "stroke-[#1baf7a] dark:stroke-[#199e70]",
+    fill: "fill-[#1baf7a] dark:fill-[#199e70]",
+    key: "bg-[#1baf7a] dark:bg-[#199e70]",
+  },
+  length_alone: {
+    stroke: "stroke-[#eda100] dark:stroke-[#c98500]",
+    fill: "fill-[#eda100] dark:fill-[#c98500]",
+    key: "bg-[#eda100] dark:bg-[#c98500]",
   },
 };
 
@@ -47,8 +59,8 @@ function Readout(props: { series: Series[]; x: number; formatX: (x: number) => s
       {props.series.map((s) => {
         const point = valueAt(s.points, props.x);
         return (
-          <div key={s.key} className="flex items-center gap-1.5">
-            <span className={`h-0.5 w-3 rounded ${TONES[s.tone].key}`} />
+          <div key={s.system} className="flex items-center gap-1.5">
+            <span className={`h-0.5 w-3 rounded ${TONES[s.system].key}`} />
             <span className="font-medium tabular-nums">{point ? point.y.toFixed(2) : "–"}</span>
             <span className="text-muted-foreground">
               {s.label}
@@ -76,7 +88,7 @@ function NumbersTable(props: { series: Series[]; xLabel: string; formatX: (x: nu
         <tbody>
           {props.series.flatMap((s) =>
             s.points.map((p) => (
-              <tr key={`${s.key}-${String(p.x)}`}>
+              <tr key={`${s.system}-${String(p.x)}`}>
                 <td>{s.label}</td>
                 <td>{props.formatX(p.x)}</td>
                 <td>{p.count}</td>
@@ -125,8 +137,8 @@ export function CurveChart(props: {
     <figure className="relative">
       <div className="mb-1 flex items-center gap-3 text-xs text-muted-foreground">
         {props.series.map((s) => (
-          <span key={s.key} className="flex items-center gap-1.5">
-            <span className={`h-0.5 w-3 rounded ${TONES[s.tone].key}`} />
+          <span key={s.system} className="flex items-center gap-1.5">
+            <span className={`h-0.5 w-3 rounded ${TONES[s.system].key}`} />
             {s.label}
           </span>
         ))}
@@ -205,14 +217,14 @@ export function CurveChart(props: {
           </g>
         )}
         {props.series.map((s) => (
-          <g key={s.key} data-testid={`curve-${s.key}`}>
+          <g key={s.system} data-testid={`curve-${s.system}`}>
             <polyline
               points={s.points.map((p) => `${String(x(p.x))},${String(y(p.y))}`).join(" ")}
               fill="none"
               strokeWidth={2}
               strokeLinejoin="round"
               strokeLinecap="round"
-              className={TONES[s.tone].stroke}
+              className={TONES[s.system].stroke}
             />
             {s.points.map((p) => (
               <circle
@@ -221,14 +233,14 @@ export function CurveChart(props: {
                 cy={y(p.y)}
                 r={4}
                 strokeWidth={2}
-                className={`${TONES[s.tone].fill} stroke-background`}
+                className={`${TONES[s.system].fill} stroke-background`}
               />
             ))}
           </g>
         ))}
         {endLabels(props.series, y).map(({ s, at }) => (
           <text
-            key={s.key}
+            key={s.system}
             x={PAD.left + PLOT_W + 8}
             y={at + 3}
             className="fill-foreground text-[11px]"

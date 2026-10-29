@@ -70,14 +70,14 @@ def is_right(case: EvaluationCase, claim: Claim | None, slack_s: float) -> bool:
 
 
 # For each system scored: whether it rejected the case, and what its Reason claims.
-REJECTS: dict[System, Callable[[EvaluationCase], tuple[bool, Claim | None]]] = {
+CLAIMED_REJECTS: dict[System, Callable[[EvaluationCase], tuple[bool, Claim | None]]] = {
     "winnow": lambda c: (c.winnow == "reject", c.winnow_claim),
     "spark_alone": lambda c: (c.spark_alone == "reject", c.spark_alone_claim),
 }
 
 
 def _row(system: System, cases: Sequence[EvaluationCase], slack: Slack) -> RightReasonRow:
-    calls = [REJECTS[system](c) for c in cases]
+    calls = [CLAIMED_REJECTS[system](c) for c in cases]
     correct = [
         (case, claim)
         for case, (rejected, claim) in zip(cases, calls, strict=True)
@@ -97,4 +97,4 @@ def _row(system: System, cases: Sequence[EvaluationCase], slack: Slack) -> Right
 
 def right_reason(cases: Sequence[EvaluationCase], slack: Slack) -> RightReason:
     """k of n over each system's correct Rejects: its Rejects of description failures."""
-    return RightReason(slack=slack, rows=[_row(s, cases, slack) for s in REJECTS])
+    return RightReason(slack=slack, rows=[_row(s, cases, slack) for s in CLAIMED_REJECTS])

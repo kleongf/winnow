@@ -9,9 +9,10 @@ from dataclasses import dataclass
 from typing import Literal
 
 from winnow.baseline.models import BaselineAnswer, EpisodeBaseline
+from winnow.baseline.prompts import FROZEN, Description
 from winnow.reference_labels.models import FailInterval, ReferenceLabel
 from winnow.triage.models import Triage, TriageDecision
-from winnow.triage.reason import rejecting_fails
+from winnow.triage.reason import labelled_fails, rejecting_fails
 
 SparkDecision = Literal["keep", "reject"]
 
@@ -56,16 +57,35 @@ def failed_phrases(label: ReferenceLabel) -> dict[str, FailInterval]:
     return {p.phrase: p.interval for p in label.phrases if p.interval is not None}
 
 
+def _span(text: str, part: str) -> range:
+    start = text.find(part)
+    return range(start, start + len(part)) if start >= 0 else range(0)
+
+
+def frozen_phrase(phrase: str, description: Description = FROZEN) -> str | None:
+    """The frozen Phrase a Rubric Phrase overlaps most in the Description, since a compiled Rubric
+    may split it differently from the Phrases Reference labels are given per; None when it
+    overlaps none."""
+    claimed = _span(description.text, phrase)
+
+    def overlap(frozen: str) -> int:
+        span = _span(description.text, frozen)
+        return max(0, min(span.stop, claimed.stop) - max(span.start, claimed.start))
+
+    best = max(description.phrases, key=overlap)
+    return best if claimed and overlap(best) > 0 else None
+
+
 def winnow_claim(triage: Triage) -> Claim | None:
     """A Reject's Reason leads with its earliest conclusive fail; a label-only Reject names the
-    labelled Phrase but no time."""
+    labelled Phrase but no time. The Phrase is read as the frozen Phrase it overlaps."""
     if triage.decision != "reject":
         return None
     fails = rejecting_fails(triage.criteria, triage.phrases)
     if fails:
-        return Claim(fails[0].phrase, fails[0].at_s)
-    labelled = [p.phrase for p in triage.phrases if p.hard and p.status == "fail" and p.label]
-    return Claim(labelled[0] if labelled else None, None)
+        return Claim(frozen_phrase(fails[0].phrase), fails[0].at_s)
+    labelled = labelled_fails(triage.phrases)
+    return Claim(frozen_phrase(labelled[0].phrase) if labelled else None, None)
 
 
 def winnow_ranking(triage: Triage) -> Ranking:

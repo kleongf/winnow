@@ -5,7 +5,7 @@ slack. Expected values are worked by hand."""
 import pytest
 
 from winnow.baseline.prompts import FROZEN
-from winnow.evaluation.cases import Claim, EvaluationCase, Ranking, SparkDecision
+from winnow.evaluation.cases import Claim, EvaluationCase, Ranking, SparkDecision, frozen_phrase
 from winnow.evaluation.models import Slack
 from winnow.evaluation.right_reason import measured_slack, right_reason
 from winnow.reference_labels.models import FailInterval, PhraseLabel, ReferenceLabel
@@ -62,6 +62,16 @@ def test_without_a_relabelled_interval_there_is_no_slack():
 
     assert slack.seconds is None
     assert (slack.edges, slack.episodes) == (0, 1)
+
+
+def test_a_rubric_phrase_is_read_as_the_frozen_phrase_it_overlaps_most():
+    # A compiled Rubric may split the Description differently from the frozen Phrases that
+    # Reference labels are given per; Winnow's claim is matched on the frozen one.
+    assert frozen_phrase(FIRST_TRY) == FIRST_TRY
+    assert frozen_phrase("grasps the object") == FIRST_TRY
+    assert frozen_phrase("the target named in the instruction, no long") == PLACES
+    assert frozen_phrase("Expert pick-and-place") is None  # overlaps no frozen Phrase
+    assert frozen_phrase("never spills") is None  # not in the Description
 
 
 def case(

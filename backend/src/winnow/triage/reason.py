@@ -28,9 +28,14 @@ def rejecting_fails(
     return sorted(fails, key=lambda r: (r.at_s is None, r.at_s or 0.0))
 
 
+def labelled_fails(phrases: list[PhraseResult]) -> list[PhraseResult]:
+    """Hard Phrases a human label failed, in Rubric order: what a label-only Reject names."""
+    return [p for p in phrases if p.hard and p.status == "fail" and p.label is not None]
+
+
 def _reject(results: list[CriterionResult], phrases: list[PhraseResult]) -> list[TextSpan]:
     fails = rejecting_fails(results, phrases)
-    labelled = [p for p in phrases if p.hard and p.status == "fail" and p.label is not None]
+    labelled = labelled_fails(phrases)
     if not fails:
         first = labelled[0]
         source = first.label.source if first.label else "review"

@@ -1,14 +1,10 @@
 // Right reason and risk–coverage for Winnow and Spark alone: the headline k/n at the measured
 // slack, then right reason over 0–3 s of slack, and risk against coverage from each system's
 // confidence, so Winnow abstaining more can be weighed fairly.
-import { CurveChart, type Series, type Tone } from "./CurveChart";
+import { CurveChart, type Series } from "./CurveChart";
 import { riskSeries, slackSeries } from "./curves";
 import { countOf, interval, slackText } from "./reportText";
 import type { EvaluationReport, RightReasonRow } from "./useEvaluation";
-
-function tone(system: string): Tone {
-  return system === "winnow" ? "winnow" : "spark";
-}
 
 function AtSlack(props: { row: RightReasonRow }) {
   const p = props.row.at_slack;
@@ -25,11 +21,16 @@ function AtSlack(props: { row: RightReasonRow }) {
 function RightReasonFigure(props: { report: EvaluationReport }) {
   const { slack, rows } = props.report.right_reason;
   const series: Series[] = rows.map((row) => ({
-    key: row.system,
+    system: row.system,
     label: row.label,
-    tone: tone(row.system),
     points: slackSeries(row),
   }));
+  // The curve's own extent (0–3 s); the measured slack is marked only when it falls inside.
+  const maxSlack = Math.max(0, ...rows.flatMap((row) => row.curve.map((p) => p.slack_s)));
+  const measured =
+    slack.seconds !== null && slack.seconds <= maxSlack
+      ? { x: slack.seconds, label: "measured" }
+      : null;
   return (
     <div data-testid="right-reason">
       <h3 className="text-sm font-medium">Right reason on correct Rejects</h3>
@@ -48,11 +49,11 @@ function RightReasonFigure(props: { report: EvaluationReport }) {
         <CurveChart
           title="Right reason over slack"
           series={series}
-          xMax={3}
+          xMax={maxSlack || 1}
           xLabel="Slack (s)"
           yLabel="Right, of correct Rejects"
           formatX={(s) => `${s.toFixed(2)} s`}
-          marker={slack.seconds === null ? null : { x: slack.seconds, label: "measured" }}
+          marker={measured}
           empty="No correct Reject yet"
         />
       </div>
@@ -63,9 +64,8 @@ function RightReasonFigure(props: { report: EvaluationReport }) {
 function RiskCoverageFigure(props: { report: EvaluationReport }) {
   const { risk_coverage: curves, matched_coverage: matched } = props.report;
   const series: Series[] = curves.map((curve) => ({
-    key: curve.system,
+    system: curve.system,
     label: curve.label,
-    tone: tone(curve.system),
     points: riskSeries(curve),
   }));
   const operating =

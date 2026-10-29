@@ -34,8 +34,8 @@ def comparison(cases: Sequence[EvaluationCase]) -> Comparison:
 
 
 def system_row(system: System, outcomes: Sequence[Outcome]) -> SystemRow:
-    failures = [d for failed, d in outcomes if failed]
-    meeting = [d for failed, d in outcomes if not failed]
+    failures: list[Decision] = [d for failed, d in outcomes if failed]
+    meeting: list[Decision] = [d for failed, d in outcomes if not failed]
     decided = [d for _, d in outcomes if d is not None]
     return SystemRow(
         system=system,
@@ -46,18 +46,18 @@ def system_row(system: System, outcomes: Sequence[Outcome]) -> SystemRow:
         false_keeps=wilson(failures.count("keep"), len(failures)),
         false_rejects=wilson(meeting.count("reject"), len(meeting)),
         coverage=wilson(len(decided), len(outcomes)),
-        balanced_accuracy=balanced_accuracy(outcomes),
+        balanced_accuracy=balanced_accuracy(failures, meeting),
     )
 
 
-def balanced_accuracy(outcomes: Sequence[Outcome]) -> float | None:
+def balanced_accuracy(failures: Sequence[Decision], meeting: Sequence[Decision]) -> float | None:
     """Over decided Episodes: the mean of failures rejected and meeting Episodes kept."""
-    failures = [d for failed, d in outcomes if failed and d is not None]
-    meeting = [d for failed, d in outcomes if not failed and d is not None]
-    if not failures or not meeting:
+    decided_failures = [d for d in failures if d is not None]
+    decided_meeting = [d for d in meeting if d is not None]
+    if not decided_failures or not decided_meeting:
         return None
-    caught = failures.count("reject") / len(failures)
-    kept = meeting.count("keep") / len(meeting)
+    caught = decided_failures.count("reject") / len(decided_failures)
+    kept = decided_meeting.count("keep") / len(decided_meeting)
     return (caught + kept) / 2
 
 
