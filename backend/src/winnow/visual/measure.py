@@ -80,8 +80,8 @@ def ask_video(
     criterion: Criterion, facts: EpisodeFacts, grasps: Grasps, window: Interval
 ) -> Measurement:
     answers = facts.visual.get(ask_key(criterion, grasps.settings))
-    if answers is None:
-        return _not_asked()
+    if answers is None or (answers.error is None and not answers.samples):
+        return _not_asked()  # nothing stored, or a clip cut and not yet asked about
     k = len(answers.samples)
     replies = [s.reply for s in answers.samples if s.reply is not None]
     errors = [s.error for s in answers.samples if s.error is not None]

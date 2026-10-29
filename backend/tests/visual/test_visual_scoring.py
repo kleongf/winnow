@@ -80,6 +80,14 @@ def test_before_spark_is_asked_the_result_is_unsure_with_source_missing():
     assert triage.decision == "needs_review"
 
 
+def test_a_clip_cut_but_not_yet_asked_about_is_still_unasked():
+    cut = answers("pass", "pass", "pass").model_copy(update={"samples": []})
+
+    [result] = score(rubric(placed()), with_answers(cut)).criteria
+
+    assert (result.status, result.uncertainty) == ("unsure", "source missing")
+
+
 def test_a_failed_step_is_unsure_with_its_error_as_evidence():
     failed = answers("pass", "pass", "pass").model_copy(
         update={"clip": None, "samples": [], "error": "ffmpeg failed: no such clip"}
