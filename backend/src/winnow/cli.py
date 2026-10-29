@@ -4,6 +4,7 @@ winnow ingest droid_100 3 16 42
 winnow select droid_1.0.1 [--size 300] [--seed 0]
 winnow sets add dev droid_100:3 droid_100:16 | remove dev droid_100:3 | freeze dev | show
 winnow fixtures <dir> [--episodes N]
+winnow eval test [--rubric-version N] [--json]
 """
 
 import argparse
@@ -16,6 +17,9 @@ from winnow.core.settings import Settings, get_settings
 from winnow.episodes.droid101 import Droid101
 from winnow.episodes.fixtures import write_fixture_source
 from winnow.episodes.service import ingest_items
+from winnow.evaluation.models import EvaluationRequest
+from winnow.evaluation.service import UnknownRubricVersionError, run_evaluation
+from winnow.evaluation.text import report_text
 from winnow.jobs.models import WorkItem
 from winnow.meta.transport import Transport
 from winnow.selection.service import sample_indices, selection_items
@@ -46,6 +50,10 @@ def _parser() -> argparse.ArgumentParser:
     fixtures = commands.add_parser("fixtures", help="write synthetic droid_100-layout Episodes")
     fixtures.add_argument("root", type=Path)
     fixtures.add_argument("--episodes", type=int, default=3)
+    evaluate = commands.add_parser("eval", help="score Winnow and the baselines on a set")
+    evaluate.add_argument("set_name", choices=SET_NAMES)
+    evaluate.add_argument("--rubric-version", type=int, help="default: the latest")
+    evaluate.add_argument("--json", action="store_true", help="the report the route returns")
     return parser
 
 
@@ -82,6 +90,18 @@ def _sets(ctx: AppContext, args: argparse.Namespace) -> int:
     return 0
 
 
+def _eval(ctx: AppContext, args: argparse.Namespace) -> int:
+    """The Evaluation page's report; a Test set run is logged like one from the page."""
+    request = EvaluationRequest(set_name=args.set_name, rubric_version=args.rubric_version)
+    try:
+        report = run_evaluation(ctx, request)
+    except UnknownRubricVersionError as error:
+        sys.stderr.write(f"{error}\n")
+        return 1
+    sys.stdout.write(f"{report.model_dump_json()}\n" if args.json else report_text(report))
+    return 0
+
+
 def _items(ctx: AppContext, args: argparse.Namespace) -> list[WorkItem]:
     if args.command == "ingest":
         return ingest_items(args.source, args.indices, with_meta=ctx.meta is not None)
@@ -105,6 +125,8 @@ def main(
     try:
         if args.command == "sets":
             return _sets(ctx, args)
+        if args.command == "eval":
+            return _eval(ctx, args)
         if args.command == "select" and ctx.meta is None:
             sys.stderr.write("The selection pass calls Spark: set MODEL_API_KEY in .env\n")
             return 2

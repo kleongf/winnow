@@ -222,6 +222,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/evaluation/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Evaluation Run
+         * @description Scores Winnow and the baselines against a set's Reference labels. A Test set run is
+         *     appended to the Test run log; `winnow eval` returns the same report.
+         */
+        post: operations["post_evaluation_run_api_evaluation_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evaluation/test-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Test Runs
+         * @description Every Test set run, newest first.
+         */
+        get: operations["list_test_runs_api_evaluation_test_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -584,6 +625,12 @@ export interface components {
             /** Task */
             task: string | null;
         };
+        /** Comparison */
+        Comparison: {
+            length_rule: components["schemas"]["LengthRule"] | null;
+            /** Rows */
+            rows: components["schemas"]["SystemRow"][];
+        };
         /** Confirm */
         Confirm: {
             /**
@@ -811,6 +858,33 @@ export interface components {
             /** Rubric Version */
             rubric_version: number;
         };
+        /** EvaluationReport */
+        EvaluationReport: {
+            comparison: components["schemas"]["Comparison"];
+            /** Description Failures */
+            description_failures: number;
+            /** Episodes */
+            episodes: number;
+            /** Labelled */
+            labelled: number;
+            /** Rubric Version */
+            rubric_version: number;
+            /**
+             * Set Name
+             * @enum {string}
+             */
+            set_name: "dev" | "test";
+        };
+        /** EvaluationRequest */
+        EvaluationRequest: {
+            /** Rubric Version */
+            rubric_version?: number | null;
+            /**
+             * Set Name
+             * @enum {string}
+             */
+            set_name: "dev" | "test";
+        };
         /** Exclude */
         Exclude: {
             /**
@@ -960,6 +1034,19 @@ export interface components {
             value: "pass" | "fail";
         };
         /**
+         * LengthRule
+         * @description Length alone's one duration threshold, chosen in hindsight on the evaluated set.
+         */
+        LengthRule: {
+            /**
+             * Keep
+             * @enum {string}
+             */
+            keep: "longer" | "shorter";
+            /** Threshold S */
+            threshold_s: number;
+        };
+        /**
          * Moment
          * @description A point in time that matters to a Criterion result.
          */
@@ -998,6 +1085,20 @@ export interface components {
             phrase: string;
             /** Status */
             status: ("pass" | "fail" | "unsure") | null;
+        };
+        /**
+         * Proportion
+         * @description `count` of `of`, with its 95% Wilson interval; no interval when `of` is 0.
+         */
+        Proportion: {
+            /** Count */
+            count: number;
+            /** High */
+            high: number | null;
+            /** Low */
+            low: number | null;
+            /** Of */
+            of: number;
         };
         /** ReferenceLabel */
         ReferenceLabel: {
@@ -1100,6 +1201,25 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** SystemRow */
+        SystemRow: {
+            coverage: components["schemas"]["Proportion"];
+            false_keeps: components["schemas"]["Proportion"];
+            false_rejects: components["schemas"]["Proportion"];
+            /** Keeps */
+            keeps: number;
+            /** Label */
+            label: string;
+            /** Rejects */
+            rejects: number;
+            /**
+             * System
+             * @enum {string}
+             */
+            system: "winnow" | "winnow_review_kept" | "spark_alone" | "length_alone";
+            /** Undecided */
+            undecided: number;
+        };
         /**
          * TargetBox
          * @description Where the object should end up, on frame 0 of the hand-drawn box's view: SAM's answer to
@@ -1132,6 +1252,19 @@ export interface components {
             status: "found" | "not_found" | "no_instruction" | "no_target";
             /** Target */
             target: string | null;
+        };
+        /**
+         * TestRun
+         * @description One logged Test set run: the reported numbers are the last of these before the freeze.
+         */
+        TestRun: {
+            /** Id */
+            id: number;
+            report: components["schemas"]["EvaluationReport"];
+            /** Rubric Version */
+            rubric_version: number;
+            /** Run At */
+            run_at: string;
         };
         /**
          * TextSpan
@@ -1630,6 +1763,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_evaluation_run_api_evaluation_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvaluationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_test_runs_api_evaluation_test_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestRun"][];
                 };
             };
         };

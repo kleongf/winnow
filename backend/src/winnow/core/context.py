@@ -15,6 +15,7 @@ from winnow.episodes.droid101 import Droid101
 from winnow.episodes.service import ingest_step
 from winnow.episodes.sources import Source, sources_from
 from winnow.episodes.store import EpisodeStore
+from winnow.evaluation.store import TestRunLog
 from winnow.jobs.models import Step
 from winnow.jobs.runner import JobRunner
 from winnow.jobs.store import JobStore
@@ -49,6 +50,7 @@ class AppContext:
     targets: TargetBoxStore
     rubrics: RubricStore
     reference_labels: ReferenceLabelStore  # never read by scoring
+    test_runs: TestRunLog
     jobs: JobStore
     runner: JobRunner
     meta: MetaClient | None  # None without a Meta API key: no step that calls Meta runs
@@ -78,6 +80,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     targets = TargetBoxStore(db)
     rubrics = RubricStore(db, SEEDED)
     reference_labels = ReferenceLabelStore(db)
+    test_runs = TestRunLog(db)
     jobs = JobStore(db)
     meta = _meta(settings, db, transport)
     steps: dict[str, Step] = {"ingest": ingest_step(episodes, sources)}
@@ -103,6 +106,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         targets,
         rubrics,
         reference_labels,
+        test_runs,
         jobs,
         runner,
         meta,
