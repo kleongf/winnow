@@ -2,9 +2,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from winnow.baseline.prompts import FROZEN
 from winnow.core.context import AppContext, get_context
 from winnow.episodes.routes import find_episode
-from winnow.reference_labels.models import ReferenceLabel, ReferenceLabelDraw
+from winnow.reference_labels.models import FrozenDescription, ReferenceLabel, ReferenceLabelDraw
 from winnow.reference_labels.service import InvalidLabelError, LabelConflictError, save_label
 
 router = APIRouter(tags=["reference_labels"])
@@ -15,6 +16,11 @@ Context = Annotated[AppContext, Depends(get_context)]
 @router.get("/reference-labels")
 async def list_reference_labels(ctx: Context) -> list[ReferenceLabel]:
     return ctx.reference_labels.list()
+
+
+@router.get("/reference-labels/description")
+async def get_frozen_description() -> FrozenDescription:
+    return FrozenDescription(text=FROZEN.text, phrases=list(FROZEN.phrases))
 
 
 @router.post("/episodes/{episode_id}/reference-labels", status_code=status.HTTP_201_CREATED)

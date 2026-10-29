@@ -42,6 +42,19 @@ def labels(api: TestClient) -> list[dict[str, object]]:
     return api.get("/api/reference-labels").json()
 
 
+def test_labels_are_given_against_the_frozen_description_and_its_phrases(api: TestClient):
+    assert api.get("/api/reference-labels/description").json() == {
+        "text": "Expert pick-and-place: grasps the object on the first try, never drops it, "
+        "places it in or on the target named in the instruction, no long pauses.",
+        "phrases": [
+            "grasps the object on the first try",
+            "never drops it",
+            "places it in or on the target named in the instruction",
+            "no long pauses",
+        ],
+    }
+
+
 def test_a_saved_label_keeps_each_phrase_its_intervals_and_the_elapsed_time(
     ingested: TestClient,
 ):

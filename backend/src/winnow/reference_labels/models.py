@@ -6,6 +6,13 @@ from typing import Self
 from pydantic import BaseModel, Field, model_validator
 
 
+class FrozenDescription(BaseModel):
+    """The Description Reference labels are given against, and its Phrases in order."""
+
+    text: str
+    phrases: list[str]
+
+
 class FailInterval(BaseModel):
     """Where in the Episode a Phrase fails, in seconds from its start."""
 
