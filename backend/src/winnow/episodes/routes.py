@@ -15,7 +15,13 @@ Context = Annotated[AppContext, Depends(get_context)]
 
 @router.get("/episodes")
 async def list_episodes(ctx: Context) -> list[Episode]:
-    return ctx.episodes.list()
+    """The Dataset outcome stays hidden until an Episode's first-pass Reference label, so it
+    can't anchor the labeller."""
+    labelled = ctx.reference_labels.labelled_ids()
+    return [
+        e if e.id in labelled else e.model_copy(update={"dataset_outcome": None})
+        for e in ctx.episodes.list()
+    ]
 
 
 def find_episode(ctx: AppContext, episode_id: str) -> Episode:

@@ -1,6 +1,7 @@
 // The Workstation (#8, Variant A): one large video with camera tabs, one playhead driving the
 // video and the robot-data plots, and a right panel. Review and Reference label mode put their
-// controls in `actions`; Criterion lanes and results arrive with scoring.
+// controls in `actions`; Criterion lanes and results arrive with scoring. `blind` (Reference
+// label mode) hides every Winnow and baseline output, tracks included.
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { SET_LABELS, setsByEpisode, useSets } from "../sets/useSets";
 import { TrackOverlay } from "../tracking/TrackOverlay";
 import { TrackStatus } from "../tracking/TrackStatus";
-import { useTracks } from "../tracking/useTracks";
+import { useTracks, type Track } from "../tracking/useTracks";
 import { EpisodeVideo } from "./EpisodeVideo";
 import { SignalPlots } from "./SignalPlots";
 import { clipUrl, useSignals, type Episode } from "./useEpisodes";
@@ -20,19 +21,26 @@ const CAMERA_LABELS: Record<string, string> = {
   wrist_image_left: "Wrist",
 };
 
-export function Workstation(props: { episode: Episode; initialT?: number; actions?: ReactNode }) {
+export function Workstation(props: {
+  episode: Episode;
+  initialT?: number;
+  actions?: Actions;
+  blind?: boolean;
+}) {
   const { episode } = props;
   const playhead = usePlayhead(episode.duration_s, props.initialT);
   const [camera, setCamera] = useState(episode.cameras[0] ?? null);
   const signals = useSignals(episode.id);
   const set = setsByEpisode(useSets().data).get(episode.id);
-  const tracks = useTracks(episode.id).data ?? [];
+  const tracks = useShownTracks(episode.id, props.blind ?? false);
   const shownTrack = tracks.find((t) => t.camera === camera && t.status === "tracked");
   const { toggle } = playhead;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== " " || event.target instanceof HTMLInputElement) return;
+      const typing =
+        event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
+      if (event.key !== " " || typing) return;
       event.preventDefault();
       toggle();
     };
@@ -80,7 +88,7 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
         )}
       </section>
       <aside className="min-w-0 rounded-lg border bg-card p-4">
-        {props.actions}
+        {renderActions(props.actions, playhead)}
         <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
           Instruction
         </div>
@@ -100,12 +108,27 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
             <TrackStatus key={track.kind} track={track} />
           ))}
         </dl>
-        <p className="mt-6 text-xs text-muted-foreground">
-          The Triage decision, Reason and Criterion results appear here once the Episode is scored.
-        </p>
+        {!props.blind && (
+          <p className="mt-6 text-xs text-muted-foreground">
+            The Triage decision, Reason and Criterion results appear here once the Episode is
+            scored.
+          </p>
+        )}
       </aside>
     </div>
   );
+}
+
+type Actions = ReactNode | ((playhead: Playhead) => ReactNode);
+
+function renderActions(actions: Actions, playhead: Playhead): ReactNode {
+  return typeof actions === "function" ? actions(playhead) : actions;
+}
+
+/** None while blind: tracks are what tracked Criteria read. */
+function useShownTracks(episodeId: string, blind: boolean): Track[] {
+  const fetched = useTracks(episodeId, !blind).data; // cached data outlives `enabled: false`
+  return blind ? [] : (fetched ?? []);
 }
 
 function Transport(props: { playhead: Playhead; duration: number; canPlay: boolean }) {
