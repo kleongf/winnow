@@ -19,6 +19,12 @@ from winnow.episodes.droid100 import CAMERAS, FPS
 INSTRUCTIONS = ("Put the marker in the pot", "Move the black remote control to the left", "")
 
 
+def failed(index: int) -> bool:
+    """Every third Episode failed: its Dataset outcome says so, and it took two failed grasp
+    attempts before the grasp."""
+    return index % 3 == 2
+
+
 def sliding_block(index: int) -> str:
     """A red block sliding right over grey, under the wrist seed point (190,105) at about 1 s.
     Its start shifts a little per Episode."""
@@ -29,25 +35,36 @@ def sliding_block(index: int) -> str:
     )
 
 
-def state(frames: int, closes: bool = True) -> np.ndarray:
-    """End-effector xyz + roll/pitch/yaw + gripper per frame (droid_100's `observation.state`)."""
+def state(frames: int, closes: bool = True, regrasps: bool = False) -> np.ndarray:
+    """End-effector xyz + roll/pitch/yaw + gripper per frame (droid_100's `observation.state`).
+
+    One closure while carrying by default. With `regrasps`, Episode 42's shape: two closures at
+    the object's height that lift nothing, then the grasp that lifts it. The first closure starts
+    on the same frame either way, so the wrist track's seed (and its recording) doesn't move.
+    """
     t = np.linspace(0.0, 1.0, frames)
     x = 0.4 + 0.2 * t
     z = 0.25 - 0.15 * np.sin(np.pi * np.clip(t * 2, 0, 1))  # dip to the object, then lift
     z = np.where(t > 0.5, 0.10 + 0.10 * (t - 0.5), z)
-    gripper = ((t > 0.3) & (t < 0.8) & closes).astype(np.float64)  # closed while carrying
+    closed = (t > 0.3) & (t < 0.8)  # closed while carrying
+    if regrasps:
+        z = np.where(t < 0.3, 0.25 - 0.5 * t, np.where(t < 0.65, 0.10, 0.10 + 0.25 * (t - 0.65)))
+        closed = ((t > 0.3) & (t < 0.4)) | ((t > 0.45) & (t < 0.55)) | ((t > 0.6) & (t < 0.9))
+    gripper = (closed & closes).astype(np.float64)
     state = np.zeros((frames, 7))
     state[:, 0], state[:, 1], state[:, 2], state[:, 6] = x, 0.0, z, gripper
     return state
 
 
 def _write_parquet(root: Path, episodes: int, frames: int, open_gripper: tuple[int, ...]) -> None:
-    states = [state(frames, closes=i not in open_gripper) for i in range(episodes)]
+    states = [
+        state(frames, closes=i not in open_gripper, regrasps=failed(i)) for i in range(episodes)
+    ]
     rows = episodes * frames
     episode_index = np.repeat(np.arange(episodes), frames)
     frame_index = np.tile(np.arange(frames), episodes)
     reward = np.zeros(rows)
-    reward[frames - 1 :: frames] = [1.0 if i % 3 != 2 else 0.0 for i in range(episodes)]
+    reward[frames - 1 :: frames] = [0.0 if failed(i) else 1.0 for i in range(episodes)]
     table = pa.table(  # pyright: ignore[reportUnknownMemberType]
         {
             "observation.state": [list(map(float, r)) for s in states for r in s],

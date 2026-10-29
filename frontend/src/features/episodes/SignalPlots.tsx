@@ -16,6 +16,7 @@ const PLOTS: { key: Key; label: string; unit: string; digits: number; fixed?: [n
   ];
 
 const SERIES = "#2a78d6"; // categorical slot 1 (dataviz reference palette)
+const LEVEL = "#d97706"; // the Rubric's levels, amber like its assumed values
 const WIDTH = 1000;
 const HEIGHT = 56;
 
@@ -33,7 +34,13 @@ export function valueAt(signals: Signals, key: Key, t: number): number | undefin
   return signals[key][Math.max(0, Math.min(signals[key].length - 1, index))];
 }
 
-export function SignalPlots(props: { signals: Signals; playhead: Playhead; duration: number }) {
+export function SignalPlots(props: {
+  signals: Signals;
+  playhead: Playhead;
+  duration: number;
+  /** A dashed reference line per plot, e.g. the Rubric's gripper-closed level. */
+  levels?: Partial<Record<Key, number>>;
+}) {
   const [hoverT, setHoverT] = useState<number | null>(null);
   const timeAt = (event: MouseEvent<SVGSVGElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -51,6 +58,7 @@ export function SignalPlots(props: { signals: Signals; playhead: Playhead; durat
           .map((v, i) => `${String(x(props.signals.t[i] ?? 0))},${String(y(v))}`)
           .join(" ");
         const value = valueAt(props.signals, plot.key, readT);
+        const level = props.levels?.[plot.key];
         return (
           <div key={plot.key}>
             <div className="mb-0.5 flex items-baseline gap-1.5 text-[11px]">
@@ -89,6 +97,20 @@ export function SignalPlots(props: { signals: Signals; playhead: Playhead; durat
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
               />
+              {level !== undefined && (
+                <line
+                  data-testid={`level-${plot.key}`}
+                  x1={0}
+                  x2={WIDTH}
+                  y1={y(level)}
+                  y2={y(level)}
+                  stroke={LEVEL}
+                  strokeDasharray="6 4"
+                  vectorEffect="non-scaling-stroke"
+                >
+                  <title>{`${plot.label} level ${String(level)}`}</title>
+                </line>
+              )}
               {hoverT !== null && (
                 <line
                   x1={x(hoverT)}

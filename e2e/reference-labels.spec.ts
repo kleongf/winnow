@@ -38,6 +38,9 @@ test("labelling a Test set Episode blind stores its Phrases, interval and instru
   await expect(page.getByTestId("track-box")).toHaveCount(0);
   await expect(page.getByTestId("track-status-wrist")).toHaveCount(0);
   await expect(page.getByText("Triage decision")).toHaveCount(0);
+  await expect(page.getByTestId("triage-decision")).toHaveCount(0);
+  await expect(page.getByTestId("reason")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Lane: / })).toHaveCount(0);
   await expect(page.getByTestId("label-timer")).toHaveText(/^0:0[1-9]$/);
 
   const save = page.getByRole("button", { name: "Save & next" });
