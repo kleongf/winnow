@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { ingest } from "./helpers.ts";
+import { ingest, referenceLabel } from "./helpers.ts";
 
 test("Prepare shows each set's size and frozen state; Episodes show their set", async ({
   page,
@@ -8,6 +8,7 @@ test("Prepare shows each set's size and frozen state; Episodes show their set", 
 }) => {
   // Sets are defined with the CLI or the API; freezing is permanent for this server's data dir.
   await ingest(request, [0, 1]);
+  await referenceLabel(request, ["droid_100:0"]); // so its Triage decision shows
   const sets = (await (await request.get("/api/sets")).json()) as {
     name: string;
     frozen_at: string | null;

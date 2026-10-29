@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { triageKey } from "../triage/useTriage";
 
 export type ReferenceLabel = components["schemas"]["ReferenceLabel"];
 export type ReferenceLabelDraw = components["schemas"]["ReferenceLabelDraw"];
@@ -47,10 +48,12 @@ export function useSaveReferenceLabel() {
       return data;
     },
     onSuccess: async () => {
-      // Labelling reveals the Episode's Dataset outcome and any instruction just written.
+      // Labelling reveals the Episode's Dataset outcome, its Triage decision and any
+      // instruction just written.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: labelsKey }),
         queryClient.invalidateQueries({ queryKey: ["episodes"], exact: true }),
+        queryClient.invalidateQueries({ queryKey: triageKey }),
       ]);
     },
   });

@@ -7,6 +7,7 @@ from winnow.core.context import AppContext, get_context
 from winnow.episodes.models import Episode, IngestRequest, IngestStarted, Signals
 from winnow.episodes.service import frame_zero, ingest_items, workstation_signals
 from winnow.episodes.store import clip_path
+from winnow.reference_labels.gate import listed_episodes
 
 router = APIRouter(tags=["episodes"])
 
@@ -17,11 +18,7 @@ Context = Annotated[AppContext, Depends(get_context)]
 async def list_episodes(ctx: Context) -> list[Episode]:
     """The Dataset outcome stays hidden until an Episode's first-pass Reference label, so it
     can't anchor the labeller."""
-    labelled = ctx.reference_labels.labelled_ids()
-    return [
-        e if e.id in labelled else e.model_copy(update={"dataset_outcome": None})
-        for e in ctx.episodes.list()
-    ]
+    return listed_episodes(ctx)
 
 
 def find_episode(ctx: AppContext, episode_id: str) -> Episode:

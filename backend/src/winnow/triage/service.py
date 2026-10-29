@@ -23,7 +23,7 @@ def episode_triage(ctx: AppContext, episode: Episode) -> EpisodeTriage:
     return _triage(ctx, ctx.rubrics.latest(), episode)
 
 
-def triage_list(ctx: AppContext) -> TriageList:
+def triage_list(ctx: AppContext, episodes: list[Episode]) -> TriageList:
     version = ctx.rubrics.latest()
     rows = [
         TriageRow(
@@ -31,6 +31,6 @@ def triage_list(ctx: AppContext) -> TriageList:
             decision=t.decision,
             reason="".join(span.text for span in t.reason),
         )
-        for t in (_triage(ctx, version, e) for e in ctx.episodes.list())
+        for t in (_triage(ctx, version, e) for e in episodes)
     ]
     return TriageList(rubric_version=version.version, rows=rows)

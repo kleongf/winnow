@@ -1,9 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-import { ingest } from "./helpers.ts";
+import { ingest, referenceLabel } from "./helpers.ts";
 
 test.beforeEach(async ({ request }) => {
   await ingest(request, [0, 1, 2]);
+  // Their Triage decisions show only once labelled. reference-labels.spec.ts labels
+  // droid_100:2 first, through the UI; awaiting-label.spec.ts keeps droid_100:1 for itself.
+  await referenceLabel(request, ["droid_100:0", "droid_100:2"]);
 });
 
 test("the table sorts Episodes into Triage tabs with their Reasons", async ({ page }) => {
