@@ -11,7 +11,9 @@ def format_value(value: float, unit: str) -> str:
     if unit == "attempts":
         return f"{value:g}"
     if unit == "m":
-        return f"{value * 100:g} cm"
+        return f"{round(value * 100, 1):g} cm"
+    if unit == "ratio":
+        return f"{value:.2f}"
     return f"{value:g} {unit}"
 
 

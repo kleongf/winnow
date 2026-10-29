@@ -5,6 +5,7 @@ label-only Reject names the labelled Phrase and its source; Needs review lists i
 signals.
 """
 
+from winnow.criteria.english import COMPARATORS, format_value
 from winnow.criteria.measured import at_times
 from winnow.criteria.models import TextSpan
 from winnow.criteria.primitives import PRIMITIVES
@@ -45,10 +46,20 @@ def _reject(results: list[CriterionResult], phrases: list[PhraseResult]) -> list
     return spans
 
 
+def _detail(result: CriterionResult) -> str:
+    """What the signal is about: the measurement against its threshold, the empty window, or
+    what couldn't be measured."""
+    if result.value is None:
+        return result.window_name if result.measurement == "no window" else result.measurement
+    threshold = format_value(result.threshold, result.unit)
+    return f"{result.measurement} against {COMPARATORS[result.comparator]} {threshold}"
+
+
 def _needs_review(results: list[CriterionResult], phrases: list[PhraseResult]) -> list[TextSpan]:
+    """Each unsure hard Phrase's Uncertainty signals, in Rubric order."""
     unsure = {p.phrase for p in phrases if p.hard and p.status == "unsure"}
     signals = [
-        f'"{r.phrase}": {r.uncertainty or r.status} ({r.window_name})'
+        f'"{r.phrase}": {r.uncertainty or r.status} ({_detail(r)})'
         for r in results
         if r.phrase in unsure and r.hard and r.status != "pass"
     ]

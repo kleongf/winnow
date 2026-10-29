@@ -19,7 +19,12 @@ export function TriagePanel(props: {
     <section aria-label="Triage" className="mb-5">
       <div className="flex items-center gap-2">
         <TriageBadge decision={triage.decision} />
-        <span className="text-xs text-muted-foreground">Rubric v{triage.rubric_version}</span>
+        <span className="text-xs text-muted-foreground tabular-nums" data-testid="confidence">
+          Confidence {triage.confidence.toFixed(2)}
+        </span>
+        <span className="ml-auto text-xs text-muted-foreground">
+          Rubric v{triage.rubric_version}
+        </span>
       </div>
       <p className="mt-2 text-[15px] leading-snug" data-testid="reason">
         <SeekableText spans={triage.reason} onSeek={props.onSeek} />
