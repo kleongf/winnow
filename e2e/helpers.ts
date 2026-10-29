@@ -26,6 +26,24 @@ export function episodeId(index: number): string {
   return `droid_100:${String(index)}`;
 }
 
+/** The e2e Dev set, which is also the anchor pool: the sets spec's Episode, frozen. Compile's
+ * recorded reply (backend/tests/record_meta.py, E2E_DEV_SET) was made against exactly it, so a
+ * spec that compiles calls this first. */
+export const DEV_SET = EPISODES.sets;
+
+/** Ingest the Dev set's Episodes, and define and freeze it unless that's done. */
+export async function freezeDevSet(request: APIRequestContext): Promise<void> {
+  await ingest(request, DEV_SET);
+  const sets = (await (await request.get("/api/sets")).json()) as {
+    name: string;
+    frozen_at: string | null;
+  }[];
+  if (sets.find((s) => s.name === "dev")?.frozen_at === null) {
+    await request.post("/api/sets/dev/episodes", { data: { episode_ids: DEV_SET.map(episodeId) } });
+    await request.post("/api/sets/dev/freeze");
+  }
+}
+
 /** Give each Episode a first-pass Reference label passing every Phrase, which reveals its
  * Triage decision. Labels never change, so one already there is kept. */
 export async function referenceLabel(
