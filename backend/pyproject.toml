@@ -54,6 +54,7 @@ select = [
     "ANN",      # annotations everywhere
 ]
 ignore = ["PLR2004"]  # magic numbers are fine in thresholds and tests
+allowed-confusables = ["–"]  # en dash, for intervals like 0.05–0.70
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
