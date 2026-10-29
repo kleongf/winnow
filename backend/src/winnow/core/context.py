@@ -22,6 +22,7 @@ from winnow.meta.client import MetaClient
 from winnow.meta.costs import CostLog
 from winnow.meta.replay import ReplayTransport
 from winnow.meta.transport import Transport
+from winnow.reference_labels.store import ReferenceLabelStore
 from winnow.selection.service import select_step
 from winnow.selection.store import SelectionStore
 from winnow.sets.store import SetStore
@@ -40,6 +41,7 @@ class AppContext:
     selection: SelectionStore
     sets: SetStore
     tracks: TrackStore
+    reference_labels: ReferenceLabelStore  # never read by scoring
     jobs: JobStore
     runner: JobRunner
     meta: MetaClient | None  # None without a Meta API key: no step that calls Meta runs
@@ -66,6 +68,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     selection = SelectionStore(db)
     sets = SetStore(db)
     tracks = TrackStore(db)
+    reference_labels = ReferenceLabelStore(db)
     jobs = JobStore(db)
     meta = _meta(settings, db, transport)
     steps: dict[str, Step] = {"ingest": ingest_step(episodes, sources)}
@@ -86,6 +89,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         selection,
         sets,
         tracks,
+        reference_labels,
         jobs,
         runner,
         meta,

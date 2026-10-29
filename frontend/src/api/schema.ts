@@ -45,7 +45,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Episodes */
+        /**
+         * List Episodes
+         * @description The Dataset outcome stays hidden until an Episode's first-pass Reference label, so it
+         *     can't anchor the labeller.
+         */
         get: operations["list_episodes_api_episodes_get"];
         put?: never;
         post?: never;
@@ -117,6 +121,23 @@ export interface paths {
         get: operations["get_frame0_api_episodes__episode_id__frame0__camera__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/episodes/{episode_id}/reference-labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Reference Label */
+        post: operations["post_reference_label_api_episodes__episode_id__reference_labels_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -203,6 +224,23 @@ export interface paths {
         };
         /** Get Job */
         get: operations["get_job_api_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reference-labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reference Labels */
+        get: operations["list_reference_labels_api_reference_labels_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -512,6 +550,16 @@ export interface components {
              */
             reason: "not pick-and-place" | "object too small to see";
         };
+        /**
+         * FailInterval
+         * @description Where in the Episode a Phrase fails, in seconds from its start.
+         */
+        FailInterval: {
+            /** End S */
+            end_s: number;
+            /** Start S */
+            start_s: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -580,6 +628,48 @@ export interface components {
             status: "queued" | "running" | "done" | "failed";
             /** Step */
             step: string;
+        };
+        /** PhraseLabel */
+        PhraseLabel: {
+            interval?: components["schemas"]["FailInterval"] | null;
+            /** Passed */
+            passed: boolean;
+            /** Phrase */
+            phrase: string;
+        };
+        /** ReferenceLabel */
+        ReferenceLabel: {
+            /** Description */
+            description: string;
+            /** Elapsed S */
+            elapsed_s: number;
+            /** Episode Id */
+            episode_id: string;
+            /** Instruction */
+            instruction: string | null;
+            /** Labelled At */
+            labelled_at: string;
+            /** Phrases */
+            phrases: components["schemas"]["PhraseLabel"][];
+            /** Relabel */
+            relabel: boolean;
+        };
+        /**
+         * ReferenceLabelDraw
+         * @description What the labeller submits for one Episode.
+         */
+        ReferenceLabelDraw: {
+            /** Elapsed S */
+            elapsed_s: number;
+            /** Instruction */
+            instruction?: string | null;
+            /** Phrases */
+            phrases: components["schemas"]["PhraseLabel"][];
+            /**
+             * Relabel
+             * @default false
+             */
+            relabel: boolean;
         };
         /** SetMembers */
         SetMembers: {
@@ -881,6 +971,41 @@ export interface operations {
             };
         };
     };
+    post_reference_label_api_episodes__episode_id__reference_labels_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReferenceLabelDraw"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferenceLabel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_signals_api_episodes__episode_id__signals_get: {
         parameters: {
             query?: never;
@@ -1021,6 +1146,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reference_labels_api_reference_labels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferenceLabel"][];
                 };
             };
         };
