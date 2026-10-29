@@ -1,5 +1,31 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
+/** The fixture Episodes each spec owns. Every spec shares one e2e server, whose Reference labels,
+ * sets and boxes are permanent, so a spec ingests, labels, boxes, adds to a set and asserts on
+ * only its own Episodes; that way each passes alone and in any order. A new spec claims unused
+ * indices here; past the last one, raise `--episodes` in scripts/e2e-server.ts and E2E_EPISODES
+ * in backend/tests/record_meta.py, and re-record.
+ *
+ * Fixture Episode i depends on i % 3: 0 is kept ("Put the marker in the pot"); 1 needs review,
+ * releasing inside the release height's margin, less confidently when i % 6 == 4 ("Move the
+ * black remote control to the left"); 2 is rejected after two failed grasp attempts, with no
+ * instruction and a failing Dataset outcome. */
+export const EPISODES = {
+  workstation: [0, 1],
+  referenceLabels: [2],
+  targets: [3],
+  awaitingLabel: [4],
+  testSetEvaluation: [5],
+  sets: [6],
+  triage: [7, 8, 9, 10],
+  boxes: [11, 12, 13],
+  prepare: [14, 15],
+} as const;
+
+export function episodeId(index: number): string {
+  return `droid_100:${String(index)}`;
+}
+
 /** Give each Episode a first-pass Reference label passing every Phrase, which reveals its
  * Triage decision. Labels never change, so one already there is kept. */
 export async function referenceLabel(
@@ -19,7 +45,10 @@ export async function referenceLabel(
 }
 
 /** Ingest fixture Episodes through the API and wait for the job to finish. */
-export async function ingest(request: APIRequestContext, indices: number[]): Promise<void> {
+export async function ingest(
+  request: APIRequestContext,
+  indices: readonly number[],
+): Promise<void> {
   const started = await request.post("/api/episodes/ingest", {
     data: { source: "droid_100", indices },
   });

@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-import { ingest } from "./helpers.ts";
+import { EPISODES, ingest } from "./helpers.ts";
 
+// This spec's Episodes are 0 and 1.
 test.beforeEach(async ({ request }) => {
-  await ingest(request, [0, 1, 2]);
+  await ingest(request, EPISODES.workstation);
 });
 
 test("a row opens the Workstation; camera tabs switch the video", async ({ page }) => {

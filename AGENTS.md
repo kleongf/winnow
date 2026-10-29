@@ -28,6 +28,7 @@ Setup: `pnpm install && uv sync --project backend && pnpm exec playwright instal
 - **Size limits:** 300 lines per source file (500 for tests), cyclomatic complexity 10. Split by responsibility when you hit them; don't raise the limit.
 - **Naming:** Python `snake_case` modules, `PascalCase` models; TS components in `PascalCase.tsx`, everything else `camelCase`.
 - **Datasets:** read LeRobot parquet and mp4 directly (pyarrow, ffmpeg); don't depend on the `lerobot` package.
+- **e2e Episodes:** all specs share one server whose labels, sets and boxes are permanent, so each spec claims its own fixture Episodes in `EPISODES` (`e2e/helpers.ts`) and ingests, changes and asserts on only those; every spec must pass alone (`playwright test e2e/<file>`).
 
 ## Agent skills
 
