@@ -36,6 +36,22 @@ _Avoid_: Explanation, rationale, justification
 The Triage decision for an Episode Winnow isn't confident about, routed to a human instead of being kept or rejected automatically.
 _Avoid_: Uncertain, flagged, borderline
 
+**Reference label**:
+A human's judgment of one Episode against the description, made without seeing what Winnow or a baseline said, used to score them.
+_Avoid_: Ground truth, gold label, annotation
+
+**Dataset outcome**:
+The success or failure flag an Episode ships with in its source dataset; it answers "was the task done", not "does it meet the description".
+_Avoid_: Provider label, ground truth
+
+**Test set**:
+The Episodes held out from all Rubric writing, calibration, and tuning, used only for reported numbers.
+_Avoid_: Eval set, benchmark
+
+**Dev set**:
+The Episodes the Rubric may be written, calibrated, and tuned against; never used for reported numbers.
+_Avoid_: Train set, validation set
+
 **Demo video**:
 The hackathon submission video showing Winnow in use.
 _Avoid_: Demo (on its own)

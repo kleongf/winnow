@@ -181,11 +181,15 @@
 
 ## 12. Evaluation plan
 
-- **Datasets:** `lerobot/droid_100` (only ~40 clear pick-and-place episodes, all successes) filled to ~100 from `lerobot/droid_1.0.1` (same format, explicit success flag); RoboFAC real-world split (`MINT-SJTU/RoboFAC-dataset`, 480 failures + 122 successes, subtask-level failure labels) as a secondary video-only check only — it has no robot data, staged failures, and judges are near-saturated on it.
-- **Headline comparison:** Spark alone vs Winnow on the same Episodes — false-keep rate on true failures (Wilson CI), Reason correctness, and Keep precision **at matched coverage**; plus Winnow's worst case with every Needs review forced to Keep, risk–coverage curves for both, and McNemar discordant counts (show counts; ~100 Episodes won't reach significance on small gaps).
-- **Baselines:** Spark alone (FailBench protocol) and **episode length alone** (5 of 7 curation metrics exploit length; in droid_100 failures are *shorter*).
-- **Curation metrics:** audited precision on kept Episodes (count + interval); false keeps and false rejects reported separately; coverage at fixed precision (risk–coverage curve); human review minutes saved; cost per 1,000 episodes.
-- **Later:** adjudicate disagreements with provider labels (labels can be wrong — "dataset said success, Winnow said failure, here's the video" could be a demo moment).
+Decided in [Evaluation protocol](https://github.com/kleongf/winnow/issues/10), which holds the detail.
+
+- **Ground truth:** blind **Reference labels** against one frozen description (*"Expert pick-and-place: grasps the object on the first try, never drops it, places it in or on the target named in the instruction, no long pauses."*): each phrase pass/fail, each fail with an interval; instructions written where missing. The **Dataset outcome** is a second column; disagreements get their own table.
+- **Sets:** a frozen **Test set** of 100 Episodes with ≥ 30 description failures (droid_100's unseen pick-and-place-like Episodes, topped up from `lerobot/droid_1.0.1`), labelled before any tuning; a **Dev set** of ~30 (including every Episode already seen) for the interview, calibration, and tuning. droid_1.0.1 Episodes are chosen by task type only (Spark pre-filter on contact sheets + human confirm, fixed seed).
+- **Baselines:** Spark alone (same tier, all 3 views, description + instruction, structured output, 3 samples for a confidence score); a FailBench "did it succeed?" check against the Dataset outcome; **episode length alone** with a hindsight threshold (5 of 7 curation metrics exploit length; in droid_100 failures are *shorter*).
+- **Right reason:** a Reject's Reason is right when its failure type matches a failing phrase and its time falls in that phrase's labelled interval plus a slack measured from the labeller's own relabelling of ~15 Dev set Episodes; also shown as a curve over slack.
+- **Metrics:** false keeps on true failures (Wilson CI) with the worst case of every Needs review kept; false rejects separately; right reason k/n; Keep precision at matched coverage; risk–coverage curves; McNemar discordant counts (counts only); balanced accuracy; failures per phrase; a $0 source ablation (robot data / + SAM / + Spark visual / all); SAM tracking health; review minutes saved (label-mode timer); cost per 1,000 Episodes extrapolated from the Test set cost log.
+- **Tooling:** a Reference label mode in the app (outputs hidden, timer, exterior hand-drawn box) and an `evaluation` module behind a route and an `eval` CLI subcommand.
+- **Dropped for now:** RoboFAC (no robot data, near-saturated) and synthetic trimmed failures.
 - **Not in scope:** training a policy on filtered data (needs GPUs) → "next steps."
 
 ---
