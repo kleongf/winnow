@@ -13,6 +13,7 @@ from winnow.criteria.measured import Measurement, grasp_attempts, release_height
 from winnow.criteria.models import Criterion
 from winnow.criteria.motion import active_duration_s, longest_still_s, path_efficiency
 from winnow.criteria.primitives import Primitive
+from winnow.visual.measure import ask_video
 
 Measure = Callable[[Criterion, EpisodeFacts, Grasps, Interval], Measurement]
 
@@ -34,4 +35,6 @@ CATALOG: dict[Primitive, Entry] = {
     ),
     "active_duration_s": Entry(active_duration_s, "Time the arm is moving"),
     "path_efficiency": Entry(path_efficiency, "Path efficiency (straight line over path)"),
+    # A visual Criterion reads as its question (`criteria.english`), not a comparison.
+    "ask_video": Entry(ask_video, "Spark's samples answering pass"),
 }

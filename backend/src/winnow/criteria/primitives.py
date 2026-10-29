@@ -14,11 +14,14 @@ Primitive = Literal[
     "release_height_m",
     "active_duration_s",
     "path_efficiency",
+    "ask_video",
 ]
 Kind = Literal["measured", "tracked", "visual"]
-# What a primitive reads. Tracks, the target box and video join with their primitives; when a
-# source is missing or its step failed, every Criterion reading it is unsure.
-Source = Literal["robot data"]
+# What a primitive reads. Tracks and the target box join with their primitives; when a source is
+# missing or its step failed, every Criterion reading it is unsure.
+Source = Literal["robot data", "video"]
+# A visual Criterion asks its frozen question and this many paraphrases, one sample each.
+PARAPHRASES = 2
 
 
 @dataclass(frozen=True)
@@ -45,4 +48,8 @@ PRIMITIVES: dict[Primitive, PrimitiveInfo] = {
     "release_height_m": PrimitiveInfo("measured", "m", {}, conclusive=False, noise_floor=0.01),
     "active_duration_s": PrimitiveInfo("measured", "s", {}, conclusive=True, noise_floor=0.2),
     "path_efficiency": PrimitiveInfo("measured", "ratio", {}, conclusive=True, noise_floor=0.05),
+    # Its value is how many samples answered pass; only a unanimous answer is conclusive.
+    "ask_video": PrimitiveInfo(
+        "visual", "samples", {}, conclusive=True, noise_floor=0, source="video"
+    ),
 }

@@ -1,7 +1,7 @@
 """An Episode's facts: everything the scoring function may read about one Episode.
 
-Robot data, and which sources are missing or failed their step. Tracks and their health, the
-target box and cached visual answers join here as their Criteria arrive.
+Robot data, Spark's stored answers to visual Criteria, and which sources are missing or failed
+their step. Tracks and their health and the target box join here as their Criteria arrive.
 """
 
 from collections.abc import Mapping
@@ -12,6 +12,7 @@ from typing import Literal
 from winnow.criteria.primitives import Source
 from winnow.episodes.models import EpisodeSignals, FloatArray
 from winnow.episodes.speed import smoothed_speed
+from winnow.visual.models import VisualAnswers
 
 SourceProblem = Literal["source missing", "step failed"]
 
@@ -21,6 +22,8 @@ class EpisodeFacts:
     signals: EpisodeSignals
     # Sources a Criterion can't read for this Episode; each one's Criteria are unsure.
     unavailable: Mapping[Source, SourceProblem] = field(default_factory=dict[Source, SourceProblem])
+    # Spark's answers to each visual Criterion asked of this Episode, by `visual.keys.ask_key`.
+    visual: Mapping[str, VisualAnswers] = field(default_factory=dict[str, VisualAnswers])
 
     @cached_property
     def t(self) -> list[float]:

@@ -36,8 +36,8 @@ Phrase it doesn't measure.
 3. A Criterion is one primitive compared with one threshold, in the primitive's unit:
    - "params": every parameter the primitive takes; null for the parameters it doesn't take.
    - "window": where in the Episode it looks; "seconds" only for last_n_s, else null.
-   - "views", "question" and "paraphrases" are for tracked and visual primitives only: use [], \
-null and [] for measured ones.
+   - "views", "question" and "paraphrases" are for tracked and visual primitives only, and \
+"crop" for visual ones: use [], null, [] and null for measured ones.
    - "hard": true, unless the Phrase says ideally, preferably or similar; a soft Criterion is \
 shown but never rejects an Episode.
    - "assumptions": one sentence for each value the Description doesn't state that you had to \

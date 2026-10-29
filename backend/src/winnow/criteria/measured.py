@@ -8,6 +8,7 @@ from winnow.criteria.facts import EpisodeFacts
 from winnow.criteria.grasp_margins import near_closures, readings
 from winnow.criteria.grasps import Grasps, Interval
 from winnow.criteria.models import Criterion, Moment, Status, TextSpan, UncertaintySignal
+from winnow.visual.models import VisualAnswers
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,8 @@ class Measurement:
     # The signed distance from the threshold in effective margins, when the measure knows it
     # better than its value does (a count near the grasp rule).
     m: float | None = None
+    p: float | None = None  # p_pass, when the measure knows it directly (Spark's agreement)
+    visual: VisualAnswers | None = None  # Spark's samples and the clip, for a visual Criterion
 
 
 def seconds(t: float) -> str:

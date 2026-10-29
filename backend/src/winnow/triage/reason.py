@@ -51,6 +51,8 @@ def _detail(result: CriterionResult) -> str:
     what couldn't be measured."""
     if result.value is None:
         return result.window_name if result.measurement == "no window" else result.measurement
+    if result.kind == "visual":  # Spark's tally; it has no threshold to compare against
+        return result.measurement
     threshold = format_value(result.threshold, result.unit)
     return f"{result.measurement} against {COMPARATORS[result.comparator]} {threshold}"
 

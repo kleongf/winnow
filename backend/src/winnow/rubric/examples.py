@@ -34,6 +34,7 @@ def _criterion(
         "views": [],
         "question": None,
         "paraphrases": [],
+        "crop": None,
         "hard": True,
         "assumptions": list(assumptions),
     }

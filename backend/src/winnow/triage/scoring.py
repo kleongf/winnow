@@ -98,6 +98,7 @@ def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) 
         margin=effective_margin(criterion),
         p_pass=judged.p_pass,
         camera=criterion.views[0] if criterion.views else None,
+        visual=measured.visual,
     )
 
 

@@ -862,6 +862,8 @@ export interface components {
              * @enum {string}
              */
             comparator: "<" | "<=" | ">=" | ">" | "==";
+            /** Crop */
+            crop?: ("view" | "placement") | null;
             /**
              * Hard
              * @default true
@@ -897,7 +899,7 @@ export interface components {
              * Primitive
              * @enum {string}
              */
-            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency";
+            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency" | "ask_video";
             /** Question */
             question?: string | null;
             /** Threshold */
@@ -990,7 +992,7 @@ export interface components {
              * Primitive
              * @enum {string}
              */
-            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency";
+            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency" | "ask_video";
             /**
              * Status
              * @enum {string}
@@ -999,11 +1001,12 @@ export interface components {
             /** Threshold */
             threshold: number;
             /** Uncertainty */
-            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed") | null;
+            uncertainty: ("near threshold" | "near threshold (count)" | "samples split" | "Spark said unsure" | "unconfirmed fail" | "window empty" | "source missing" | "step failed") | null;
             /** Unit */
             unit: string;
             /** Value */
             value: number | null;
+            visual?: components["schemas"]["VisualAnswers"] | null;
             window: components["schemas"]["TimeWindow"] | null;
             /** Window Name */
             window_name: string;
@@ -1721,7 +1724,7 @@ export interface components {
             /** Reason */
             reason: string;
             /** Uncertainty */
-            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed")[];
+            uncertainty: ("near threshold" | "near threshold (count)" | "samples split" | "Spark said unsure" | "unconfirmed fail" | "window empty" | "source missing" | "step failed")[];
         };
         /** ValidationError */
         ValidationError: {
@@ -1735,6 +1738,52 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VisualAnswers */
+        VisualAnswers: {
+            clip: components["schemas"]["VisualClip"] | null;
+            /** Error */
+            error: string | null;
+            /** Samples */
+            samples: components["schemas"]["VisualSample"][];
+        };
+        /**
+         * VisualClip
+         * @description The short clip the crop step cut for one Criterion on one Episode.
+         */
+        VisualClip: {
+            box: components["schemas"]["FrameBox"] | null;
+            /** Camera */
+            camera: string;
+            /** End */
+            end: number;
+            /** Name */
+            name: string;
+            /** Start */
+            start: number;
+        };
+        /**
+         * VisualReply
+         * @description One sample's structured answer: pass means the question's answer is yes.
+         */
+        VisualReply: {
+            /**
+             * Answer
+             * @enum {string}
+             */
+            answer: "pass" | "fail" | "unsure";
+            /** Confidence */
+            confidence: number;
+            /** Observation */
+            observation: string;
+        };
+        /** VisualSample */
+        VisualSample: {
+            /** Error */
+            error: string | null;
+            /** Prompt */
+            prompt: string;
+            reply: components["schemas"]["VisualReply"] | null;
         };
         /**
          * Window
