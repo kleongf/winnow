@@ -75,7 +75,7 @@
    - **Tracked from SAM 3.1** across the views each Criterion needs (wrist for in-hand, one boxed exterior view for placement): object slips in transit, falls after release, moved, overlaps the target box at the end.
    - **Visual** (Spark on a specific moment the measurements point to, cropped to the SAM box): what geometry can't decide, e.g. "grasped by the handle", spills, upright.
    - Each Criterion is **hard** (fail = reject) or **soft** (adds to a quality score; scored relative to the dataset, never rejects alone). A free dry run shows each Criterion's pass rate before the user confirms.
-3. **Score** — every Episode gets per-Criterion results with Evidence (value, threshold, time window, track plot, the frame where it went wrong). Spark reads the robot-data and SAM event timeline, investigates with tools (crop a view at a time, track another concept), and writes the **Reason**.
+3. **Score** — every Episode gets per-Criterion results with Evidence (value, threshold, time window, track plot, the frame where it went wrong). Every visual Criterion runs as a fixed-shape Spark call (no investigator tool loop: slides-only this week). The **Reason** is a template first, with Spark's Reason swapped in if built.
 4. **Triage with self-monitoring** — Criterion results resolve per Phrase: a Phrase **fails** on any crisp *conclusive* fail (a per-primitive flag: `release_height_m` is inconclusive because of stacking; `final_overlap`, the other primitives and a unanimous `ask_video` are conclusive), **passes** only when all its Criteria pass crisply, and is otherwise unsure. Then a weakest link over hard Phrases: any failing → Reject (Reason from the earliest-in-time conclusive fail); all passing → Keep; otherwise Needs review, with its Uncertainty signals as the Reason. No Spark refuter: a Reject is final unless a human label overrides it. Soft Criteria never touch the decision; their robust z (median/MAD within the run) averages into a quality score. Uncertainty signals:
    - measurement within a Criterion's margin of its threshold; `grasp_attempts` is unsure when any closure sits within the margins of the gripper-closed level or the 2 cm grasp rule (Episode 49)
    - Spark's 3 paraphrased samples split 2–1, or any answers "unsure"; no extra samples on splits
@@ -98,8 +98,8 @@
 | Model | Role | What makes it more than a basic integration |
 |---|---|---|
 | **SAM 3.1** (Model API, `sam-3.1`) | Tracks the gripper and objects from a seed box (text prompts fail on the gripper and small objects at 320×180); each call takes one concept and one camera and returns per-frame boxes, masks, track ids, and confidence | The *measurement backbone*: with robot data, it decides physical facts (lifted, dropped, moved, inside target) across camera views, and steers Spark to the right moment and crop |
-| **Muse Spark 1.3** | Runs the Describe interview; composes typed Criteria; picks what SAM tracks; investigates the event timeline; judges only what geometry can't; challenges failures before Reject; writes Reasons; proposes missing Criteria | Never the holistic judge (that's the baseline). Checks run in Winnow's own code (the API has no hosted code execution), which Spark calls as function tools |
-| **Muse Voice Transcribe** | Talk-while-watching labeling: narrate verdicts while watching an episode | Moment labels from speech (turn-level timestamps aligned to the video playhead; the API has no word-level timestamps); can draft the rubric from spoken critique |
+| **Muse Spark 1.3** | Runs the Describe interview; composes typed Criteria; picks what SAM tracks; judges only what geometry can't; writes Reasons; proposes missing Criteria | Never the holistic judge (that's the baseline). Checks run in Winnow's own code (the API has no hosted code execution), which Spark calls as function tools |
+| **Muse Voice Transcribe** | Push-to-talk labeling on the Review page: narrate while watching an Episode | Each turn is transcribed through the backend; its moment is the playhead at the turn's onset (the API has no word-level timestamps); one Spark call maps the transcript onto the Episode's unsure Phrases as pass or fail, shown as chips the user confirms before they save as ordinary review labels (voice is only the input mode). Answering the Describe interview by voice is slides-only |
 | **Muse Glimmer** (open weights; hosted via OpenRouter, not on the Meta Model API) | One-way second opinion on keyframes for end-state visual Criteria Spark answered unanimously; disagreement only adds Needs review (images only, no video); running locally is roadmap (needs a 32 GB+ Mac) | Different model than Spark catches different mistakes; open-weights bonus |
 | **Muse Wonder** | (Stretch / roadmap) agent that improves the rubric against labeled episodes, with budget and stopping rules | Applies my self-monitoring research-agent architecture |
 | **Muse Image** | (Roadmap) edit a keyframe to insert an obvious failure; check whether the judge's verdict flips | An image model auditing another model's attention |
@@ -149,28 +149,64 @@
 
 ---
 
-## 10. Real vs. precomputed vs. slides
+## 10. Cut line
 
-- **Must be real:** rubric compiling; scoring ~100 episodes; episode detail view; Spark-alone comparison numbers.
-- **Fine to precompute (say so on screen):** full dataset run; SAM tracks and measurements cached so edits re-sort instantly.
-- **Real but small:** voice labeling on one episode.
-- **Slides only ("what's next"):** rubric-improving agent (Wonder), image-edit judge test (Muse Image), Glimmer activation probes. Rules require demoing only what was built during the hackathon — label future work clearly.
+Decided in [Cut line and day-by-day build plan](https://github.com/kleongf/winnow/issues/12). **Must-ship** is built, exercised, and measured. **Nice-to-have** is built strictly in rank order, and only after the gate: end-to-end numbers on the Dev set. **Slides-only** is "what's next" in the Demo video, never built. A nice-to-have not reached by Mon Nov 2 night drops to slides-only, so nothing is demoed half-built. Rules require demoing only what was built during the hackathon, so label future work clearly. Precomputed runs (the full dataset, cached SAM tracks and measurements) are fine if said on screen.
+
+**Must-ship** (the floor of rubric compiling, scoring ~100 Episodes, the Episode detail view and Spark-alone numbers, plus what those and the pitch depend on):
+
+1. Ingest: droid_100 plus the droid_1.0.1 selection pass, a frozen Test set and Dev set, AV1→H.264, the SQLite Meta cache and the asyncio runner.
+2. Prepare page (hand-drawn box) and the SAM text-prompted target box with a hand-drawn fallback.
+3. SAM tracks: wrist seeded from robot data, one boxed exterior view.
+4. The catalog: 5 measured primitives, 4 tracked, `ask_video`.
+5. Reference label mode, and the Test set and Dev set labelled in it.
+6. Triage: the Phrase rule with conclusive-fail flags, every Uncertainty signal including tracking health, min-based confidence, template Reasons.
+7. Episodes table and the full-page Workstation.
+8. Evaluation: the Spark-alone baseline at ingest; the `evaluation` module, `eval` CLI and Evaluation page (false keeps, right reason, risk–coverage, matched coverage, length-alone baseline, $0 source ablation, cost per 1,000 Episodes).
+9. Review queue with the (Episode, Phrase, source) label store; labels override results.
+10. Instant re-sort: drag a threshold or edit a sentence; only changed Criteria re-run.
+11. Describe as a minimal interview: compile, coverage, and code-picked question cards for uncovered Phrases and threshold bisection on the anchor pool.
+
+The **cost cascade** needs no separate build: routing to the cheapest source is how compile works, and the cost log gives the metric.
+
+**Nice-to-have, in build order:**
+
+1. Audit tab with Keep precision (count plus Wilson interval).
+2. Calibration: margin-multiplier scan with the leave-one-out check, plus threshold suggestions.
+3. Rubric sanity monitor.
+4. Voice labeling, push-to-talk on the Review page (§6).
+5. Spark's Reason swapped in over the template.
+6. The rest of the interview: hard/soft and grasp-setting questions, Criteria-disagree questions, free-text recompile.
+7. LeRobot-format export of kept Episodes.
+8. Background dry run of visual Criteria on the anchor pool.
+9. Soft-Criterion quality score (until then soft Criteria show results but never touch the Triage decision).
+10. Criterion chat, and more than one Dataset and Project.
+11. Glimmer second opinion on end-state Criteria.
+
+**Slides-only:** Spark as investigator (a tool loop over cached crop/track), the rubric-improving agent (Wonder), the image-edit judge test (Muse Image), Glimmer running locally and its activation probes, voice answers to the Describe interview, training a policy on filtered data.
 
 ---
 
-## 11. Build order
+## 11. Build plan
 
-1. **Day-1 feasibility test** (see below).
-2. Load episodes + robot data; run SAM 3.1 on clips; cache tracks.
-3. Compile description → rubric; compute measured criteria; Spark visual criteria.
-4. Episode detail view (this *is* the demo — give it real time).
-5. Spark-alone comparison → results slide.
-6. Triage + confidence; needs-review pile.
-7. Voice labeling; instant re-sort from cache.
-8. Record the demo video early; polish story and visuals.
-9. Buffer, submission, X post.
+Build days are Thu Oct 29 – Mon Nov 2; Nov 3–4 is for the Demo video and submission. The table is a guide, not a contract. Only two orderings are fixed: the user's blind Reference labels land before any tuning (and before they see Winnow's or Spark-alone's output on those Episodes), and the gate comes before any nice-to-have.
 
-### Day-1 feasibility test
+| Day | Build | Human |
+|---|---|---|
+| Thu Oct 29 | Ingest and the selection pass, Meta cache and runner, frozen sets; workspace shell, Prepare page, Reference label mode | Confirm the selection; Discord questions (§14); label the Dev set |
+| Fri Oct 30 | SAM tracks at ingest (wrist, exterior, target box); measured and tracked primitives; Spark-alone baseline at ingest, hidden from the UI | Label the Test set, plus the ~15-Episode relabel for slack |
+| Sat Oct 31 | Compile, `ask_video`, Triage, Uncertainty signals, confidence, template Reasons; Episodes table and Workstation; minimal interview | Interview on the anchor pool; Dev set tuning |
+| Sun Nov 1 | Review queue and label store, instant re-sort, evaluation module and page; **gate**; first logged Test run | Review pass on the Dev set |
+| Mon Nov 2 | Nice-to-haves in rank order; freeze at night with a final logged Test run | Teammate interviews, validation to-dos |
+
+**Rules:**
+
+- Each day ends with `pnpm verify` green and its work merged to `main`, one short-lived branch and PR per must-ship item.
+- A slipped must-ship item moves to the front of the next day and costs Monday's nice-to-haves; must-ship is never cut.
+- The one sanctioned fallback: if tracked primitives aren't working on the Dev set by Sat noon, ship measured and visual Criteria only and report SAM's absence in the source ablation.
+- **Test set hygiene:** the Test set may be run more than once, but every run is appended to a dated log, no threshold, margin or Rubric change is made because of a Test result, and the reported numbers come from the last run before the freeze.
+
+### Day-1 feasibility test (done Oct 27: conditional go, then go)
 1. Get Meta API key + credits working.
 2. Load `lerobot/droid_100` (small; no big download). Avoid full DROID (~1.7 TB RLDS). Transcode its AV1 video to H.264 (not on SAM's accepted list); the `v2.0` branch has one mp4 per episode per camera.
 3. Pick 5 pick-and-place episodes: episode 42 (marked success, appears to fail; recovered instruction "Move the black remote control to the left"), 2 known failures (their instructions are blank — write one by watching), 2 true successes.
