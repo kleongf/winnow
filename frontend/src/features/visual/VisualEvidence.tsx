@@ -31,6 +31,7 @@ export function VisualEvidence(props: { episodeId: string; visual: VisualAnswers
             loop
             muted
             playsInline
+            preload="auto"
           />
           <figcaption className="text-xs text-muted-foreground">{clipText(clip)}</figcaption>
         </figure>
