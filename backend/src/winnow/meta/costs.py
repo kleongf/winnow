@@ -1,6 +1,9 @@
-"""Every paid call is checked against the budget before it is sent and logged after."""
+"""Every paid call reserves its estimate against the budget before it is sent, and settles its
+actual cost when it returns, so calls in flight together can't overspend."""
 
 import json
+from collections.abc import Generator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -23,6 +26,7 @@ class CostLog:
     def __init__(self, path: Path, budget_usd: float) -> None:
         self.path = path
         self.budget_usd = budget_usd
+        self._reserved_usd = 0.0  # estimates of calls in flight in this process
 
     def spent_usd(self) -> float:
         if not self.path.exists():
@@ -31,12 +35,22 @@ class CostLog:
         return sum(float(json.loads(line)["usd"]) for line in lines if line.strip())
 
     def ensure_affordable(self, estimate_usd: float) -> None:
-        spent = self.spent_usd()
-        if spent + estimate_usd > self.budget_usd:
+        committed = self.spent_usd() + self._reserved_usd
+        if committed + estimate_usd > self.budget_usd:
             raise BudgetExceededError(
-                f"Call would cost up to ${estimate_usd:.4f}; ${spent:.4f} of the "
-                f"${self.budget_usd:.2f} budget is already spent."
+                f"Call would cost up to ${estimate_usd:.4f}; ${committed:.4f} of the "
+                f"${self.budget_usd:.2f} budget is already spent or reserved."
             )
+
+    @contextmanager
+    def reserve(self, estimate_usd: float) -> Generator[None]:
+        """Hold `estimate_usd` of the budget until the block exits; record the real cost inside."""
+        self.ensure_affordable(estimate_usd)
+        self._reserved_usd += estimate_usd
+        try:
+            yield
+        finally:
+            self._reserved_usd -= estimate_usd
 
     def record(self, entry: CostEntry) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
