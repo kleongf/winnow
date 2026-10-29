@@ -28,3 +28,17 @@ Setup: `pnpm install && uv sync --project backend && pnpm exec playwright instal
 - **Size limits:** 300 lines per source file (500 for tests), cyclomatic complexity 10. Split by responsibility when you hit them; don't raise the limit.
 - **Naming:** Python `snake_case` modules, `PascalCase` models; TS components in `PascalCase.tsx`, everything else `camelCase`.
 - **Datasets:** read LeRobot parquet and mp4 directly (pyarrow, ffmpeg); don't depend on the `lerobot` package.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `kleongf/winnow` via the `gh` CLI (sub-issues and native blocking supported). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default roles: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `GLOSSARY.md`, ADRs in `docs/adr/` (created when the first one is needed). See `docs/agents/domain.md`.
