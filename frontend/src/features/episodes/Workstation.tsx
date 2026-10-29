@@ -1,17 +1,22 @@
 // The Workstation (#8, Variant A): one large video with camera tabs, one playhead driving the
-// video and the robot-data plots, and a right panel. Review and Reference label mode put their
-// controls in `actions`; Criterion lanes and results arrive with scoring. `blind` (Reference
-// label mode) hides every Winnow and baseline output, tracks included.
+// video, a lane per Criterion and the robot-data plots, and a right panel with the Triage
+// decision, Reason and Criterion results. Review and Reference label mode put their controls in
+// `actions`. `blind` (Reference label mode) hides every Winnow and baseline output: tracks,
+// lanes, the Triage decision, Reason and Criterion results.
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 
+import { useSignalLevels } from "../rubric/useRubric";
 import { SET_LABELS, setsByEpisode, useSets } from "../sets/useSets";
 import { TargetOverlay } from "../tracking/TargetOverlay";
 import { TargetStatus } from "../tracking/TargetStatus";
 import { TrackOverlay } from "../tracking/TrackOverlay";
 import { TrackStatus } from "../tracking/TrackStatus";
 import { useTracks, type Track } from "../tracking/useTracks";
+import { CriterionLanes } from "../triage/CriterionLanes";
+import { TriagePanel } from "../triage/TriagePanel";
+import { useTriageFocus } from "../triage/useTriageFocus";
 import { EpisodeVideo } from "./EpisodeVideo";
 import { SignalPlots } from "./SignalPlots";
 import { clipUrl, useSignals, type Episode } from "./useEpisodes";
@@ -34,9 +39,12 @@ export function Workstation(props: {
   const [camera, setCamera] = useState(episode.cameras[0] ?? null);
   const signals = useSignals(episode.id);
   const set = setsByEpisode(useSets().data).get(episode.id);
-  const tracks = useShownTracks(episode.id, props.blind ?? false);
+  const blind = props.blind ?? false;
+  const tracks = useShownTracks(episode.id, blind);
   const shownTrack = tracks.find((t) => t.camera === camera && t.status === "tracked");
-  const { toggle } = playhead;
+  const levels = useSignalLevels(!blind);
+  const { toggle, seek } = playhead;
+  const { triage, openId, setOpenId, focus } = useTriageFocus(episode, blind, seek, setCamera);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -86,12 +94,35 @@ export function Workstation(props: {
           </div>
         )}
         <Transport playhead={playhead} duration={episode.duration_s} canPlay={camera !== null} />
+        {triage && (
+          <CriterionLanes
+            results={triage.criteria}
+            duration={episode.duration_s}
+            t={playhead.t}
+            openId={openId}
+            onFocus={focus}
+          />
+        )}
         {signals.data && (
-          <SignalPlots signals={signals.data} playhead={playhead} duration={episode.duration_s} />
+          <SignalPlots
+            signals={signals.data}
+            playhead={playhead}
+            duration={episode.duration_s}
+            levels={levels}
+          />
         )}
       </section>
       <aside className="min-w-0 rounded-lg border bg-card p-4">
         {renderActions(props.actions, playhead)}
+        {triage && (
+          <TriagePanel
+            triage={triage}
+            openId={openId}
+            onOpen={setOpenId}
+            onFocus={focus}
+            onSeek={seek}
+          />
+        )}
         <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
           Instruction
         </div>
@@ -112,12 +143,6 @@ export function Workstation(props: {
           ))}
           <TargetStatus episodeId={episode.id} hidden={props.blind} />
         </dl>
-        {!props.blind && (
-          <p className="mt-6 text-xs text-muted-foreground">
-            The Triage decision, Reason and Criterion results appear here once the Episode is
-            scored.
-          </p>
-        )}
       </aside>
     </div>
   );
