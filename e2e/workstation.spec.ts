@@ -35,6 +35,7 @@ test("the playhead moves the plots' readouts, and ?t= opens at that time", async
 test("J and K step through Episodes and Esc goes back to the table", async ({ page }) => {
   await page.goto("/?page=episodes&episode=droid_100%3A0");
   const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
+  await expect(breadcrumb).toContainText("droid_100:0"); // keys only work once it's open
 
   await page.keyboard.press("j");
   await expect(breadcrumb).toContainText("droid_100:1");
