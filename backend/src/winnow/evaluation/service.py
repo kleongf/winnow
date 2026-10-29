@@ -6,7 +6,7 @@ no per-Episode decision is in the report. Interview and review labels tune the
 Rubric on the Dev set, so they are applied to Dev set Episodes only, never to the Test set.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 
 from winnow.baseline.prompts import FROZEN
 from winnow.core.context import AppContext
@@ -24,14 +24,6 @@ from winnow.sets.models import SetName
 from winnow.triage.models import Label
 from winnow.triage.scoring import score
 from winnow.triage.service import episode_facts
-
-# An Episode's interview and review labels, by Episode id.
-TuningLabels = Callable[[str], Sequence[Label]]
-
-
-def no_tuning_labels(episode_id: str) -> Sequence[Label]:
-    """Until the label store lands, no Episode has interview or review labels."""
-    return ()
 
 
 class UnknownRubricVersionError(LookupError):
@@ -67,7 +59,6 @@ def evaluation_report(
     ctx: AppContext,
     set_name: SetName,
     rubric_version: int | None = None,
-    tuning_labels: TuningLabels = no_tuning_labels,
 ) -> EvaluationReport:
     version = _version(ctx, rubric_version)
     members = ctx.sets.get(set_name).episode_ids
@@ -80,7 +71,7 @@ def evaluation_report(
     labels = [first_pass[id] for id in members if id in first_pass]
 
     def applied(episode_id: str) -> Sequence[Label]:
-        return () if set_name == "test" else tuning_labels(episode_id)
+        return () if set_name == "test" else ctx.labels.in_force(episode_id)
 
     cases = [_case(ctx, version, label, applied(label.episode_id)) for label in labels]
     return EvaluationReport(
