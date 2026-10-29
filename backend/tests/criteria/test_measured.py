@@ -14,7 +14,7 @@ def signals(gripper: list[float], z: list[float] | None = None) -> EpisodeSignal
         timestamps=np.arange(n) / 15.0,
         position=position,
         gripper=np.asarray(gripper, dtype=np.float64),
-        success_label=True,
+        dataset_outcome=True,
     )
 
 

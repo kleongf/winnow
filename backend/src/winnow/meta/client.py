@@ -88,7 +88,7 @@ class MetaClient:
         transport = OpenAITransport(
             settings.meta_base_url, settings.model_api_key.get_secret_value()
         )
-        costs = CostLog(settings.data_dir / "meta_costs.jsonl", settings.meta_budget_usd)
+        costs = CostLog(settings.cost_log_path, settings.meta_budget_usd)
         return cls(transport, db, costs)
 
     async def sam_track(self, request: SamRequest) -> SamCall:

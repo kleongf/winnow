@@ -17,6 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
+winnow = "winnow.cli:main"
 winnow-openapi = "winnow.openapi:main"
 
 [build-system]

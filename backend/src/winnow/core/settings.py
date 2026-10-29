@@ -14,10 +14,17 @@ class Settings(BaseSettings):
     meta_base_url: str = "https://api.meta.ai/v1"
     meta_budget_usd: float = 5.0  # hard stop on total recorded Meta API spend
     data_dir: Path = REPO_ROOT / "data"
+    # Read droid_100 from a local copy laid out like the repo (test fixtures), not the Hub.
+    droid100_root: Path | None = None
+    ingest_concurrency: int = 4  # Episodes transcoded at once
 
     @property
     def db_path(self) -> Path:
         return self.data_dir / "winnow.db"
+
+    @property
+    def cost_log_path(self) -> Path:
+        return self.data_dir / "meta_costs.jsonl"
 
 
 @lru_cache

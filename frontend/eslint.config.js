@@ -4,7 +4,8 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "src/api/schema.ts"] },
+  // Generated: the API types (`pnpm gen:api`) and shadcn/ui components (`shadcn add`).
+  { ignores: ["dist", "src/api/schema.ts", "src/components/ui/**"] },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
