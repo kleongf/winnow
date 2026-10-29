@@ -9,6 +9,12 @@ export type SystemRow = components["schemas"]["SystemRow"];
 export type Proportion = components["schemas"]["Proportion"];
 export type LengthRule = components["schemas"]["LengthRule"];
 export type TestRun = components["schemas"]["TestRun"];
+export type Slack = components["schemas"]["Slack"];
+export type RightReasonRow = components["schemas"]["RightReasonRow"];
+export type RiskCoverage = components["schemas"]["RiskCoverage"];
+export type MatchedCoverage = components["schemas"]["MatchedCoverage"];
+export type McNemar = components["schemas"]["McNemar"];
+export type PhraseFailures = components["schemas"]["PhraseFailures"];
 
 const testRunsKey = ["evaluation", "test-runs"] as const;
 
