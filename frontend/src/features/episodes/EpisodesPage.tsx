@@ -10,12 +10,15 @@ import {
 } from "@/components/ui/table";
 
 import { navigate, useSearchParams } from "../core/url";
+import { SetTag } from "../sets/SetTag";
+import { setsByEpisode, useSets } from "../sets/useSets";
 import { EpisodePage } from "./EpisodePage";
 import { useEpisodes } from "./useEpisodes";
 
 export function EpisodesPage() {
   const params = useSearchParams();
   const episodes = useEpisodes();
+  const setOf = setsByEpisode(useSets().data);
   const openId = params.get("episode");
   const list = episodes.data ?? [];
   const open = (id: string | null) => {
@@ -56,6 +59,7 @@ export function EpisodesPage() {
               <TableHead>Instruction</TableHead>
               <TableHead className="w-24 text-right">Length</TableHead>
               <TableHead className="w-28">Source</TableHead>
+              <TableHead className="w-24">Set</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -75,6 +79,9 @@ export function EpisodesPage() {
                   {e.duration_s.toFixed(1)} s
                 </TableCell>
                 <TableCell className="text-muted-foreground">{e.source}</TableCell>
+                <TableCell>
+                  <SetTag name={setOf.get(e.id)} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

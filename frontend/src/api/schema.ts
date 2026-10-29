@@ -262,6 +262,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Sets */
+        get: operations["list_sets_api_sets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sets/{name}/episodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Set Episodes */
+        post: operations["post_set_episodes_api_sets__name__episodes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sets/{name}/episodes/{episode_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Set Episode */
+        delete: operations["delete_set_episode_api_sets__name__episodes__episode_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sets/{name}/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Freeze */
+        post: operations["post_freeze_api_sets__name__freeze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -393,6 +461,20 @@ export interface components {
             /** Task Target */
             task_target: string | null;
         };
+        /** EpisodeSet */
+        EpisodeSet: {
+            /** Episode Ids */
+            episode_ids: string[];
+            /** Frozen At */
+            frozen_at: string | null;
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "dev" | "test";
+            /** Size */
+            size: number;
+        };
         /** Exclude */
         Exclude: {
             /**
@@ -474,6 +556,11 @@ export interface components {
             status: "queued" | "running" | "done" | "failed";
             /** Step */
             step: string;
+        };
+        /** SetMembers */
+        SetMembers: {
+            /** Episode Ids */
+            episode_ids: string[];
         };
         /**
          * Signals
@@ -916,6 +1003,124 @@ export interface operations {
                 };
                 content: {
                     "image/jpeg": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sets_api_sets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EpisodeSet"][];
+                };
+            };
+        };
+    };
+    post_set_episodes_api_sets__name__episodes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: "dev" | "test";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMembers"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EpisodeSet"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_set_episode_api_sets__name__episodes__episode_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: "dev" | "test";
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EpisodeSet"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_freeze_api_sets__name__freeze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: "dev" | "test";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EpisodeSet"];
                 };
             };
             /** @description Validation Error */
