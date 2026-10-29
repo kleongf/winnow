@@ -24,7 +24,10 @@ export function ReviewPage() {
       <ReviewHeader reviewed={queue.data?.reviewed ?? 0} left={items.length} current={current} />
       {current ? (
         <>
-          {episode && <ReviewWorkstation item={current} episode={episode} />}
+          {episode && (
+            // Keyed so each Episode starts with its own playhead, focus and save state.
+            <ReviewWorkstation key={episode.id} item={current} episode={episode} />
+          )}
           <UpNext
             items={items.filter((i) => i !== current)}
             episodes={episodes}
@@ -86,12 +89,10 @@ function ReviewWorkstation(props: { item: ReviewItem; episode: Episode }) {
   const save = useSaveLabel();
   return (
     <Workstation
-      key={episode.id}
       episode={episode}
       actions={
         <>
           <YourCall
-            key={item.episode_id}
             item={item}
             pending={save.isPending}
             onAnswer={(phrase, value) => {

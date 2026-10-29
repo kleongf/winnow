@@ -111,7 +111,7 @@ function AnswerButton(props: {
 }) {
   return (
     <Button size="xs" variant="outline" disabled={props.disabled} onClick={props.onClick}>
-      {props.label}
+      <span>{props.label}</span>
       {props.shortcut && <kbd className="text-muted-foreground">{props.shortcut}</kbd>}
     </Button>
   );
