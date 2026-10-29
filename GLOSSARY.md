@@ -32,6 +32,10 @@ _Avoid_: Verdict, score
 What supports a Criterion result: timestamps, track plots, measurements, or the frame where something went wrong.
 _Avoid_: Explanation, justification
 
+**Uncertainty signal**:
+Why a Criterion result is unsure rather than pass or fail, e.g. a measurement near its threshold, Spark's samples disagreeing, or a lost track.
+_Avoid_: Flag, warning
+
 **Triage decision**:
 The per-Episode outcome after all Criterion results are combined: Keep, Reject, or Needs review.
 _Avoid_: Verdict, label, classification
