@@ -1,10 +1,12 @@
 import { pageLabels, type Page } from "./pages";
 
-type Unbuilt = Exclude<Page, "prepare" | "select" | "episodes" | "reference" | "evaluation">;
+type Unbuilt = Exclude<
+  Page,
+  "prepare" | "select" | "episodes" | "review" | "reference" | "evaluation"
+>;
 
 const coming: Record<Unbuilt, string> = {
   describe: "Write a Description, compile it into a Rubric, and answer the interview.",
-  review: "The Needs review queue, least confident first.",
 };
 
 export function NotBuiltYet(props: { page: Unbuilt }) {

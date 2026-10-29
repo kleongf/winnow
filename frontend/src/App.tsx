@@ -5,6 +5,7 @@ import { PreparePage } from "./features/dataset/PreparePage";
 import { EpisodesPage } from "./features/episodes/EpisodesPage";
 import { EvaluationPage } from "./features/evaluation/EvaluationPage";
 import { ReferenceLabelsPage } from "./features/referenceLabels/ReferenceLabelsPage";
+import { ReviewPage } from "./features/review/ReviewPage";
 import { SelectionPage } from "./features/selection/SelectionPage";
 
 export function App() {
@@ -16,9 +17,10 @@ export function App() {
         {page === "prepare" && <PreparePage />}
         {page === "select" && <SelectionPage />}
         {page === "episodes" && <EpisodesPage />}
+        {page === "review" && <ReviewPage />}
         {page === "reference" && <ReferenceLabelsPage />}
         {page === "evaluation" && <EvaluationPage />}
-        {(page === "describe" || page === "review") && <NotBuiltYet page={page} />}
+        {page === "describe" && <NotBuiltYet page={page} />}
       </main>
     </div>
   );
