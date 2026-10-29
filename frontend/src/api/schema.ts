@@ -140,6 +140,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/episodes/{episode_id}/target-box": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Target Box
+         * @description Draw the target box by hand, on frame 0 of the view the object was boxed in. It replaces
+         *     SAM's for as long as the object box stays on that view.
+         */
+        put: operations["put_target_box_api_episodes__episode_id__target_box_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/episodes/{episode_id}/tracks": {
         parameters: {
             query?: never;
@@ -350,6 +371,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/target-boxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Target Boxes
+         * @description Each boxed Episode's target box so far: the hand-drawn one if any, else SAM's.
+         */
+        get: operations["list_target_boxes_api_target_boxes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -448,10 +489,16 @@ export interface components {
             cost_usd: number;
             /** Episodes */
             episodes: number;
+            /** Exterior Tracks */
+            exterior_tracks: number | null;
             /** Name */
             name: string;
             /** Sources */
             sources: components["schemas"]["SourceCount"][];
+            /** Target Boxes */
+            target_boxes: number;
+            /** Targets Missing */
+            targets_missing: number;
             /** Wrist No Closure */
             wrist_no_closure: number;
             /** Wrist Tracks */
@@ -511,6 +558,34 @@ export interface components {
              * @enum {string}
              */
             reason: "not pick-and-place" | "object too small to see";
+        };
+        /**
+         * FrameBox
+         * @description A box on frame 0, in that frame's pixels (half-open bounds).
+         */
+        FrameBox: {
+            /** Bottom */
+            bottom: number;
+            /** Left */
+            left: number;
+            /** Right */
+            right: number;
+            /** Top */
+            top: number;
+        };
+        /**
+         * FrameRect
+         * @description A box in frame-0 pixels.
+         */
+        FrameRect: {
+            /** X1 */
+            x1: number;
+            /** X2 */
+            x2: number;
+            /** Y1 */
+            y1: number;
+            /** Y2 */
+            y2: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -607,6 +682,39 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * TargetBox
+         * @description Where the object should end up, on frame 0 of the hand-drawn box's view: SAM's answer to
+         *     a text prompt for the instruction's target, or the curator's box, which wins.
+         */
+        TargetBox: {
+            box: components["schemas"]["FrameBox"] | null;
+            /**
+             * Camera
+             * @enum {string}
+             */
+            camera: "exterior_image_1_left" | "exterior_image_2_left";
+            /** Episode Id */
+            episode_id: string;
+            /** Frame Height */
+            frame_height: number;
+            /** Frame Width */
+            frame_width: number;
+            /** Made At */
+            made_at: string;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "sam" | "hand";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "found" | "not_found" | "no_instruction" | "no_target";
+            /** Target */
+            target: string | null;
+        };
         /** Track */
         Track: {
             /** Boxes */
@@ -624,9 +732,9 @@ export interface components {
             height: number;
             /**
              * Kind
-             * @constant
+             * @enum {string}
              */
-            kind: "wrist";
+            kind: "wrist" | "exterior";
             /** Seed Frame */
             seed_frame: number | null;
             /**
@@ -899,6 +1007,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Signals"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_target_box_api_episodes__episode_id__target_box_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FrameRect"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TargetBox"];
                 };
             };
             /** @description Validation Error */
@@ -1245,6 +1388,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_target_boxes_api_target_boxes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TargetBox"][];
                 };
             };
         };

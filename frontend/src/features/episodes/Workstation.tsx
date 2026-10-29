@@ -6,6 +6,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 import { SET_LABELS, setsByEpisode, useSets } from "../sets/useSets";
+import { TargetOverlay } from "../tracking/TargetOverlay";
+import { TargetStatus } from "../tracking/TargetStatus";
 import { TrackOverlay } from "../tracking/TrackOverlay";
 import { TrackStatus } from "../tracking/TrackStatus";
 import { useTracks } from "../tracking/useTracks";
@@ -68,6 +70,7 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
           <div className="relative">
             <EpisodeVideo key={camera} src={clipUrl(episode.id, camera)} playhead={playhead} />
             {shownTrack && <TrackOverlay track={shownTrack} playhead={playhead} />}
+            <TargetOverlay episodeId={episode.id} camera={camera} />
           </div>
         ) : (
           <div className="grid aspect-video w-full place-items-center rounded bg-black text-sm text-white/60">
@@ -99,6 +102,7 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
           {tracks.map((track) => (
             <TrackStatus key={track.kind} track={track} />
           ))}
+          <TargetStatus episodeId={episode.id} />
         </dl>
         <p className="mt-6 text-xs text-muted-foreground">
           The Triage decision, Reason and Criterion results appear here once the Episode is scored.
