@@ -26,8 +26,12 @@ function useTriagedEpisodes(tab: TriageTab) {
   const awaiting = episodes.filter((e) => !e.reference_labelled).length;
   const summary = triage
     ? [
-        `${String(decided.all - decided.needs_review)} of ${String(decided.all)} decided automatically`,
-        `${String(decided.needs_review)} Needs review`,
+        ...(decided.all > 0
+          ? [
+              `${String(decided.all - decided.needs_review)} of ${String(decided.all)} decided automatically`,
+              `${String(decided.needs_review)} Needs review`,
+            ]
+          : []),
         ...(awaiting > 0 ? [`${String(awaiting)} awaiting Reference label`] : []),
         `Rubric v${String(triage.rubric_version)}`,
       ].join(" · ")
