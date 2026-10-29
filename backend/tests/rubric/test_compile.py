@@ -184,6 +184,7 @@ def test_spark_sees_the_catalog_with_ranges_over_the_anchor_pool_only(
         "set_name": "dev",
         "episode_ids": ["droid_100:0", "droid_100:2"],
         "hidden_test_episodes": 1,
+        "awaiting_reference_label": 2,
     }
     [[prompt]] = spark.prompts
     assert "The anchor pool is the Dev set: 2 Episodes." in prompt

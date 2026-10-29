@@ -1,10 +1,11 @@
 from typing import Literal, Self
 
-from pydantic import BaseModel, computed_field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 from winnow.criteria.english import english
-from winnow.criteria.models import Criterion, RubricSettings
+from winnow.criteria.models import Criterion, RubricSettings, Status
 from winnow.rubric.phrases import TextRange, uncovered_words
+from winnow.triage.models import TriageDecision
 
 
 class Rubric(BaseModel):
@@ -29,11 +30,15 @@ class Rubric(BaseModel):
         return self
 
 
+RubricOrigin = Literal["seed", "run"]
+
+
 class RubricVersion(BaseModel):
     """A frozen Rubric: every Criterion result names the version it came from."""
 
     version: int
     created_at: str
+    origin: RubricOrigin  # seed: the code's Rubric, replaced until one is Run; run: from Run
     rubric: Rubric
 
 
@@ -69,8 +74,18 @@ class RubricDraft(BaseModel):
     phrases: list[DraftPhrase]  # in Description order, never overlapping
     settings: RubricSettings
     criteria: list[Criterion]
+    disabled: list[str] = []  # ids of Criteria switched off: shown, never scored or Run
     rejected: list[RejectedPhrase] = []
     compiled_at: str
+
+    def rubric(self) -> Rubric:
+        """What Run freezes and the preview scores: every Phrase, the Criteria switched on."""
+        return Rubric(
+            description=self.description,
+            phrases=[p.text for p in self.phrases],
+            settings=self.settings,
+            criteria=[c for c in self.criteria if c.id not in self.disabled],
+        )
 
     @computed_field
     @property
@@ -83,3 +98,69 @@ class RubricDraft(BaseModel):
     def english(self) -> dict[str, str]:
         """Each Criterion as the user reads it, by id."""
         return {c.id: english(c) for c in self.criteria}
+
+    @computed_field
+    @property
+    def assumptions_unconfirmed(self) -> int:
+        """Values guessed and not yet confirmed: a Rubric setting's, or a switched-on
+        Criterion's. Run never waits for them."""
+        settings = (self.settings.gripper_closed_level, self.settings.grasp_rise_m)
+        guessed = sum(1 for s in settings if s.assumption is not None)
+        return guessed + sum(len(c.assumptions) for c in self.rubric().criteria)
+
+
+class CriterionEdit(BaseModel):
+    """A direct edit on one Criterion card: no model call. Unset fields stay as they are."""
+
+    threshold: float | None = None
+    hard: bool | None = None
+    enabled: bool | None = None
+
+
+class DraftEdit(BaseModel):
+    """Direct edits to the draft: Criterion cards by id, and the two Rubric settings. Setting a
+    Rubric setting confirms it."""
+
+    criteria: dict[str, CriterionEdit] = {}
+    gripper_closed_level: float | None = Field(default=None, gt=0, lt=1)
+    grasp_rise_m: float | None = Field(default=None, gt=0, le=0.5)
+
+
+class AnchorValue(BaseModel):
+    """One anchor Episode's result on one Criterion."""
+
+    episode_id: str
+    value: float | None  # None when it couldn't be measured
+    status: Status
+
+
+class CriterionPreview(BaseModel):
+    """How one Criterion sorts the anchor pool: its histogram's values and the counts."""
+
+    criterion_id: str
+    english: str
+    threshold: float
+    margin: float  # the effective margin around the threshold, in `unit`
+    unit: str
+    passing: int
+    failing: int
+    unsure: int
+    values: list[AnchorValue]
+
+
+class AnchorEpisode(BaseModel):
+    episode_id: str
+    decision: TriageDecision
+    confidence: float
+
+
+class AnchorPreview(BaseModel):
+    """A Rubric scored on the anchor pool's Episodes that have a Reference label (the rest stay
+    blind), computed on every read: dragging a threshold re-sorts it with no model call."""
+
+    rubric_version: int | None  # None: the draft, unfrozen
+    keep: int
+    reject: int
+    needs_review: int
+    episodes: list[AnchorEpisode]  # least confident first
+    criteria: list[CriterionPreview]  # every Criterion, switched off or not

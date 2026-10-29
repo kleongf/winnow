@@ -405,7 +405,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Patch Draft
+         * @description Direct edits on Criterion cards and the Rubric settings, saved; no model call.
+         */
+        patch: operations["patch_draft_api_rubric_draft_patch"];
         trace?: never;
     };
     "/api/rubric/draft/compile": {
@@ -423,6 +427,87 @@ export interface paths {
          *     plus one repair turn when its answer fails code's checks.
          */
         post: operations["post_compile_api_rubric_draft_compile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rubric/draft/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Preview
+         * @description The draft, with `edit` applied but not saved, scored on the anchor pool: a threshold drag
+         *     re-sorts it with no model call.
+         */
+        post: operations["post_preview_api_rubric_draft_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rubric/draft/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Run
+         * @description Freeze the draft into the next immutable Rubric version, which scores every Episode.
+         */
+        post: operations["post_run_api_rubric_draft_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rubric/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Versions
+         * @description Every Rubric version, newest first.
+         */
+        get: operations["list_versions_api_rubric_versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rubric/versions/{version}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Version Preview
+         * @description A frozen Rubric version scored on the anchor pool.
+         */
+        get: operations["get_version_preview_api_rubric_versions__version__preview_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -613,8 +698,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnchorEpisode */
+        AnchorEpisode: {
+            /** Confidence */
+            confidence: number;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "keep" | "reject" | "needs_review";
+            /** Episode Id */
+            episode_id: string;
+        };
         /** AnchorPool */
         AnchorPool: {
+            /** Awaiting Reference Label */
+            awaiting_reference_label: number;
             /** Episode Ids */
             episode_ids: string[];
             /** Hidden Test Episodes */
@@ -624,6 +723,40 @@ export interface components {
              * @enum {string}
              */
             set_name: "dev" | "test";
+        };
+        /**
+         * AnchorPreview
+         * @description A Rubric scored on the anchor pool's Episodes that have a Reference label (the rest stay
+         *     blind), computed on every read: dragging a threshold re-sorts it with no model call.
+         */
+        AnchorPreview: {
+            /** Criteria */
+            criteria: components["schemas"]["CriterionPreview"][];
+            /** Episodes */
+            episodes: components["schemas"]["AnchorEpisode"][];
+            /** Keep */
+            keep: number;
+            /** Needs Review */
+            needs_review: number;
+            /** Reject */
+            reject: number;
+            /** Rubric Version */
+            rubric_version: number | null;
+        };
+        /**
+         * AnchorValue
+         * @description One anchor Episode's result on one Criterion.
+         */
+        AnchorValue: {
+            /** Episode Id */
+            episode_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pass" | "fail" | "unsure";
+            /** Value */
+            value: number | null;
         };
         /** Box */
         Box: {
@@ -783,6 +916,42 @@ export interface components {
              */
             window: components["schemas"]["Window"];
         };
+        /**
+         * CriterionEdit
+         * @description A direct edit on one Criterion card: no model call. Unset fields stay as they are.
+         */
+        CriterionEdit: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Hard */
+            hard?: boolean | null;
+            /** Threshold */
+            threshold?: number | null;
+        };
+        /**
+         * CriterionPreview
+         * @description How one Criterion sorts the anchor pool: its histogram's values and the counts.
+         */
+        CriterionPreview: {
+            /** Criterion Id */
+            criterion_id: string;
+            /** English */
+            english: string;
+            /** Failing */
+            failing: number;
+            /** Margin */
+            margin: number;
+            /** Passing */
+            passing: number;
+            /** Threshold */
+            threshold: number;
+            /** Unit */
+            unit: string;
+            /** Unsure */
+            unsure: number;
+            /** Values */
+            values: components["schemas"]["AnchorValue"][];
+        };
         /** CriterionResult */
         CriterionResult: {
             /** At S */
@@ -866,6 +1035,24 @@ export interface components {
             wrist_no_closure: number;
             /** Wrist Tracks */
             wrist_tracks: number | null;
+        };
+        /**
+         * DraftEdit
+         * @description Direct edits to the draft: Criterion cards by id, and the two Rubric settings. Setting a
+         *     Rubric setting confirms it.
+         */
+        DraftEdit: {
+            /**
+             * Criteria
+             * @default {}
+             */
+            criteria: {
+                [key: string]: components["schemas"]["CriterionEdit"];
+            };
+            /** Grasp Rise M */
+            grasp_rise_m?: number | null;
+            /** Gripper Closed Level */
+            gripper_closed_level?: number | null;
         };
         /**
          * DraftPhrase
@@ -1371,12 +1558,23 @@ export interface components {
          *     frozen into a Rubric version by Run.
          */
         RubricDraft: {
+            /**
+             * Assumptions Unconfirmed
+             * @description Values guessed and not yet confirmed: a Rubric setting's, or a switched-on
+             *     Criterion's. Run never waits for them.
+             */
+            readonly assumptions_unconfirmed: number;
             /** Compiled At */
             compiled_at: string;
             /** Criteria */
             criteria: components["schemas"]["Criterion"][];
             /** Description */
             description: string;
+            /**
+             * Disabled
+             * @default []
+             */
+            disabled: string[];
             /**
              * English
              * @description Each Criterion as the user reads it, by id.
@@ -1413,6 +1611,11 @@ export interface components {
         RubricVersion: {
             /** Created At */
             created_at: string;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "seed" | "run";
             rubric: components["schemas"]["Rubric"];
             /** Version */
             version: number;
@@ -2285,6 +2488,44 @@ export interface operations {
             };
         };
     };
+    patch_draft_api_rubric_draft_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricDraft"];
+                };
+            };
+            /** @description No Description has been compiled yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The draft has no such Criterion */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     post_compile_api_rubric_draft_compile_post: {
         parameters: {
             query?: never;
@@ -2329,6 +2570,136 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    post_preview_api_rubric_draft_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnchorPreview"];
+                };
+            };
+            /** @description No Description has been compiled yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The draft has no such Criterion */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    post_run_api_rubric_draft_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricVersion"];
+                };
+            };
+            /** @description No Description has been compiled yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The draft has no such Criterion */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_versions_api_rubric_versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RubricVersion"][];
+                };
+            };
+        };
+    };
+    get_version_preview_api_rubric_versions__version__preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnchorPreview"];
+                };
+            };
+            /** @description No such Rubric version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

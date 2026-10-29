@@ -19,6 +19,20 @@ export function useRubric() {
   });
 }
 
+export const versionsKey = [...rubricKey, "versions"] as const;
+
+/** Every Rubric version, newest first. */
+export function useVersions() {
+  return useQuery({
+    queryKey: versionsKey,
+    queryFn: async () => {
+      const { data, response } = await api.GET("/api/rubric/versions");
+      if (!response.ok || !data) throw new Error(`Versions failed: ${String(response.status)}`);
+      return data;
+    },
+  });
+}
+
 /** Reference lines for the Workstation's plots: the gripper-closed level grasps are read at.
  * None unless `shown` (Reference label mode stays blind to the Rubric). */
 export function useSignalLevels(shown: boolean): { gripper?: number } {
