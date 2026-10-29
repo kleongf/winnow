@@ -8,8 +8,16 @@ Winnow filters recorded robot demonstrations against a plain-English description
 One recorded robot demonstration: the video plus the robot's joint and gripper data, as a single unit of training data.
 _Avoid_: Demo, demonstration, trajectory, rollout
 
+**Description**:
+The user's plain-English statement of what an expert Episode looks like; a Rubric is compiled from it.
+_Avoid_: Prompt, spec, instructions (an **instruction** is an Episode's own task text, e.g. "Move the black remote to the left")
+
+**Phrase**:
+One clause of a Description, the unit that Criteria trace back to and that Reference labels are given per.
+_Avoid_: Clause, requirement
+
 **Rubric**:
-The set of criteria Winnow compiles from a user's plain-English "expert" description, used to judge every Episode.
+The set of criteria Winnow compiles from a user's Description, used to judge every Episode.
 _Avoid_: Filter, spec, checklist; never use for the hackathon's scoring
 
 **Criterion**:
