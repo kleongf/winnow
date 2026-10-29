@@ -6,7 +6,7 @@ from winnow.episodes.models import Episode
 from winnow.review.models import ReviewItem, ReviewQueue, UnsurePhrase
 from winnow.triage.models import EpisodeTriage
 from winnow.triage.reason import signal_text, undecided
-from winnow.triage.service import scored
+from winnow.triage.service import plain_reason, scored
 
 
 def review_queue(ctx: AppContext, episodes: list[Episode]) -> ReviewQueue:
@@ -31,7 +31,7 @@ def _item(triage: EpisodeTriage) -> ReviewItem:
     return ReviewItem(
         episode_id=triage.episode_id,
         confidence=triage.confidence,
-        reason="".join(span.text for span in triage.reason),
+        reason=plain_reason(triage),
         unsure=[
             UnsurePhrase(
                 phrase=p.phrase,

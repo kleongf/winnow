@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS labels (
     labelled_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS labels_by_episode ON labels (episode_id, phrase);
-CREATE TRIGGER IF NOT EXISTS labels_stay BEFORE UPDATE ON labels
+CREATE TRIGGER IF NOT EXISTS labels_no_update BEFORE UPDATE ON labels
 BEGIN SELECT RAISE(ABORT, 'Labels are kept as history'); END;
-CREATE TRIGGER IF NOT EXISTS labels_stay_put BEFORE DELETE ON labels
+CREATE TRIGGER IF NOT EXISTS labels_no_delete BEFORE DELETE ON labels
 BEGIN SELECT RAISE(ABORT, 'Labels are kept as history'); END;
 """
 

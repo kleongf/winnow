@@ -37,6 +37,21 @@ test("keys 1 and 2 answer the focused Phrase, the first until another is focused
   expect(onAnswer).toHaveBeenLastCalledWith("never drops it", "fail");
 });
 
+test("arrow keys move the focus between Phrases, stopping at either end", () => {
+  const onAnswer = vi.fn();
+  render(<YourCall item={item} pending={false} onAnswer={onAnswer} />);
+
+  fireEvent.keyDown(globalThis.window, { key: "ArrowDown" });
+  fireEvent.keyDown(globalThis.window, { key: "ArrowDown" });
+  fireEvent.keyDown(globalThis.window, { key: "1" });
+  expect(onAnswer).toHaveBeenLastCalledWith("never drops it", "pass");
+
+  fireEvent.keyDown(globalThis.window, { key: "ArrowUp" });
+  fireEvent.keyDown(globalThis.window, { key: "ArrowUp" });
+  fireEvent.keyDown(globalThis.window, { key: "2" });
+  expect(onAnswer).toHaveBeenLastCalledWith("places it in the bowl", "fail");
+});
+
 test("the buttons answer their own Phrase", () => {
   const onAnswer = vi.fn();
   render(<YourCall item={item} pending={false} onAnswer={onAnswer} />);

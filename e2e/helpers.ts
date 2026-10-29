@@ -20,6 +20,7 @@ export const EPISODES = {
   triage: [7, 8, 9, 10],
   boxes: [11, 12, 13],
   prepare: [14, 15],
+  review: [16],
 } as const;
 
 export function episodeId(index: number): string {

@@ -26,7 +26,7 @@ from winnow.meta.replay import RecordingTransport
 from winnow.tracking.exterior import box_items
 
 RECORDINGS = Path(__file__).parent / "recordings" / "fixture_episodes.jsonl"
-E2E_EPISODES = 16  # what scripts/e2e-server.ts writes
+E2E_EPISODES = 17  # what scripts/e2e-server.ts writes
 # The box e2e draws (a drag from 40% to 60% of each side of the 320x180 frame) and puts.
 E2E_BOX = {"x1": 128, "y1": 72, "x2": 192, "y2": 108}
 

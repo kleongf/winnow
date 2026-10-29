@@ -7,7 +7,7 @@ Every route serving a per-Episode output goes through here: one Episode's output
 `RevealedEpisode` (403 until labelled), a list of outputs reads only `revealed_episodes(ctx)`.
 Episode facts (video, robot data, object tracks) aren't outputs and stay visible."""
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
 
@@ -52,6 +52,11 @@ async def revealed_episode(
         )
     return episode
 
+
+# The 403 a route taking a `RevealedEpisode` adds to its OpenAPI responses.
+HIDDEN_UNTIL_LABELLED: dict[int | str, dict[str, Any]] = {
+    403: {"description": "The Episode has no Reference label yet"}
+}
 
 # A path parameter `episode_id` resolved to its Episode, only once it has a Reference label.
 RevealedEpisode = Annotated[Episode, Depends(revealed_episode)]

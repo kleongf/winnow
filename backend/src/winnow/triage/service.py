@@ -35,11 +35,15 @@ def triage_list(ctx: AppContext, episodes: list[Episode]) -> TriageList:
     return TriageList(rubric_version=version.version, rows=[_row(t) for t in triages])
 
 
+def plain_reason(triage: EpisodeTriage) -> str:
+    return "".join(span.text for span in triage.reason)
+
+
 def _row(triage: EpisodeTriage) -> TriageRow:
     return TriageRow(
         episode_id=triage.episode_id,
         decision=triage.decision,
-        reason="".join(span.text for span in triage.reason),
+        reason=plain_reason(triage),
         confidence=triage.confidence,
         not_passed=[
             PhraseChip(phrase=p.phrase, status=p.status)

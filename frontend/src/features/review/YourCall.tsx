@@ -1,23 +1,28 @@
 // The Review Workstation's actions: only the Phrases Winnow couldn't decide, each answered Pass or
-// Fail. Keys 1 and 2 answer the focused Phrase (the first, until another is clicked); each answer
-// is saved as a `review` label, which recomputes the Episode's Triage decision.
+// Fail. Keys 1 and 2 answer the focused Phrase (the first, until another is clicked or picked with
+// the arrow keys); each answer is saved as a `review` label, which recomputes the Episode's Triage
+// decision.
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import type { LabelDraw } from "../labels/useLabels";
 import type { ReviewItem } from "./useReview";
 
-export type Answer = "pass" | "fail";
+export type Answer = LabelDraw["value"];
 
-const KEYS: Record<string, Answer> = { "1": "pass", "2": "fail" };
+const ANSWER_KEYS: Record<string, Answer> = { "1": "pass", "2": "fail" };
+const MOVE_KEYS: Record<string, number> = { ArrowUp: -1, ArrowDown: 1 };
 
-function typing(target: EventTarget | null): boolean {
-  return (
+/** A key the panel may handle: not while typing, nor with a modifier held. */
+function handled(event: KeyboardEvent): boolean {
+  const target = event.target;
+  const typing =
     target instanceof HTMLInputElement ||
     target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
-  );
+    target instanceof HTMLSelectElement;
+  return !typing && !event.metaKey && !event.ctrlKey && !event.altKey;
 }
 
 export function YourCall(props: {
@@ -28,22 +33,28 @@ export function YourCall(props: {
   const { item, pending, onAnswer } = props;
   const [focused, setFocused] = useState(0);
   // An answered Phrase drops out of the list; keep the focus on one that's still there.
-  const index = Math.min(focused, item.unsure.length - 1);
+  const last = item.unsure.length - 1;
+  const index = Math.min(focused, last);
   const focusedPhrase = item.unsure[index]?.phrase;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const value = KEYS[event.key];
-      if (!value || !focusedPhrase || pending || event.repeat) return;
-      if (typing(event.target) || event.metaKey || event.ctrlKey || event.altKey) return;
-      event.preventDefault();
-      onAnswer(focusedPhrase, value);
+      if (!handled(event)) return;
+      const move = MOVE_KEYS[event.key];
+      const value = ANSWER_KEYS[event.key];
+      if (move !== undefined) {
+        event.preventDefault();
+        setFocused(Math.max(0, Math.min(last, index + move)));
+      } else if (value && focusedPhrase && !pending && !event.repeat) {
+        event.preventDefault();
+        onAnswer(focusedPhrase, value);
+      }
     };
     globalThis.addEventListener("keydown", onKey);
     return () => {
       globalThis.removeEventListener("keydown", onKey);
     };
-  }, [focusedPhrase, pending, onAnswer]);
+  }, [index, last, focusedPhrase, pending, onAnswer]);
 
   return (
     <section
