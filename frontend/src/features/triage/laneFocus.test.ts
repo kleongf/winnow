@@ -29,6 +29,7 @@ function result(overrides: Partial<CriterionResult>): CriterionResult {
     margin: 0,
     p_pass: 0,
     camera: null,
+    track_plot: null,
     ...overrides,
   };
 }

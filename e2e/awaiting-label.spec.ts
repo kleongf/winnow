@@ -37,7 +37,7 @@ test("an Episode's outputs stay hidden until it has a Reference label", async ({
   // Once labelled, they appear.
   await referenceLabel(request, [EPISODE]);
   await page.reload();
-  // It releases inside the release height's margin, so it needs review.
+  // Unboxed, its placement has no exterior track to check, so it needs review.
   await expect(page.getByTestId("triage-decision")).toHaveText("Needs review");
   await expect(page.getByTestId("reason")).not.toBeEmpty();
   await expect(page.getByRole("button", { name: /^Lane: Grasp attempts/ })).toBeVisible();

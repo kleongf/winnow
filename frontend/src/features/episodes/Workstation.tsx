@@ -17,6 +17,7 @@ import { TrackOverlay } from "../tracking/TrackOverlay";
 import { TrackStatus } from "../tracking/TrackStatus";
 import { useTracks, type Track } from "../tracking/useTracks";
 import { CriterionLanes } from "../triage/CriterionLanes";
+import { TrackPlots } from "../triage/TrackPlots";
 import { TriagePanel } from "../triage/TriagePanel";
 import { useTriageFocus } from "../triage/useTriageFocus";
 import { EpisodeVideo } from "./EpisodeVideo";
@@ -115,6 +116,14 @@ export function Workstation(props: {
             playhead={playhead}
             duration={episode.duration_s}
             levels={levels}
+          />
+        )}
+        {triage && (
+          <TrackPlots
+            results={triage.criteria}
+            playhead={playhead}
+            duration={episode.duration_s}
+            onFocus={focus}
           />
         )}
       </section>

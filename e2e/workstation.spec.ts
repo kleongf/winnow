@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { EPISODES, ingest } from "./helpers.ts";
 
-// This spec's Episodes are 0 and 1.
+// This spec's Episodes are 9 and 10.
 test.beforeEach(async ({ request }) => {
   await ingest(request, EPISODES.workstation);
 });
@@ -12,9 +12,9 @@ test("a row opens the Workstation; camera tabs switch the video", async ({ page 
   page.on("pageerror", (err) => errors.push(err.message));
   await page.goto("/?page=episodes");
 
-  await page.getByRole("row", { name: /^1 Move the black remote control/ }).click();
+  await page.getByRole("row", { name: /^10 Move the black remote control/ }).click();
 
-  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText("droid_100:1");
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText("droid_100:10");
   const video = page.getByLabel("Episode video");
   await expect(video).toHaveAttribute("src", /exterior_image_1_left$/);
   await page.getByRole("tab", { name: "Wrist" }).click();
@@ -24,7 +24,7 @@ test("a row opens the Workstation; camera tabs switch the video", async ({ page 
 });
 
 test("the playhead moves the plots' readouts, and ?t= opens at that time", async ({ page }) => {
-  await page.goto("/?page=episodes&episode=droid_100%3A0&t=2");
+  await page.goto("/?page=episodes&episode=droid_100%3A9&t=2");
 
   // The fixture gripper is closed from 0.9 s to 2.4 s, open before and after.
   await expect(page.getByText("2.0 / 3.0 s")).toBeVisible();
@@ -34,7 +34,7 @@ test("the playhead moves the plots' readouts, and ?t= opens at that time", async
 });
 
 test("the wrist view shows SAM's box following the playhead", async ({ page }) => {
-  await page.goto("/?page=episodes&episode=droid_100%3A0&t=0.2");
+  await page.goto("/?page=episodes&episode=droid_100%3A9&t=0.2");
   await page.getByRole("tab", { name: "Wrist" }).click();
 
   // The fixture's block slides right; its recorded wrist track follows it.
@@ -48,14 +48,14 @@ test("the wrist view shows SAM's box following the playhead", async ({ page }) =
 });
 
 test("J and K step through Episodes and Esc goes back to the table", async ({ page }) => {
-  await page.goto("/?page=episodes&episode=droid_100%3A0");
+  await page.goto("/?page=episodes&episode=droid_100%3A9");
   const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
-  await expect(breadcrumb).toContainText("droid_100:0"); // keys only work once it's open
+  await expect(breadcrumb).toContainText("droid_100:9"); // keys only work once it's open
 
   await page.keyboard.press("j");
-  await expect(breadcrumb).toContainText("droid_100:1");
+  await expect(breadcrumb).toContainText("droid_100:10");
   await page.keyboard.press("k");
-  await expect(breadcrumb).toContainText("droid_100:0");
+  await expect(breadcrumb).toContainText("droid_100:9");
   await page.keyboard.press("Escape");
 
   await expect(page.getByRole("heading", { name: "Episodes" })).toBeVisible();

@@ -1,9 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
+import { boxForPlacement, EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
 
 // Two Episodes that release inside the release height's margin (LESS_SURE nearer its fail
-// side), one that fails its grasp twice first, and one kept.
+// side), one that fails its grasp twice first, and one kept. All four are boxed in Exterior 2:
+// REJECT's recorded track there is empty, so its placement is unsure with "track lost".
 const [NEAR, REJECT, KEEP, LESS_SURE] = EPISODES.triage;
 const OWN: readonly number[] = EPISODES.triage;
 
@@ -18,6 +19,7 @@ const ownRows = (page: Page) => async () =>
 
 test.beforeEach(async ({ request }) => {
   await ingest(request, EPISODES.triage);
+  for (const index of EPISODES.triage) await boxForPlacement(request, episodeId(index));
   // Their Triage decisions show only once labelled.
   await referenceLabel(request, EPISODES.triage.map(episodeId));
 });
@@ -71,9 +73,7 @@ test("the table filters by Uncertainty signal, set and Phrase, and sorts by conf
 
   await page.getByLabel("Uncertainty signal").selectOption("near threshold");
   await expect.poll(own).toEqual([NEAR, LESS_SURE]);
-  await expect(row(page, NEAR).getByTestId("phrase-chip")).toHaveText(
-    "places it in or on the target named in the instruction",
-  );
+  await expect(row(page, NEAR).getByTestId("phrase-chip")).toHaveText("never drops it");
   await expect(page).toHaveURL(/signal=near\+threshold/);
 
   await page.getByRole("button", { name: "Confidence" }).click();
@@ -89,8 +89,31 @@ test("the table filters by Uncertainty signal, set and Phrase, and sorts by conf
   await page.getByLabel("Set", { exact: true }).selectOption("none");
   await expect.poll(own).toEqual([NEAR, LESS_SURE]);
 
+  await page.getByLabel("Uncertainty signal").selectOption("track lost");
+  await expect.poll(own).toEqual([REJECT]);
+
   await page.getByRole("button", { name: "Clear filters" }).click();
   await page.getByLabel("Phrase").selectOption("grasps the object on the first try");
   await expect(row(page, REJECT)).toBeVisible();
   await expect(row(page, KEEP)).toHaveCount(0);
+});
+
+test("the Workstation plots each tracked Criterion's deciding signal", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+  await page.goto(`/?page=episodes&episode=${encodeURIComponent(episodeId(KEEP))}`);
+
+  await expect(page.getByTestId("triage-decision")).toHaveText("Keep");
+  for (const id of ["in-hand-lost", "fall-after-release", "final-overlap"])
+    await expect(page.getByTestId(`track-plot-${id}`)).toBeVisible();
+  const overlap = page.getByTestId("track-plot-final-overlap");
+  await expect(overlap).toContainText("Share inside the target box");
+
+  // Clicking a plot opens its result on the view it was tracked in, at that time.
+  await overlap.getByRole("img").click();
+  await expect(page.getByLabel("Episode video")).toHaveAttribute("src", /exterior_image_2_left$/);
+  await expect(page.getByTestId("criterion-final-overlap")).toContainText(
+    "of the object's final box is inside the target box",
+  );
+  expect(errors).toEqual([]);
 });
