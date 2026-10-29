@@ -41,7 +41,7 @@ class Episode(BaseModel):
     source: str
     index: int
     instruction: str | None
-    dataset_outcome: bool | None
+    dataset_outcome: bool | None  # None in the API until the Episode has a Reference label
     frames: int
     fps: float
     duration_s: float

@@ -3,6 +3,7 @@ import { usePage } from "./features/core/pages";
 import { Sidebar } from "./features/core/Sidebar";
 import { PreparePage } from "./features/dataset/PreparePage";
 import { EpisodesPage } from "./features/episodes/EpisodesPage";
+import { ReferenceLabelsPage } from "./features/referenceLabels/ReferenceLabelsPage";
 import { SelectionPage } from "./features/selection/SelectionPage";
 
 export function App() {
@@ -14,7 +15,8 @@ export function App() {
         {page === "prepare" && <PreparePage />}
         {page === "select" && <SelectionPage />}
         {page === "episodes" && <EpisodesPage />}
-        {page !== "prepare" && page !== "select" && page !== "episodes" && (
+        {page === "reference" && <ReferenceLabelsPage />}
+        {page !== "prepare" && page !== "select" && page !== "episodes" && page !== "reference" && (
           <NotBuiltYet page={page} />
         )}
       </main>

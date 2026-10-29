@@ -4,7 +4,7 @@ from winnow.boxes.models import Box, BoxDraw, FrameRect
 from winnow.core.context import AppContext
 from winnow.episodes.models import Episode
 from winnow.episodes.service import frame_zero
-from winnow.tracking.exterior import box_items
+from winnow.tracking.exterior import BOX_STEPS, box_items
 
 MIN_SIDE_PX = 3  # smaller than this, SAM has nothing to track
 
@@ -27,6 +27,12 @@ async def save_box(ctx: AppContext, episode: Episode, draw: BoxDraw) -> Box:
         frame_size = image.size
     check_box(draw, frame_size)
     box = ctx.boxes.save(episode.id, draw, frame_size)
-    if ctx.meta is not None:  # without Meta there is nothing to track with
-        ctx.runner.submit("box", box_items(episode.id))
+    queue_box_work(ctx, episode.id)
     return box
+
+
+def queue_box_work(ctx: AppContext, episode_id: str, steps: tuple[str, ...] = BOX_STEPS) -> None:
+    """Run the SAM steps a boxed Episode's box feeds; nothing without a box, or without Meta to
+    run them."""
+    if ctx.meta is not None and ctx.boxes.get(episode_id) is not None:
+        ctx.runner.submit("box", box_items(episode_id, steps))

@@ -18,11 +18,13 @@ from winnow.tracking.models import Track
 from winnow.tracking.sam_output import one_per_frame, parse_boxes
 from winnow.tracking.store import TrackStore
 
+BOX_STEPS = ("track_exterior", "target_box")
 
-def box_items(episode_id: str) -> list[WorkItem]:
+
+def box_items(episode_id: str, steps: tuple[str, ...] = BOX_STEPS) -> list[WorkItem]:
     """What saving an Episode's box queues: its exterior track and its target box."""
     args: dict[str, object] = {"episode_id": episode_id}
-    return [WorkItem("track_exterior", args, episode_id), WorkItem("target_box", args, episode_id)]
+    return [WorkItem(step, args, episode_id) for step in steps]
 
 
 def box_prompt(box: Box, size: tuple[int, int]) -> str:

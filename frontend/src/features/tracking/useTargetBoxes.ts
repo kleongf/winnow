@@ -10,9 +10,10 @@ export type FrameRect = components["schemas"]["FrameRect"];
 export const targetBoxesKey = ["target-boxes"] as const;
 
 /** Each boxed Episode's target box: the hand-drawn one if any, else SAM's. */
-export function useTargetBoxes() {
+export function useTargetBoxes(enabled = true) {
   return useQuery({
     queryKey: targetBoxesKey,
+    enabled,
     queryFn: async () => {
       const { data, response } = await api.GET("/api/target-boxes");
       if (!response.ok || !data) throw new Error(`Target boxes failed: ${String(response.status)}`);
@@ -21,9 +22,10 @@ export function useTargetBoxes() {
   });
 }
 
-/** One Episode's target box, if it has one yet. */
-export function useTargetBox(episodeId: string): TargetBox | undefined {
-  return useTargetBoxes().data?.find((t) => t.episode_id === episodeId);
+/** One Episode's target box, if it has one yet; none while `hidden` (Reference label mode). */
+export function useTargetBox(episodeId: string, hidden = false): TargetBox | undefined {
+  const fetched = useTargetBoxes(!hidden).data; // cached data outlives `enabled: false`
+  return hidden ? undefined : fetched?.find((t) => t.episode_id === episodeId);
 }
 
 export function useDrawTargetBox() {

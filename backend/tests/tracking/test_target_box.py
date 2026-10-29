@@ -150,3 +150,24 @@ def test_without_meta_a_target_box_can_still_be_drawn(api: TestClient):
     target = target_of(api, "droid_100:0")
     assert target is not None and (target["origin"], target["target"]) == ("hand", "pot")
     assert api.get("/api/dataset").json()["target_boxes"] == 1
+
+
+def test_an_instruction_the_labeller_writes_prompts_the_target_box_again(
+    scripted_api: TestClient, sam: ScriptedSam
+):
+    save_box(scripted_api, "droid_100:2")
+    phrases = scripted_api.get("/api/reference-labels/description").json()["phrases"]
+    label = {
+        "phrases": [{"phrase": p, "passed": True, "interval": None} for p in phrases],
+        "elapsed_s": 30.0,
+        "instruction": "Put the marker in the pot",
+    }
+
+    assert scripted_api.post("/api/episodes/droid_100:2/reference-labels", json=label).is_success
+    job = scripted_api.get("/api/jobs/latest", params={"kind": "box"}).json()
+    wait_for_job(scripted_api, job["id"])
+
+    [call] = sam.made("000002/exterior_image_2_left.frame0.mp4")
+    assert call.prompt == "pot"
+    target = target_of(scripted_api, "droid_100:2")
+    assert target is not None and (target["status"], target["target"]) == ("found", "pot")

@@ -1,9 +1,13 @@
 // The Episode's target box over the video, on the boxed exterior view only. A fixed place, so
-// it ignores the playhead.
+// it ignores the playhead. Hidden while blind.
 import { useTargetBox } from "./useTargetBoxes";
 
-export function TargetOverlay(props: { episodeId: string; camera: string }) {
-  const target = useTargetBox(props.episodeId);
+export function TargetOverlay(props: {
+  episodeId: string;
+  camera: string;
+  hidden?: boolean | undefined;
+}) {
+  const target = useTargetBox(props.episodeId, props.hidden);
   const box = target?.camera === props.camera ? target.box : null;
   if (!target || !box) return null;
   const percent = (value: number, of: number) => `${String((value / of) * 100)}%`;
