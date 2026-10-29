@@ -55,6 +55,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/episodes/{episode_id}/clips/{camera}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Clip */
+        get: operations["get_clip_api_episodes__episode_id__clips__camera__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/episodes/{episode_id}/signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Signals */
+        get: operations["get_signals_api_episodes__episode_id__signals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -129,6 +163,8 @@ export interface components {
          * @description An ingested Episode, as the app lists it.
          */
         Episode: {
+            /** Cameras */
+            cameras: string[];
             /** Dataset Outcome */
             dataset_outcome: boolean | null;
             /** Duration S */
@@ -212,6 +248,20 @@ export interface components {
              * @enum {string}
              */
             status: "queued" | "running" | "done" | "failed";
+        };
+        /**
+         * Signals
+         * @description Per-frame robot data for the Workstation's plots, on a time axis starting at 0.
+         */
+        Signals: {
+            /** Gripper */
+            gripper: number[];
+            /** Speed */
+            speed: number[];
+            /** T */
+            t: number[];
+            /** Z */
+            z: number[];
         };
         /** SourceCount */
         SourceCount: {
@@ -302,6 +352,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IngestStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_clip_api_episodes__episode_id__clips__camera__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+                camera: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "video/mp4": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_signals_api_episodes__episode_id__signals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Signals"];
                 };
             };
             /** @description Validation Error */

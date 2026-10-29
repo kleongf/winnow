@@ -79,3 +79,14 @@ def test_an_unknown_source_is_refused(api: TestClient):
     response = api.post("/api/episodes/ingest", json={"source": "robofac", "indices": [1]})
 
     assert response.status_code == 422
+
+
+def test_two_jobs_ingesting_the_same_episode_at_once_both_succeed(api: TestClient):
+    first = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": [1]})
+    second = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": [1]})
+
+    jobs = [wait_for_job(api, r.json()["job_id"]) for r in (first, second)]
+
+    assert [j["done"] for j in jobs] == [1, 1]
+    details = sorted(str(j["items"][0]["detail"]) for j in jobs)  # type: ignore[index]
+    assert details == ["None", "already ingested"]
