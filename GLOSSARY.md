@@ -8,6 +8,18 @@ Winnow filters recorded robot demonstrations against a plain-English description
 One recorded robot demonstration: the video plus the robot's joint and gripper data, as a single unit of training data.
 _Avoid_: Demo, demonstration, trajectory, rollout
 
+**Dataset**:
+A named collection of Episodes, possibly from several sources, together with everything about them that doesn't depend on a Description, such as tracks and hand-drawn boxes; several Projects can share one.
+_Avoid_: Collection, corpus, source (a **source** is where Episodes were imported from, e.g. droid_100)
+
+**Project**:
+One Description applied to one Dataset, holding its Rubric versions, anchor pool, labels, and runs.
+_Avoid_: Workspace, job, experiment
+
+**Anchor pool**:
+The Episodes of a Project that the Rubric may be written against and whose statistics Rubric-writing screens show: the Dev set during evaluation, otherwise a fixed sample of about 30.
+_Avoid_: Sample, preview set, training set
+
 **Description**:
 The user's plain-English statement of what an expert Episode looks like; a Rubric is compiled from it.
 _Avoid_: Prompt, spec, instructions (an **instruction** is an Episode's own task text, e.g. "Move the black remote to the left")
