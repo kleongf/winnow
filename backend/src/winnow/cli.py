@@ -84,7 +84,7 @@ def _sets(ctx: AppContext, args: argparse.Namespace) -> int:
 
 def _items(ctx: AppContext, args: argparse.Namespace) -> list[WorkItem]:
     if args.command == "ingest":
-        return ingest_items(args.source, args.indices, with_baseline=ctx.meta is not None)
+        return ingest_items(args.source, args.indices, with_meta=ctx.meta is not None)
     source = ctx.sources[args.source]
     assert isinstance(source, Droid101)
     sample = sample_indices([*source.index.values()], args.size, args.seed)

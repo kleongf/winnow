@@ -5,7 +5,10 @@ import type { components } from "../../api/schema";
 type Job = components["schemas"]["Job"];
 type JobItem = components["schemas"]["JobItem"];
 
-const STEP_NAMES: Record<string, string> = { baseline: "Spark-alone baseline" };
+const STEP_NAMES: Record<string, string> = {
+  baseline: "Spark-alone baseline",
+  track_wrist: "Wrist track",
+};
 
 function itemName(item: JobItem): string {
   const step = STEP_NAMES[item.step];

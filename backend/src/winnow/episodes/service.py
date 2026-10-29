@@ -69,11 +69,12 @@ def _text(value: object) -> str | None:
 def ingest_items(
     source: str,
     indices: list[int],
-    with_baseline: bool,
+    with_meta: bool,
     tasks: Mapping[int, tuple[str | None, str | None]] | None = None,
 ) -> list[WorkItem]:
     """Per Episode (each once, in the order given): ingest it, with its (object, target) when
-    known, then, once that has succeeded, run the Spark-alone baseline if Meta is configured."""
+    known, then, once that has succeeded and if Meta is configured, run the Spark-alone baseline
+    and track the wrist view."""
     items: list[WorkItem] = []
     for i in dict.fromkeys(indices):
         label = episode_id(source, i)
@@ -81,8 +82,10 @@ def ingest_items(
         if tasks is not None and i in tasks:
             args["object"], args["target"] = tasks[i]
         items.append(WorkItem("ingest", args, label))
-        if with_baseline:
-            items.append(WorkItem("baseline", {"episode_id": label}, label, after=len(items) - 1))
+        if with_meta:
+            ingested = len(items) - 1
+            items.append(WorkItem("baseline", {"episode_id": label}, label, after=ingested))
+            items.append(WorkItem("track_wrist", {"episode_id": label}, label, after=ingested))
     return items
 
 

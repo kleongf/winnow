@@ -34,7 +34,7 @@ def test_each_ingested_episode_gets_three_samples_and_a_failbench_answer(
 ):
     job = ingest(app_api, 0, 1)
 
-    assert job["done"] == 4 and job["failed"] == 0  # ingest + baseline, per Episode
+    assert job["done"] == 6 and job["failed"] == 0  # ingest, baseline, wrist track per Episode
     assert (spark.baseline_calls, spark.failbench_calls) == (6, 2)
     answers = app_context(app_api).baseline.answers("droid_100:1", FROZEN_DESCRIPTION)
     assert [a.sample for a in answers.samples] == [0, 1, 2]
@@ -88,7 +88,7 @@ def test_a_malformed_answer_fails_only_its_own_sample(app_api: TestClient, spark
 def test_no_baseline_without_its_episode(app_api: TestClient, spark: ScriptedSpark):
     job = ingest(app_api, CORRUPT_EPISODE)
 
-    assert [i["status"] for i in job["items"]] == ["failed", "failed"]  # type: ignore[union-attr]
+    assert [i["status"] for i in job["items"]] == ["failed"] * 3  # type: ignore[union-attr]
     assert job["items"][1]["detail"] == f"skipped: droid_100:{CORRUPT_EPISODE} failed"  # type: ignore[index]
     assert spark.baseline_calls == 0
 

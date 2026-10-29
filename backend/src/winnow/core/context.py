@@ -20,10 +20,13 @@ from winnow.jobs.runner import JobRunner
 from winnow.jobs.store import JobStore
 from winnow.meta.client import MetaClient
 from winnow.meta.costs import CostLog
+from winnow.meta.replay import ReplayTransport
 from winnow.meta.transport import Transport
 from winnow.selection.service import select_step
 from winnow.selection.store import SelectionStore
 from winnow.sets.store import SetStore
+from winnow.tracking.store import TrackStore
+from winnow.tracking.wrist import track_wrist_step
 
 
 @dataclass(frozen=True)
@@ -36,6 +39,7 @@ class AppContext:
     baseline: BaselineStore
     selection: SelectionStore
     sets: SetStore
+    tracks: TrackStore
     jobs: JobStore
     runner: JobRunner
     meta: MetaClient | None  # None without a Meta API key: no step that calls Meta runs
@@ -44,7 +48,9 @@ class AppContext:
 def _meta(
     settings: Settings, db: sqlite3.Connection, transport: Transport | None
 ) -> MetaClient | None:
-    if transport is not None:  # tests script the Meta API here
+    if transport is None and settings.meta_replay is not None:
+        transport = ReplayTransport(settings.meta_replay)
+    if transport is not None:  # tests script or replay the Meta API here
         return MetaClient(transport, db, CostLog(settings.cost_log_path, settings.meta_budget_usd))
     if settings.model_api_key is None:
         return None
@@ -59,17 +65,30 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     baseline = BaselineStore(db)
     selection = SelectionStore(db)
     sets = SetStore(db)
+    tracks = TrackStore(db)
     jobs = JobStore(db)
     meta = _meta(settings, db, transport)
     steps: dict[str, Step] = {"ingest": ingest_step(episodes, sources)}
     droid101 = sources.get("droid_1.0.1")
     if meta is not None:
         steps["baseline"] = baseline_step(meta, baseline, episodes)
+        steps["track_wrist"] = track_wrist_step(meta, tracks, episodes)
         if isinstance(droid101, Droid101):
             steps["select"] = select_step(meta, selection, droid101, settings.data_dir)
     runner = JobRunner(jobs, steps, concurrency=settings.ingest_concurrency)
     return AppContext(
-        settings, db, sources, episodes, boxes, baseline, selection, sets, jobs, runner, meta
+        settings,
+        db,
+        sources,
+        episodes,
+        boxes,
+        baseline,
+        selection,
+        sets,
+        tracks,
+        jobs,
+        runner,
+        meta,
     )
 
 

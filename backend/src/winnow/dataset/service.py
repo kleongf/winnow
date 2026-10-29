@@ -16,5 +16,7 @@ def dataset_status(ctx: AppContext) -> DatasetStatus:
         episodes=sum(counts.values()),
         boxes=ctx.boxes.count(),
         baseline=ctx.baseline.complete_count(FROZEN_DESCRIPTION) if ctx.meta else None,
+        wrist_tracks=ctx.tracks.count("wrist", "tracked") if ctx.meta else None,
+        wrist_no_closure=ctx.tracks.count("wrist", "no_closure"),
         cost_usd=round(costs.spent_usd(), 4),
     )

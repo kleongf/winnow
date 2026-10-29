@@ -58,6 +58,6 @@ async def ingest_confirmed(ctx: Context) -> IngestStarted:
         raise HTTPException(status_code=409, detail="No confirmed candidates left to ingest")
     tasks = {c.index: (c.object, c.target) for c in confirmed}
     items = ingest_items(
-        confirmed[0].source, list(tasks), with_baseline=ctx.meta is not None, tasks=tasks
+        confirmed[0].source, list(tasks), with_meta=ctx.meta is not None, tasks=tasks
     )
     return IngestStarted(job_id=ctx.runner.submit("ingest", items))

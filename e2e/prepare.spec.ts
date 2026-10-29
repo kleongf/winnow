@@ -10,7 +10,8 @@ test("ingesting Episodes shows progress, then the new counts", async ({ page, re
   await page.getByRole("button", { name: "Ingest" }).click();
 
   await expect(page.getByTestId("job-progress")).toContainText("Last ingest", { timeout: 30_000 });
-  await expect(page.getByTestId("job-progress")).toContainText("2 of 2");
+  // Per Episode: ingest, then the Spark-alone baseline and the wrist track (replayed).
+  await expect(page.getByTestId("job-progress")).toContainText("6 of 6");
   await expect(page.getByTestId("episodes-ingested")).toContainText(String(before + 2));
   await expect(page.getByText(`droid_100 ${String(before + 2)}`)).toBeVisible();
 });
