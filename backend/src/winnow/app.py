@@ -9,6 +9,7 @@ from winnow.core.routes import router as core_router
 from winnow.core.settings import Settings, get_settings
 from winnow.dataset.routes import router as dataset_router
 from winnow.episodes.routes import router as episodes_router
+from winnow.evaluation.routes import router as evaluation_router
 from winnow.jobs.routes import router as jobs_router
 from winnow.meta.transport import Transport
 from winnow.reference_labels.routes import router as reference_labels_router
@@ -41,6 +42,7 @@ def create_app(settings: Settings | None = None, transport: Transport | None = N
         rubric_router,
         triage_router,
         reference_labels_router,
+        evaluation_router,
         jobs_router,
     ):
         app.include_router(router, prefix="/api")
