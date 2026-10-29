@@ -3,7 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { triageKey } from "../triage/useTriage";
-import { draftKey } from "./useDraft";
+import { draftKey, underDraft } from "./useDraft";
 import { rubricKey, versionsKey } from "./useRubric";
 
 export type DraftEdit = components["schemas"]["DraftEdit"];
@@ -58,7 +58,8 @@ export function useEditDraft() {
     },
     onSuccess: async (draft) => {
       queryClient.setQueryData(draftKey, draft);
-      await queryClient.invalidateQueries({ queryKey: previewKey });
+      // It re-sorts the preview, and may change what the interview asks.
+      await queryClient.invalidateQueries({ queryKey: draftKey, predicate: underDraft });
     },
   });
 }

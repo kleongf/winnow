@@ -20,6 +20,7 @@ function PhraseSection(props: {
   phrase: DraftPhrase;
   index: number;
   editing: DraftEditing;
+  highlighted?: string | null | undefined;
 }) {
   const { draft, phrase, editing } = props;
   const criteria = draft.criteria.filter((c) => c.phrase === phrase.text);
@@ -55,6 +56,7 @@ function PhraseSection(props: {
             enabled={!draft.disabled.includes(c.id)}
             preview={editing.preview?.criteria.find((p) => p.criterion_id === c.id)}
             editor={editing.editorFor(c)}
+            highlighted={props.highlighted === c.id}
           />
         ))}
       </div>
@@ -62,7 +64,11 @@ function PhraseSection(props: {
   );
 }
 
-export function RubricPanel(props: { draft: RubricDraft; editing: DraftEditing }) {
+export function RubricPanel(props: {
+  draft: RubricDraft;
+  editing: DraftEditing;
+  highlighted?: string | null; // the Criterion the last interview answer changed
+}) {
   const { draft, editing } = props;
   const { gripper_closed_level: closed, grasp_rise_m: rise } = draft.settings;
   return (
@@ -119,6 +125,7 @@ export function RubricPanel(props: { draft: RubricDraft; editing: DraftEditing }
           phrase={phrase}
           index={i}
           editing={editing}
+          highlighted={props.highlighted}
         />
       ))}
     </div>
