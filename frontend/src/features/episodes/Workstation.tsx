@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 
+import { SET_LABELS, setsByEpisode, useSets } from "../sets/useSets";
 import { EpisodeVideo } from "./EpisodeVideo";
 import { SignalPlots } from "./SignalPlots";
 import { clipUrl, useSignals, type Episode } from "./useEpisodes";
@@ -21,6 +22,7 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
   const playhead = usePlayhead(episode.duration_s, props.initialT);
   const [camera, setCamera] = useState(episode.cameras[0] ?? null);
   const signals = useSignals(episode.id);
+  const set = setsByEpisode(useSets().data).get(episode.id);
   const { toggle } = playhead;
 
   useEffect(() => {
@@ -84,6 +86,8 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
           </dd>
           <dt className="text-muted-foreground">Source</dt>
           <dd>{episode.source}</dd>
+          <dt className="text-muted-foreground">Set</dt>
+          <dd data-testid="episode-set">{set ? SET_LABELS[set] : "None"}</dd>
         </dl>
         <p className="mt-6 text-xs text-muted-foreground">
           The Triage decision, Reason and Criterion results appear here once the Episode is scored.

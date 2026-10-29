@@ -7,6 +7,7 @@ import { IngestForm } from "../episodes/IngestForm";
 import { useEpisodes } from "../episodes/useEpisodes";
 import { JobProgress } from "../jobs/JobProgress";
 import { useIngestProgress } from "../jobs/useIngestProgress";
+import { SetStatus } from "../sets/SetStatus";
 import { useDatasetStatus, type DatasetStatus } from "./useDatasetStatus";
 
 const LATER_STAGES = ["Wrist tracks", "Exterior tracks", "Target boxes"];
@@ -26,6 +27,7 @@ export function PreparePage() {
         Nothing here depends on a Description.
       </p>
       {status.data && <StatusGrid status={status.data} />}
+      <SetStatus />
       <div className="mt-8 grid grid-cols-2 gap-4">
         <IngestForm disabled={running} />
         {job.data && <JobProgress job={job.data} />}

@@ -2,6 +2,7 @@
 
 winnow ingest droid_100 3 16 42
 winnow select droid_1.0.1 [--size 300] [--seed 0]
+winnow sets add dev droid_100:3 droid_100:16 | remove dev droid_100:3 | freeze dev | show
 winnow fixtures <dir> [--episodes N]
 """
 
@@ -18,6 +19,8 @@ from winnow.episodes.service import ingest_items
 from winnow.jobs.models import WorkItem
 from winnow.meta.transport import Transport
 from winnow.selection.service import sample_indices, selection_items
+from winnow.sets.models import SET_LABELS, SET_NAMES
+from winnow.sets.service import SetError, add_episodes, freeze, remove_episode
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -30,6 +33,16 @@ def _parser() -> argparse.ArgumentParser:
     select.add_argument("source", choices=["droid_1.0.1"])
     select.add_argument("--size", type=int, default=300)
     select.add_argument("--seed", type=int, default=0)
+    sets = commands.add_parser("sets", help="define and freeze the Dev set and Test set")
+    actions = sets.add_subparsers(dest="action", required=True)
+    for action in ("add", "remove"):
+        change = actions.add_parser(action, help=f"{action} Episodes, e.g. droid_100:42")
+        change.add_argument("name", choices=SET_NAMES)
+        change.add_argument("episode_ids", nargs="+")
+    actions.add_parser("freeze", help="make a set's membership immutable").add_argument(
+        "name", choices=SET_NAMES
+    )
+    actions.add_parser("show", help="each set's size, frozen state and Episodes")
     fixtures = commands.add_parser("fixtures", help="write synthetic droid_100-layout Episodes")
     fixtures.add_argument("root", type=Path)
     fixtures.add_argument("--episodes", type=int, default=3)
@@ -46,6 +59,27 @@ async def _run(ctx: AppContext, kind: str, items: list[WorkItem]) -> int:
         sys.stdout.write(f"{item.label} {item.step}: {item.status}{note}\n")
     sys.stdout.write(f"job {job_id}: {job.done} done, {job.failed} failed\n")
     return 1 if job.failed else 0
+
+
+def _sets(ctx: AppContext, args: argparse.Namespace) -> int:
+    try:
+        if args.action == "add":
+            add_episodes(ctx.sets, ctx.episodes, args.name, args.episode_ids)
+        elif args.action == "remove":
+            for episode_id in args.episode_ids:
+                remove_episode(ctx.sets, args.name, episode_id)
+        elif args.action == "freeze":
+            freeze(ctx.sets, args.name)
+    except SetError as error:
+        sys.stderr.write(f"{error}\n")
+        return 1
+    for episode_set in ctx.sets.list():
+        frozen = f"frozen {episode_set.frozen_at}" if episode_set.frozen_at else "not frozen"
+        label = SET_LABELS[episode_set.name]
+        sys.stdout.write(f"{label}: {episode_set.size} Episodes, {frozen}\n")
+        if args.action == "show" and episode_set.episode_ids:
+            sys.stdout.write(f"  {' '.join(episode_set.episode_ids)}\n")
+    return 0
 
 
 def _items(ctx: AppContext, args: argparse.Namespace) -> list[WorkItem]:
@@ -69,6 +103,8 @@ def main(
         return 0
     ctx = build_context(settings or get_settings(), transport)
     try:
+        if args.command == "sets":
+            return _sets(ctx, args)
         if args.command == "select" and ctx.meta is None:
             sys.stderr.write("The selection pass calls Spark: set MODEL_API_KEY in .env\n")
             return 2

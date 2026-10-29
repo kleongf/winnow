@@ -23,6 +23,7 @@ from winnow.meta.costs import CostLog
 from winnow.meta.transport import Transport
 from winnow.selection.service import select_step
 from winnow.selection.store import SelectionStore
+from winnow.sets.store import SetStore
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,7 @@ class AppContext:
     boxes: BoxStore
     baseline: BaselineStore
     selection: SelectionStore
+    sets: SetStore
     jobs: JobStore
     runner: JobRunner
     meta: MetaClient | None  # None without a Meta API key: no step that calls Meta runs
@@ -56,6 +58,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     boxes = BoxStore(db)
     baseline = BaselineStore(db)
     selection = SelectionStore(db)
+    sets = SetStore(db)
     jobs = JobStore(db)
     meta = _meta(settings, db, transport)
     steps: dict[str, Step] = {"ingest": ingest_step(episodes, sources)}
@@ -66,7 +69,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
             steps["select"] = select_step(meta, selection, droid101, settings.data_dir)
     runner = JobRunner(jobs, steps, concurrency=settings.ingest_concurrency)
     return AppContext(
-        settings, db, sources, episodes, boxes, baseline, selection, jobs, runner, meta
+        settings, db, sources, episodes, boxes, baseline, selection, sets, jobs, runner, meta
     )
 
 
