@@ -31,9 +31,11 @@ export function episodeId(index: number): string {
  * spec that compiles calls this first. */
 export const DEV_SET = EPISODES.sets;
 
-/** Ingest the Dev set's Episodes, and define and freeze it unless that's done. */
+/** Ingest the Dev set's Episodes, define and freeze it unless that's done, and give them their
+ * Reference labels: the Describe page counts only labelled anchor Episodes. */
 export async function freezeDevSet(request: APIRequestContext): Promise<void> {
   await ingest(request, DEV_SET);
+  await referenceLabel(request, DEV_SET.map(episodeId));
   const sets = (await (await request.get("/api/sets")).json()) as {
     name: string;
     frozen_at: string | null;

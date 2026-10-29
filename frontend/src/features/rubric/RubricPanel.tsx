@@ -1,39 +1,27 @@
 // The live Rubric: the compiled Description, the two Rubric-level settings, and each Phrase's
-// section with its status, restatement and Criterion cards.
-import { AlertTriangle } from "lucide-react";
-
+// section with its status, restatement and Criterion cards, each sorting the anchor pool.
 import { cn } from "@/lib/utils";
 
-import { CriterionCard } from "./CriterionCard";
+import { type CardEditor, CriterionCard } from "./CriterionCard";
 import { DescriptionText, phraseAnchor } from "./DescriptionText";
-import { ASSUMED, PHRASE_LABELS, PHRASE_TONES } from "./phraseTones";
-import type { DraftPhrase, RubricDraft, Setting } from "./useDraft";
+import { PHRASE_LABELS, PHRASE_TONES } from "./phraseTones";
+import { cm, SettingCard } from "./SettingCard";
+import type { Criterion, DraftPhrase, RubricDraft } from "./useDraft";
+import type { AnchorPreview, DraftEdit } from "./useDraftEdits";
 
-function SettingCard(props: { label: string; value: string; setting: Setting }) {
-  const assumption = props.setting.assumption;
-  return (
-    <div
-      className={cn("rounded-lg border bg-card p-3", assumption && ASSUMED)}
-      data-testid="rubric-setting"
-    >
-      <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-        Rubric setting
-        {assumption && (
-          <span className="ml-auto flex items-center gap-1 text-amber-800 dark:text-amber-300">
-            <AlertTriangle className="size-3" /> assumed
-          </span>
-        )}
-      </div>
-      <p className="mt-0.5 text-sm">
-        {props.label} <span className="font-semibold tabular-nums">{props.value}</span>
-      </p>
-      {assumption && <p className="mt-1 text-xs">{assumption}</p>}
-    </div>
-  );
+export interface DraftEditing {
+  preview?: AnchorPreview | undefined;
+  editorFor: (criterion: Criterion) => CardEditor;
+  onSettings: (edit: Omit<DraftEdit, "criteria">) => void;
 }
 
-function PhraseSection(props: { draft: RubricDraft; phrase: DraftPhrase; index: number }) {
-  const { draft, phrase } = props;
+function PhraseSection(props: {
+  draft: RubricDraft;
+  phrase: DraftPhrase;
+  index: number;
+  editing: DraftEditing;
+}) {
+  const { draft, phrase, editing } = props;
   const criteria = draft.criteria.filter((c) => c.phrase === phrase.text);
   return (
     <section
@@ -60,15 +48,22 @@ function PhraseSection(props: { draft: RubricDraft; phrase: DraftPhrase; index: 
       )}
       <div className="mt-2 grid gap-2">
         {criteria.map((c) => (
-          <CriterionCard key={c.id} criterion={c} english={draft.english[c.id] ?? c.id} />
+          <CriterionCard
+            key={c.id}
+            criterion={c}
+            english={draft.english[c.id] ?? c.id}
+            enabled={!draft.disabled.includes(c.id)}
+            preview={editing.preview?.criteria.find((p) => p.criterion_id === c.id)}
+            editor={editing.editorFor(c)}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-export function RubricPanel(props: { draft: RubricDraft }) {
-  const { draft } = props;
+export function RubricPanel(props: { draft: RubricDraft; editing: DraftEditing }) {
+  const { draft, editing } = props;
   const { gripper_closed_level: closed, grasp_rise_m: rise } = draft.settings;
   return (
     <div>
@@ -89,15 +84,42 @@ export function RubricPanel(props: { draft: RubricDraft }) {
         ))}
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <SettingCard label="Gripper closed above" value={String(closed.value)} setting={closed} />
+        <SettingCard
+          label="Gripper closed above"
+          shown={closed.value}
+          setting={closed}
+          editor={{
+            min: 0.05,
+            max: 0.95,
+            step: 0.05,
+            onSave: (value) => {
+              editing.onSettings({ gripper_closed_level: value });
+            },
+          }}
+        />
         <SettingCard
           label="Grasp: the last closure that rises"
-          value={`${String(Math.round(rise.value * 1000) / 10)} cm`}
+          shown={cm(rise.value)}
+          unit="cm"
           setting={rise}
+          editor={{
+            min: 0.5,
+            max: 20,
+            step: 0.5,
+            onSave: (value) => {
+              editing.onSettings({ grasp_rise_m: value / 100 });
+            },
+          }}
         />
       </div>
       {draft.phrases.map((phrase, i) => (
-        <PhraseSection key={phrase.start} draft={draft} phrase={phrase} index={i} />
+        <PhraseSection
+          key={phrase.start}
+          draft={draft}
+          phrase={phrase}
+          index={i}
+          editing={editing}
+        />
       ))}
     </div>
   );

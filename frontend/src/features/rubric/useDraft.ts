@@ -38,8 +38,10 @@ export function useCompile() {
       }
       return data;
     },
-    onSuccess: (draft) => {
+    onSuccess: async (draft) => {
       queryClient.setQueryData(draftKey, draft);
+      // A new draft re-sorts the anchor pool: refetch its preview (keyed under the draft).
+      await queryClient.invalidateQueries({ queryKey: [...draftKey, "preview"] });
     },
   });
 }
