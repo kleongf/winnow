@@ -7,13 +7,14 @@ from pathlib import Path
 
 import numpy as np
 
-from winnow.episodes.clips import to_h264, to_sam_fps
-from winnow.episodes.models import EpisodeSignals, Signals, SourceEpisode
+from winnow.episodes.clips import first_frame, to_h264, to_sam_fps
+from winnow.episodes.models import Episode, EpisodeSignals, Signals, SourceEpisode
 from winnow.episodes.sources import Source
 from winnow.episodes.store import (
     EpisodeStore,
     clip_path,
     episode_id,
+    frame0_path,
     sam_clip_path,
     save_signals,
 )
@@ -82,3 +83,12 @@ def workstation_signals(signals: EpisodeSignals) -> Signals:
 
 def _rounded(values: np.ndarray) -> list[float]:
     return [round(float(v), 4) for v in values]
+
+
+async def frame_zero(store: EpisodeStore, episode: Episode, camera: str) -> Path:
+    """Frame 0 of a camera's clip as a JPEG, extracted on first request and kept."""
+    folder = store.episode_folder(episode)
+    still = frame0_path(folder, camera)
+    if not still.exists():
+        await asyncio.to_thread(first_frame, clip_path(folder, camera), still)
+    return still

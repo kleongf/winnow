@@ -13,5 +13,6 @@ def dataset_status(ctx: AppContext) -> DatasetStatus:
         name=DATASET_NAME,
         sources=[SourceCount(name=name, episodes=n) for name, n in sorted(counts.items())],
         episodes=sum(counts.values()),
+        boxes=ctx.boxes.count(),
         cost_usd=round(costs.spent_usd(), 4),
     )

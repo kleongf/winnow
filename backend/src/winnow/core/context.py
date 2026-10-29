@@ -6,6 +6,7 @@ from typing import cast
 
 from fastapi import Request
 
+from winnow.boxes.store import BoxStore
 from winnow.core.db import open_db
 from winnow.core.settings import Settings
 from winnow.episodes.service import ingest_step
@@ -21,6 +22,7 @@ class AppContext:
     db: sqlite3.Connection
     sources: dict[str, Source]
     episodes: EpisodeStore
+    boxes: BoxStore
     jobs: JobStore
     runner: JobRunner
 
@@ -29,10 +31,11 @@ def build_context(settings: Settings) -> AppContext:
     db = open_db(settings.db_path)
     sources = sources_from(settings)
     episodes = EpisodeStore(db, settings.data_dir)
+    boxes = BoxStore(db)
     jobs = JobStore(db)
     steps = {"ingest": ingest_step(episodes, sources)}
     runner = JobRunner(jobs, steps, concurrency=settings.ingest_concurrency)
-    return AppContext(settings, db, sources, episodes, jobs, runner)
+    return AppContext(settings, db, sources, episodes, boxes, jobs, runner)
 
 
 def get_context(request: Request) -> AppContext:

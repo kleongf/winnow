@@ -35,6 +35,10 @@ def sam_clip_path(folder: Path, camera: str) -> Path:
     return folder / f"{camera}.5fps.mp4"
 
 
+def frame0_path(folder: Path, camera: str) -> Path:
+    return folder / f"{camera}.frame0.jpg"
+
+
 def cameras_with_clips(folder: Path) -> list[str]:
     return sorted(p.stem for p in folder.glob("*.mp4") if "." not in p.stem)
 

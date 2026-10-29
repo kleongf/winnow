@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+
+export type DatasetStatus = components["schemas"]["DatasetStatus"];
 
 export const datasetStatusKey = ["dataset"] as const;
 
