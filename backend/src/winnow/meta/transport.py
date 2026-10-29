@@ -11,6 +11,7 @@ from winnow.meta.models import MetaContent
 class Reply:
     text: str
     usage: dict[str, int]  # input_tokens, output_tokens, cached_tokens, video_frames_processed
+    incomplete: str | None = None  # why the model stopped early, e.g. "max_output_tokens"
 
 
 class TransientError(RuntimeError):

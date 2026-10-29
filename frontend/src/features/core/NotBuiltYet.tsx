@@ -1,6 +1,6 @@
 import { pageLabels, type Page } from "./pages";
 
-type Unbuilt = Exclude<Page, "prepare" | "episodes">;
+type Unbuilt = Exclude<Page, "prepare" | "select" | "episodes">;
 
 const coming: Record<Unbuilt, string> = {
   describe: "Write a Description, compile it into a Rubric, and answer the interview.",

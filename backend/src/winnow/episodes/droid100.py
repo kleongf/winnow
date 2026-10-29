@@ -11,6 +11,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from numpy.typing import NDArray
 
+from winnow.episodes.clips import to_h264
 from winnow.episodes.models import EpisodeSignals, SourceEpisode
 
 REPO_ID = "lerobot/droid_100"
@@ -86,8 +87,9 @@ class Droid100:
         instruction = self._tasks.get(task, "").strip() or None
         return SourceEpisode(signals, instruction)
 
-    def clip(self, index: int, camera: str) -> Path:
-        """The source's own (AV1) clip for one camera."""
-        return self._fetch(
+    def write_clip(self, index: int, camera: str, out: Path) -> None:
+        """Transcode the source's own (AV1) clip to H.264."""
+        source = self._fetch(
             f"videos/chunk-000/observation.images.{camera}/episode_{index:06d}.mp4", "v2.0"
         )
+        to_h264(source, out)

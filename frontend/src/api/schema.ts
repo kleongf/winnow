@@ -191,6 +191,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Candidates */
+        get: operations["list_candidates_api_selection_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/selection/ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ingest Confirmed
+         * @description Ingest every confirmed candidate, with the object and target Spark named.
+         */
+        post: operations["ingest_confirmed_api_selection_ingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/selection/{episode_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Decide */
+        put: operations["decide_api_selection__episode_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/selection/{episode_id}/sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sheet */
+        get: operations["get_sheet_api_selection__episode_id__sheet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -238,6 +309,44 @@ export interface components {
             /** Y2 */
             y2: number;
         };
+        /** Candidate */
+        Candidate: {
+            /** Episode Id */
+            episode_id: string;
+            /** Error */
+            error: string | null;
+            /** Exclusion Reason */
+            exclusion_reason: ("not pick-and-place" | "object too small to see") | null;
+            /** Index */
+            index: number;
+            /** Ingested */
+            ingested: boolean;
+            /** Object */
+            object: string | null;
+            /** Pick And Place */
+            pick_and_place: boolean | null;
+            /** Seed */
+            seed: number;
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "confirmed" | "excluded";
+            /** Target */
+            target: string | null;
+            /** Task */
+            task: string | null;
+        };
+        /** Confirm */
+        Confirm: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            decision: "confirm";
+        };
         /**
          * DatasetStatus
          * @description Description-independent work on the Dataset so far, for the Prepare page.
@@ -279,6 +388,23 @@ export interface components {
             instruction: string | null;
             /** Source */
             source: string;
+            /** Task Object */
+            task_object: string | null;
+            /** Task Target */
+            task_target: string | null;
+        };
+        /** Exclude */
+        Exclude: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            decision: "exclude";
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "not pick-and-place" | "object too small to see";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -301,9 +427,9 @@ export interface components {
             indices: number[];
             /**
              * Source
-             * @constant
+             * @enum {string}
              */
-            source: "droid_100";
+            source: "droid_100" | "droid_1.0.1";
         };
         /** IngestStarted */
         IngestStarted: {
@@ -684,6 +810,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Job"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_candidates_api_selection_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Candidate"][];
+                };
+            };
+        };
+    };
+    ingest_confirmed_api_selection_ingest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestStarted"];
+                };
+            };
+        };
+    };
+    decide_api_selection__episode_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Confirm"] | components["schemas"]["Exclude"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Candidate"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sheet_api_selection__episode_id__sheet_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": unknown;
                 };
             };
             /** @description Validation Error */

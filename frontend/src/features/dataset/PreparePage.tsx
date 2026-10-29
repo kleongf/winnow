@@ -1,31 +1,20 @@
 // Prepare: Dataset-level work that no Description depends on: ingest, hand-drawn boxes, and
 // (as they're built) tracks, target boxes and the Spark-alone baseline.
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-
 import { Progress } from "@/components/ui/progress";
 
 import { NeedsBox } from "../boxes/NeedsBox";
 import { IngestForm } from "../episodes/IngestForm";
 import { useEpisodes } from "../episodes/useEpisodes";
 import { JobProgress } from "../jobs/JobProgress";
-import { useLatestJob } from "../jobs/useLatestJob";
-import { datasetStatusKey, useDatasetStatus, type DatasetStatus } from "./useDatasetStatus";
+import { useIngestProgress } from "../jobs/useIngestProgress";
+import { useDatasetStatus, type DatasetStatus } from "./useDatasetStatus";
 
 const LATER_STAGES = ["Wrist tracks", "Exterior tracks", "Target boxes"];
 
 export function PreparePage() {
   const status = useDatasetStatus();
   const episodeList = useEpisodes();
-  const job = useLatestJob("ingest");
-  const queryClient = useQueryClient();
-  const settled = job.data ? job.data.done + job.data.failed : 0;
-
-  useEffect(() => {
-    // Counts and the box grid move as ingest items land.
-    void queryClient.invalidateQueries({ queryKey: datasetStatusKey });
-    void queryClient.invalidateQueries({ queryKey: ["episodes"] });
-  }, [settled, queryClient]);
+  const job = useIngestProgress();
 
   const running = job.data ? !job.data.finished : false;
   return (

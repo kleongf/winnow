@@ -46,6 +46,8 @@ class Episode(BaseModel):
     fps: float
     duration_s: float
     cameras: list[str]  # cameras with a clip to play
+    task_object: str | None  # the object moved, from the droid_1.0.1 selection pass
+    task_target: str | None  # where it goes; prompts SAM for the target box
 
 
 class Signals(BaseModel):
@@ -58,7 +60,7 @@ class Signals(BaseModel):
 
 
 class IngestRequest(BaseModel):
-    source: Literal["droid_100"]
+    source: Literal["droid_100", "droid_1.0.1"]
     indices: list[Annotated[int, Field(ge=0)]] = Field(min_length=1)
 
 

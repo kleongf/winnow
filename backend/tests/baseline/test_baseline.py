@@ -6,11 +6,10 @@ from fastapi.testclient import TestClient
 
 from tests.baseline.scripted import REASON, ScriptedSpark
 from tests.conftest import CORRUPT_EPISODE
-from tests.helpers import wait_for_job
+from tests.helpers import app_context, wait_for_job
 from winnow.app import create_app
 from winnow.baseline.prompts import FROZEN_DESCRIPTION, Description
 from winnow.baseline.service import run_baseline
-from winnow.core.context import AppContext
 from winnow.core.settings import Settings
 
 
@@ -25,10 +24,6 @@ def app_api(settings: Settings, spark: ScriptedSpark) -> Iterator[TestClient]:
         yield client
 
 
-def context(api: TestClient) -> AppContext:
-    return api.app.state.context  # type: ignore[attr-defined, no-any-return]
-
-
 def ingest(api: TestClient, *indices: int) -> dict[str, object]:
     response = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": indices})
     return wait_for_job(api, response.json()["job_id"])
@@ -41,7 +36,7 @@ def test_each_ingested_episode_gets_three_samples_and_a_failbench_answer(
 
     assert job["done"] == 4 and job["failed"] == 0  # ingest + baseline, per Episode
     assert (spark.baseline_calls, spark.failbench_calls) == (6, 2)
-    answers = context(app_api).baseline.answers("droid_100:1", FROZEN_DESCRIPTION)
+    answers = app_context(app_api).baseline.answers("droid_100:1", FROZEN_DESCRIPTION)
     assert [a.sample for a in answers.samples] == [0, 1, 2]
     assert answers.samples[0].answer is not None
     assert answers.samples[0].answer.decision == "reject"
@@ -66,7 +61,7 @@ def test_rerunning_is_all_cache_hits_but_a_new_description_is_not(
     ingest(app_api, 0)
     assert spark.baseline_calls == 3
 
-    ctx = context(app_api)
+    ctx = app_context(app_api)
     [episode] = ctx.episodes.list()
     assert ctx.meta is not None
     other = Description("Expert: no long pauses.", ("no long pauses",))
@@ -84,7 +79,7 @@ def test_a_malformed_answer_fails_only_its_own_sample(app_api: TestClient, spark
     baseline_item = job["items"][1]  # type: ignore[index]
     assert baseline_item["status"] == "done"
     assert baseline_item["detail"] == "1 of 4 answers failed"
-    answers = context(app_api).baseline.answers("droid_100:0", FROZEN_DESCRIPTION)
+    answers = app_context(app_api).baseline.answers("droid_100:0", FROZEN_DESCRIPTION)
     assert [a.error is None for a in answers.samples].count(False) == 1
     assert sum(a.answer is not None for a in answers.samples) == 2
     assert app_api.get("/api/dataset").json()["baseline"] == 0  # incomplete

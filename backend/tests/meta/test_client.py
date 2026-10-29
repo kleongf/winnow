@@ -4,11 +4,12 @@ from pathlib import Path
 import pytest
 
 from tests.meta.fakes import FakeTime, FakeTransport, MakeClient
+from winnow.meta.client import IncompleteReplyError
 from winnow.meta.costs import BudgetExceededError
 from winnow.meta.limits import Limit
 from winnow.meta.models import SamRequest, SparkCall, SparkRequest, Text, Video
 from winnow.meta.pricing import SPARK_CONTRIBUTOR
-from winnow.meta.transport import FileGoneError, TransientError
+from winnow.meta.transport import FileGoneError, Reply, TransientError
 
 SCHEMA: dict[str, object] = {"type": "object"}
 
@@ -163,3 +164,18 @@ def test_a_file_the_server_lost_is_uploaded_again(
     assert not answer.cached
     assert len(transport.uploads) == 2
     assert transport.calls[-1][1][1] == {"type": "input_video", "file_id": "file-2"}
+
+
+def test_a_reply_cut_off_by_the_token_cap_is_paid_for_but_not_cached(
+    make_client: MakeClient, transport: FakeTransport
+):
+    client = make_client()
+    transport.script = [Reply("", {"output_tokens": 4000}, incomplete="max_output_tokens")]
+
+    with pytest.raises(IncompleteReplyError, match="max_output_tokens"):
+        asyncio.run(client.spark(ask()))
+    again = asyncio.run(client.spark(ask()))
+
+    assert len(transport.calls) == 2  # the cut-off reply wasn't served from the cache
+    assert not again.cached
+    assert client.costs.spent_usd() > again.usd  # the first call still cost money

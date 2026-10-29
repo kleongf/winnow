@@ -1,10 +1,13 @@
-"""Where Episodes come from: one adapter per dataset, all yielding the same Episode shape."""
+"""Where Episodes come from: one adapter per dataset, all yielding the same Episode shape.
+
+Camera names are droid_100's (`exterior_image_1_left`, ...); other adapters map onto them."""
 
 from pathlib import Path
 from typing import Protocol
 
 from winnow.core.settings import Settings
-from winnow.episodes import droid100
+from winnow.episodes import droid100, droid101
+from winnow.episodes.droid101_files import HubFiles, LocalFiles
 from winnow.episodes.models import SourceEpisode
 
 
@@ -14,7 +17,9 @@ class Source(Protocol):
 
     def load(self, index: int) -> SourceEpisode: ...
 
-    def clip(self, index: int, camera: str) -> Path: ...
+    def write_clip(self, index: int, camera: str, out: Path) -> None:
+        """Write the Episode's clip for one camera as H.264."""
+        ...
 
 
 def sources_from(settings: Settings) -> dict[str, Source]:
@@ -24,4 +29,6 @@ def sources_from(settings: Settings) -> dict[str, Source]:
         if root is not None
         else droid100.hub_fetch(settings.data_dir / "droid_100")
     )
-    return {droid100.NAME: droid100.Droid100(fetch)}
+    root101 = settings.droid101_root
+    files = LocalFiles(root101) if root101 is not None else HubFiles()
+    return {droid100.NAME: droid100.Droid100(fetch), droid101.NAME: droid101.Droid101(files)}

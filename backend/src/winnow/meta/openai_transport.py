@@ -58,7 +58,11 @@ class OpenAITransport:
             if _is_file_gone(e):
                 raise FileGoneError(e.message) from e
             raise
-        return Reply(response.output_text, _usage(response))
+        details = response.incomplete_details
+        incomplete = (
+            (details.reason or "unknown") if response.status == "incomplete" and details else None
+        )
+        return Reply(response.output_text, _usage(response), incomplete)
 
     async def _send(self, model: str, content: MetaContent, options: dict[str, object]) -> Response:
         # Options go in the body as-is: Meta's fields (SAM metadata) aren't in the SDK's types.

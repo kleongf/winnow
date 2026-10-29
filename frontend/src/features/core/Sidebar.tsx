@@ -3,6 +3,7 @@ import {
   BarChart3,
   Database,
   FolderKanban,
+  ListFilter,
   ListChecks,
   MessageSquareText,
   ScanSearch,
@@ -21,6 +22,7 @@ const PROJECT_NAME = "Expert pick-and-place";
 
 const icons: Record<Page, ComponentType<{ className?: string }>> = {
   prepare: SquareDashedMousePointer,
+  select: ListFilter,
   describe: MessageSquareText,
   episodes: ListChecks,
   review: ScanSearch,
@@ -62,6 +64,7 @@ export function Sidebar(props: { page: Page; onPage: (page: Page) => void }) {
       </div>
       <nav className="mt-3 px-3">
         {nav("prepare", dataset.data && String(dataset.data.episodes))}
+        {nav("select")}
       </nav>
       <div className="mt-4 px-4">
         <SectionLabel>Project</SectionLabel>
