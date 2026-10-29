@@ -27,19 +27,21 @@ def failed(index: int) -> bool:
 
 def carry_climb(index: int) -> float:
     """How fast the arm climbs while carrying, in m per Episode length. Episodes with
-    i % 3 == 1 climb faster, a little more each, so they release 4.4 cm, 5.3 cm, ... above
+    i % 3 == 1 climb faster, so they release 4.4 cm (i % 6 == 1) or 5.3 cm (i % 6 == 4) above
     where they picked up: inside the seeded release height's margin (5 cm ± 1 cm), so each
-    needs review with its own confidence. Robot data only: recorded Meta replies still hold."""
-    return 0.17 + 0.01 * index if index % 3 == 1 else 0.10
+    needs review, the 5.3 cm ones with less confidence. Robot data only: recorded Meta replies
+    still hold."""
+    return 0.17 + 0.01 * (index % 6) if index % 3 == 1 else 0.10
 
 
 def sliding_block(index: int) -> str:
     """A red block sliding right over grey, under the wrist seed point (190,105) at about 1 s.
-    Its start shifts a little per Episode."""
+    Its start shifts a little per Episode, right through five Episodes and then down, so it
+    stays under the seed point and no two Episodes share a clip."""
     return (
         f"color=c=0x5a6470:size=320x180:rate={FPS:g}[bg];"
         f"color=c=0xd03030:size=60x40:rate={FPS:g}[fg];"
-        f"[bg][fg]overlay=x='{110 + 4 * index}+40*t':y=85"
+        f"[bg][fg]overlay=x='{110 + 4 * (index % 5)}+40*t':y={85 + 2 * (index // 5)}"
     )
 
 

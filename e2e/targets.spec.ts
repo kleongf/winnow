@@ -1,14 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-import { boxEpisode, dragBox, ingest, RECORDED_BOX } from "./helpers.ts";
+import { boxEpisode, dragBox, EPISODES, episodeId, ingest, RECORDED_BOX } from "./helpers.ts";
 
-// Episode 0's instruction is "Put the marker in the pot"; the fixture's views have no pot, so the
+// Its instruction is "Put the marker in the pot"; the fixture's views have no pot, so the
 // recorded SAM finds none, while its exterior track follows the box in Exterior 2 (testsrc2).
-const EPISODE = "droid_100:0";
+const [INDEX] = EPISODES.targets;
+const EPISODE = episodeId(INDEX);
 const EXTERIOR_2 = "exterior_image_2_left";
 
 test.beforeEach(async ({ request }) => {
-  await ingest(request, [0, 1, 2]);
+  await ingest(request, EPISODES.targets);
   await boxEpisode(request, EPISODE, EXTERIOR_2);
 });
 
@@ -21,7 +22,9 @@ test("Prepare shows the proposed target box, and a drawn one replaces it", async
   await expect(card.getByTestId("target-status")).toHaveText("SAM found no “pot”");
   await expect(page.getByTestId("exterior-tracks")).not.toContainText("—");
 
-  await card.getByRole("button", { name: "Draw the target box for Episode 0" }).click();
+  await card
+    .getByRole("button", { name: `Draw the target box for Episode ${String(INDEX)}` })
+    .click();
   const dialog = page.getByRole("dialog");
   await dragBox(page);
   await dialog.getByRole("button", { name: "Save target box" }).click();
@@ -53,7 +56,7 @@ test("the Workstation draws the exterior track and target box on the boxed view"
   expect((await request.put(`/api/episodes/${EPISODE}/target-box`, { data: target })).ok()).toBe(
     true,
   );
-  await page.goto("/?page=episodes&episode=droid_100%3A0&t=1");
+  await page.goto(`/?page=episodes&episode=${encodeURIComponent(EPISODE)}&t=1`);
 
   await expect(page.getByTestId("target-status")).toHaveText("Hand-drawn");
   await expect(page.getByTestId("track-status-exterior")).toContainText("box on 15 of 15 frames");

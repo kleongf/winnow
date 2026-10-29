@@ -1,13 +1,25 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-import { ingest, referenceLabel } from "./helpers.ts";
+import { EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
+
+// Two Episodes that release inside the release height's margin (LESS_SURE nearer its fail
+// side), one that fails its grasp twice first, and one kept.
+const [NEAR, REJECT, KEEP, LESS_SURE] = EPISODES.triage;
+const OWN: readonly number[] = EPISODES.triage;
+
+const row = (page: Page, index: number) =>
+  page.getByRole("row", { name: new RegExp(`^${String(index)} `) });
+
+/** The table's Episode indices in order, this spec's only: other specs' Episodes show too. */
+const ownRows = (page: Page) => async () =>
+  (await page.locator("tbody tr td:first-child").allTextContents())
+    .map(Number)
+    .filter((index) => OWN.includes(index));
 
 test.beforeEach(async ({ request }) => {
-  await ingest(request, [0, 1, 2]);
-  // Their Triage decisions show only once labelled. reference-labels.spec.ts labels
-  // droid_100:2 first, through the UI; awaiting-label.spec.ts keeps droid_100:1 for itself
-  // until the filter test below, which runs after it.
-  await referenceLabel(request, ["droid_100:0", "droid_100:2"]);
+  await ingest(request, EPISODES.triage);
+  // Their Triage decisions show only once labelled.
+  await referenceLabel(request, EPISODES.triage.map(episodeId));
 });
 
 test("the table sorts Episodes into Triage tabs with their Reasons", async ({ page }) => {
@@ -15,11 +27,13 @@ test("the table sorts Episodes into Triage tabs with their Reasons", async ({ pa
 
   await expect(page.getByText(/\d+ of \d+ decided automatically/)).toBeVisible();
   await page.getByRole("tab", { name: /^Keep/ }).click();
-  await expect(page.getByRole("row", { name: /^0 Put the marker in the pot/ })).toBeVisible();
-  await expect(page.getByRole("row", { name: /^2 / })).toHaveCount(0);
+  await expect(
+    page.getByRole("row", { name: new RegExp(`^${String(KEEP)} Put the marker in the pot`) }),
+  ).toBeVisible();
+  await expect(row(page, REJECT)).toHaveCount(0);
 
   await page.getByRole("tab", { name: /^Reject/ }).click();
-  await expect(page.getByRole("row", { name: /^2 / })).toContainText(
+  await expect(row(page, REJECT)).toContainText(
     "2 failed grasp attempts, at 0.9 s and 1.3 s, before the grasp at 1.8 s.",
   );
   await expect(page).toHaveURL(/triage=reject/);
@@ -32,9 +46,11 @@ test("a Reject opens from the table, and its lane and Reason seek the playhead",
   page.on("pageerror", (err) => errors.push(err.message));
   await page.goto("/?page=episodes&triage=reject");
 
-  await page.getByRole("row", { name: /^2 / }).click();
+  await row(page, REJECT).click();
 
-  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText("droid_100:2");
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText(
+    episodeId(REJECT),
+  );
   await expect(page.getByTestId("triage-decision")).toHaveText("Reject");
   await expect(page.getByText("0.0 / 3.0 s")).toBeVisible();
   await page.getByRole("button", { name: /^Lane: Grasp attempts/ }).click();
@@ -49,37 +65,32 @@ test("a Reject opens from the table, and its lane and Reason seek the playhead",
 
 test("the table filters by Uncertainty signal, set and Phrase, and sorts by confidence", async ({
   page,
-  request,
 }) => {
-  // Fixture Episodes 1 and 4 release inside the release height's margin, 4 nearer its fail side.
-  await ingest(request, [4]);
-  // awaiting-label.spec.ts runs first and labels droid_100:1 itself; labelling it again here
-  // (a no-op then) keeps this test runnable alone.
-  await referenceLabel(request, ["droid_100:1", "droid_100:4"]);
-  const firstCells = page.locator("tbody tr td:first-child");
+  const own = ownRows(page);
   await page.goto("/?page=episodes");
 
   await page.getByLabel("Uncertainty signal").selectOption("near threshold");
-  await expect(firstCells).toHaveText(["1", "4"]);
-  await expect(page.getByTestId("phrase-chip").first()).toHaveText(
+  await expect.poll(own).toEqual([NEAR, LESS_SURE]);
+  await expect(row(page, NEAR).getByTestId("phrase-chip")).toHaveText(
     "places it in or on the target named in the instruction",
   );
   await expect(page).toHaveURL(/signal=near\+threshold/);
 
   await page.getByRole("button", { name: "Confidence" }).click();
-  await expect(firstCells).toHaveText(["4", "1"]); // least confident first
-  const confidences = await page.getByTestId("confidence").allTextContents();
-  expect(Number(confidences[0])).toBeLessThan(Number(confidences[1]));
+  await expect.poll(own).toEqual([LESS_SURE, NEAR]); // least confident first
+  const confidence = async (index: number) =>
+    Number(await row(page, index).getByTestId("confidence").textContent());
+  expect(await confidence(LESS_SURE)).toBeLessThan(await confidence(NEAR));
   await page.getByRole("button", { name: "Confidence" }).click();
-  await expect(firstCells).toHaveText(["1", "4"]);
+  await expect.poll(own).toEqual([NEAR, LESS_SURE]);
 
   await page.getByLabel("Set", { exact: true }).selectOption("dev");
-  await expect(page.getByText("No Episodes match this tab and these filters.")).toBeVisible();
+  await expect.poll(own).toEqual([]);
   await page.getByLabel("Set", { exact: true }).selectOption("none");
-  await expect(firstCells).toHaveText(["1", "4"]);
+  await expect.poll(own).toEqual([NEAR, LESS_SURE]);
 
   await page.getByRole("button", { name: "Clear filters" }).click();
   await page.getByLabel("Phrase").selectOption("grasps the object on the first try");
-  await expect(page.getByRole("row", { name: /^2 / })).toBeVisible();
-  await expect(page.getByRole("row", { name: /^0 / })).toHaveCount(0);
+  await expect(row(page, REJECT)).toBeVisible();
+  await expect(row(page, KEEP)).toHaveCount(0);
 });
