@@ -33,6 +33,14 @@ class VisualClip(BaseModel):
     box: FrameBox | None  # the crop, in the camera's pixels; None for the whole view
 
 
+class AskRequest(BaseModel):
+    episode_ids: list[str] | None = None  # every ingested Episode when unset
+
+
+class AskStarted(BaseModel):
+    job_id: int | None  # None: the Rubric has no visual Criterion
+
+
 class VisualAnswers(BaseModel):
     clip: VisualClip | None  # None when the crop step failed
     samples: list[VisualSample]  # one per frozen question and paraphrase

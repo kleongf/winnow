@@ -58,7 +58,10 @@ def test_three_failing_samples_fail_conclusively_and_reject_from_the_clip():
     assert result.p_pass == pytest.approx(0.2, abs=0.02)
     assert result.window is not None and result.at_s == result.window.start
     assert triage.decision == "reject"
-    assert text(triage) == f'Rejected: "{PLACES}" failed. All 3 samples: fail. Saw 0.'
+    assert text(triage) == (
+        f'Rejected: "{PLACES}" failed. All 3 samples: fail. Saw 0. Asked of the whole view: no '
+        "object track and target box to crop to."
+    )
 
 
 def test_stated_confidence_breaks_ties_but_never_crosses_a_tally():
@@ -118,6 +121,13 @@ def test_each_samples_answer_and_the_clip_are_its_evidence():
     assert [s.prompt for s in result.visual.samples] == [placed().question, *placed().paraphrases]
     assert result.visual.clip is not None and result.visual.clip.name.endswith(".mp4")
     assert result.camera == "exterior_image_1_left"
+
+
+def test_a_placement_question_asked_of_the_whole_view_says_so():
+    # CLIP has no crop box: the Episode had no object track and target box to crop to.
+    [result] = score(rubric(placed()), with_answers(answers("pass", "pass", "pass"))).criteria
+
+    assert "whole view" in "".join(s.text for s in result.evidence)
 
 
 def test_a_soft_visual_criterion_never_changes_the_decision():

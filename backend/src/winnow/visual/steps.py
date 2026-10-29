@@ -26,7 +26,7 @@ from winnow.rubric.models import RubricVersion
 from winnow.rubric.store import RubricStore
 from winnow.tracking.store import TrackStore
 from winnow.tracking.target_store import TargetBoxStore
-from winnow.visual.crop import Placement, cut, plan_crop
+from winnow.visual.crop import Placement, clips_folder, cut, plan_crop
 from winnow.visual.keys import ask_key, prompts
 from winnow.visual.models import VisualReply, VisualSample
 from winnow.visual.prompts import VISUAL_SCHEMA, visual_prompt
@@ -115,7 +115,7 @@ async def _crop(sources: VisualSources, asked: _Asked) -> str | None:
     source = clip_path(folder, plan.camera)
     _, width, height = await asyncio.to_thread(probe, source)
     clip, made = await asyncio.to_thread(
-        cut, episode.id, plan, source, (width, height), folder / "visual"
+        cut, episode.id, plan, source, (width, height), clips_folder(folder)
     )
     sources.answers.save_clip(episode.id, asked.key, clip)
     return None if made else "clip already cut"
@@ -149,7 +149,7 @@ async def _ask(meta: MetaClient, sources: VisualSources, asked: _Asked) -> str |
     if found is None or found.clip is None:
         return "no clip to ask about"
     clip = found.clip
-    video = Video(sources.episodes.episode_folder(asked.episode) / "visual" / clip.name)
+    video = Video(clips_folder(sources.episodes.episode_folder(asked.episode)) / clip.name)
     asking = prompts(asked.criterion)
     requests = [
         SparkRequest(

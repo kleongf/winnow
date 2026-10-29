@@ -102,6 +102,11 @@ def plan_crop(
     return CropPlan(camera, start, end, None)
 
 
+def clips_folder(episode_folder: Path) -> Path:
+    """Where an Episode's visual clips live."""
+    return episode_folder / "visual"
+
+
 def _even(value: float) -> int:
     return max(2, int(value) // 2 * 2)  # yuv420p needs even sides
 

@@ -64,7 +64,9 @@ def _read(
 
 def judge(criterion: Criterion, measured: Measurement) -> Judgement:
     status, signal, m = _read(criterion, measured)
-    p = measured.p if measured.p is not None else 0.5 if m is None else p_of(m)
+    from_m = 0.5 if m is None else p_of(m)
+    # The measure may know p directly, e.g. Spark's agreement.
+    p = from_m if measured.p is None else measured.p
     if not PRIMITIVES[criterion.primitive].conclusive:
         p = max(p, 0.5)
         if status == "fail" and signal is None:

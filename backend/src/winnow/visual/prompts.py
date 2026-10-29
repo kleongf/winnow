@@ -1,13 +1,15 @@
 """The words of one visual sample: the Episode's task, then one frozen prompt about the clip."""
 
-from winnow.visual.models import VisualClip
+from typing import get_args
+
+from winnow.visual.models import AnswerValue, VisualClip
 
 VISUAL_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
     "required": ["answer", "confidence", "observation"],
     "properties": {
-        "answer": {"type": "string", "enum": ["pass", "fail", "unsure"]},
+        "answer": {"type": "string", "enum": list(get_args(AnswerValue))},
         "confidence": {"type": "number"},
         "observation": {"type": "string"},
     },

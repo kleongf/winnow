@@ -3,6 +3,7 @@
 from winnow.criteria.catalog import CATALOG
 from winnow.criteria.models import Criterion
 from winnow.criteria.windows import window_name
+from winnow.visual.crop import DEFAULT_VIEW
 
 COMPARATORS = {"<": "<", "<=": "≤", ">=": "≥", ">": ">", "==": "="}
 
@@ -21,9 +22,11 @@ CROPS = {"view": "", "placement": ", cropped to the object and its target"}
 
 
 def _visual(criterion: Criterion) -> str:
-    """e.g. 'Spark, on exterior_image_1_left after release, cropped to the object and its
-    target: "Is the object resting in or on the target?"'."""
-    view = criterion.views[0] if criterion.views else "the boxed view"
+    """e.g. 'Spark, on the view the object was boxed in after release, cropped to the object
+    and its target: "Is the object resting in or on the target?"'."""
+    view = criterion.views[0] if criterion.views else DEFAULT_VIEW
+    if criterion.crop == "placement":  # the object's track and target box are in that view
+        view = "the view the object was boxed in"
     crop = CROPS[criterion.crop or "view"]
     return f'Spark, on {view} {window_name(criterion.window)}{crop}: "{criterion.question}"'
 

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from winnow.core.context import AppContext
 from winnow.rubric.models import RubricVersion
+from winnow.visual.crop import clips_folder
 from winnow.visual.steps import visual_items
 
 
@@ -28,5 +29,5 @@ def visual_clip(ctx: AppContext, episode_id: str, name: str) -> Path | None:
     episode = ctx.episodes.get(episode_id)
     if episode is None:
         return None
-    path = ctx.episodes.episode_folder(episode) / "visual" / name
+    path = clips_folder(ctx.episodes.episode_folder(episode)) / name
     return path if path.is_file() else None

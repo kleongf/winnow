@@ -4,13 +4,10 @@ import { cn } from "@/lib/utils";
 
 import type { components } from "../../api/schema";
 import { STATUS_TEXT } from "../triage/TriageBadge";
+import { visualClipUrl } from "./visualClip";
 
 type VisualAnswers = components["schemas"]["VisualAnswers"];
 type VisualClip = components["schemas"]["VisualClip"];
-
-export function visualClipUrl(episodeId: string, name: string): string {
-  return `/api/episodes/${encodeURIComponent(episodeId)}/visual-clips/${name}`;
-}
 
 function clipText(clip: VisualClip): string {
   const framing = clip.box ? "cropped to the object and its target" : "whole view";

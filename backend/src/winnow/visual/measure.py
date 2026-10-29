@@ -68,12 +68,19 @@ def _judged(replies: list[VisualReply], k: int) -> tuple[Status, UncertaintySign
     return ("pass" if answered == {"pass"} else "fail"), None
 
 
-def _evidence(replies: list[VisualReply], status: Status, k: int) -> list[TextSpan]:
+def _evidence(
+    criterion: Criterion, answers: VisualAnswers, replies: list[VisualReply], status: Status
+) -> list[TextSpan]:
+    k = len(answers.samples)
     if status != "unsure":
         lead = f"All {k} samples: {status}. "
     else:
         lead = f"Samples: {tally(replies)}, of {k}. "
-    return [TextSpan(text=lead + (replies[0].observation if replies else ""))]
+    evidence = [TextSpan(text=lead + (replies[0].observation if replies else ""))]
+    if criterion.crop == "placement" and answers.clip is not None and answers.clip.box is None:
+        why = " Asked of the whole view: no object track and target box to crop to."
+        evidence.append(TextSpan(text=why))
+    return evidence
 
 
 def ask_video(
@@ -92,7 +99,7 @@ def ask_video(
     return Measurement(
         float(sum(1 for r in replies if r.answer == "pass")),
         tally(replies),
-        _evidence(replies, status, k),
+        _evidence(criterion, answers, replies, status),
         [Moment(t=start, label="Clip")],
         at_s=start,
         status=status,

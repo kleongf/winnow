@@ -3,9 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
 
 from winnow.core.context import AppContext, get_context
+from winnow.visual.models import AskRequest, AskStarted
 from winnow.visual.service import MetaUnavailableError, ask_visual, visual_clip
 
 router = APIRouter(tags=["visual"])
@@ -13,14 +13,6 @@ router = APIRouter(tags=["visual"])
 Context = Annotated[AppContext, Depends(get_context)]
 
 CLIP_NAME = re.compile(r"[0-9a-f]{16}\.mp4")
-
-
-class AskRequest(BaseModel):
-    episode_ids: list[str] | None = None  # every ingested Episode when unset
-
-
-class AskStarted(BaseModel):
-    job_id: int | None  # None: the Rubric has no visual Criterion
 
 
 @router.post(

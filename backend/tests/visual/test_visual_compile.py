@@ -72,7 +72,8 @@ def test_a_phrase_compiles_to_a_visual_criterion_with_its_frozen_question(
     assert asked["paraphrases"] == PARAPHRASES
     english = draft["english"][asked["id"]]  # type: ignore[index]
     assert english == (
-        "Spark, on exterior_image_1_left after release, cropped to the object and its target: "
+        "Spark, on the view the object was boxed in after release, cropped to the object and its "
+        "target: "
         f'"{QUESTION}"'
     )
 

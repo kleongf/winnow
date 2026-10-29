@@ -90,15 +90,18 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     visual = VisualStore(db)
     jobs = JobStore(db)
     meta = _meta(settings, db, transport)
-    asked = VisualSources(rubrics, episodes, boxes, tracks, targets, visual)
-    steps: dict[str, Step] = {"ingest": ingest_step(episodes, sources), "crop": crop_step(asked)}
+    visual_sources = VisualSources(rubrics, episodes, boxes, tracks, targets, visual)
+    steps: dict[str, Step] = {
+        "ingest": ingest_step(episodes, sources),
+        "crop": crop_step(visual_sources),
+    }
     droid101 = sources.get("droid_1.0.1")
     if meta is not None:
         steps["baseline"] = baseline_step(meta, baseline, episodes)
         steps["track_wrist"] = track_wrist_step(meta, tracks, episodes)
         steps["track_exterior"] = track_exterior_step(meta, tracks, boxes, episodes)
         steps["target_box"] = target_box_step(meta, targets, boxes, episodes)
-        steps["visual"] = visual_step(meta, asked)
+        steps["visual"] = visual_step(meta, visual_sources)
         if isinstance(droid101, Droid101):
             steps["select"] = select_step(meta, selection, droid101, settings.data_dir)
     runner = JobRunner(jobs, steps, concurrency=settings.ingest_concurrency)
