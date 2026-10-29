@@ -89,6 +89,8 @@
 6. **Output** — filtered dataset in the same (LeRobot) format + a Reason for every rejection.
 7. **Iterate** — edit one sentence, re-sort instantly (cache keyed by Criterion, params and Episode; only changed Criteria re-run; dragging a threshold calls no model).
 
+**The workspace** (shadcn/ui on Radix). A **Dataset** holds Episodes and all Description-independent work (clips, tracks, hand-drawn boxes), shared by its **Projects**; a Project is one Description over one Dataset (Rubric versions, anchor pool, Test set held out, labels, runs). A sidebar holds the Dataset switcher and its Projects; each stage is its own page: **Prepare** (Dataset-level: ingest status and a frame-0 grid of unboxed Episodes, drawn in a dialog with Save & next), **Describe** (the interview as anchored question cards beside the live Rubric; anchor-pool numbers only), **Episodes** (filterable table → full-page Workstation), **Review** (Needs review queue, least confident first, answering only unsure Phrases), **Audit**, and **Evaluation** (the only place the Spark-alone contrast appears). Decided in [Workspace shape: datasets, projects, Episode browser, and Criterion chat](https://github.com/kleongf/winnow/issues/20).
+
 ---
 
 ## 6. Meta models — used in non-obvious ways
