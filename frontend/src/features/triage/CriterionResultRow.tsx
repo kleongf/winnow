@@ -45,6 +45,9 @@ export function CriterionResultRow(props: {
         <span>
           {r.kind} · {r.hard ? "hard" : "soft"}
         </span>
+        <span className="tabular-nums" title="How likely this Criterion passes">
+          p {r.p_pass.toFixed(2)}
+        </span>
         {r.uncertainty && <span className={STATUS_TEXT.unsure}>{r.uncertainty}</span>}
       </div>
       {props.open && (

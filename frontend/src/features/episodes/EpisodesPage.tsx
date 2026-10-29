@@ -1,10 +1,20 @@
-// Every ingested Episode in a dense table, sorted into Triage tabs with its Reason; a row opens
-// the full-page Workstation. The tab, the open Episode and its start time live in `?triage=`,
-// `?episode=` and `?t=`; J/K step through the tab's Episodes.
+// Every ingested Episode in a dense table, sorted into Triage tabs with its Reason, filterable by
+// Phrase, Uncertainty signal and set, and sortable by confidence; a row opens the full-page
+// Workstation. The tab, filters, sort, open Episode and its start time live in the URL; J/K
+// step through the Episodes shown.
 import { navigate, useSearchParams } from "../core/url";
+import { useRubric } from "../rubric/useRubric";
 import { setsByEpisode, useSets } from "../sets/useSets";
 import { countDecisions, parseTriageTab, TriageTabs, type TriageTab } from "../triage/TriageTabs";
 import { useTriageList } from "../triage/useTriage";
+import { EpisodeFilterBar } from "./EpisodeFilterBar";
+import {
+  applyFilters,
+  nextSort,
+  parseFilters,
+  signalsIn,
+  type EpisodeFilters,
+} from "./episodeFilters";
 import { EpisodePage } from "./EpisodePage";
 import { EpisodeTable } from "./EpisodeTable";
 import { useEpisodes, type Episode } from "./useEpisodes";
@@ -13,18 +23,22 @@ function open(id: string | null) {
   navigate({ episode: id, t: null });
 }
 
-function useTriagedEpisodes(tab: TriageTab) {
+function useTriagedEpisodes(tab: TriageTab, filters: EpisodeFilters) {
   const all = useEpisodes().data;
   const triage = useTriageList().data;
+  const setOf = setsByEpisode(useSets().data);
   const triageOf = new Map(triage?.rows.map((r) => [r.episode_id, r]));
   const episodes = all ?? [];
+  const filtered = applyFilters(episodes, filters, triageOf, setOf);
   const shown =
-    tab === "all" ? episodes : episodes.filter((e) => triageOf.get(e.id)?.decision === tab);
-  const counts = countDecisions(triage?.rows.map((r) => r.decision) ?? []);
+    tab === "all" ? filtered : filtered.filter((e) => triageOf.get(e.id)?.decision === tab);
+  const decided = countDecisions(triage?.rows.map((r) => r.decision) ?? []);
+  const counts = countDecisions(filtered.flatMap((e) => triageOf.get(e.id)?.decision ?? []));
   const summary = triage
-    ? `${String(counts.all - counts.needs_review)} of ${String(counts.all)} decided automatically · ${String(counts.needs_review)} Needs review · Rubric v${String(triage.rubric_version)}`
+    ? `${String(decided.all - decided.needs_review)} of ${String(decided.all)} decided automatically · ${String(decided.needs_review)} Needs review · Rubric v${String(triage.rubric_version)}`
     : `${String(episodes.length)} Episodes in the Dataset.`;
-  return { loaded: all !== undefined, episodes, shown, triageOf, counts, summary };
+  const signals = signalsIn(triage?.rows ?? []);
+  return { loaded: all !== undefined, episodes, shown, triageOf, setOf, counts, summary, signals };
 }
 
 function OpenEpisode(props: { episode: Episode; ids: string[]; t: string | null }) {
@@ -43,8 +57,12 @@ function OpenEpisode(props: { episode: Episode; ids: string[]; t: string | null 
 export function EpisodesPage() {
   const params = useSearchParams();
   const tab = parseTriageTab(params.get("triage"));
-  const { loaded, episodes, shown, triageOf, counts, summary } = useTriagedEpisodes(tab);
-  const setOf = setsByEpisode(useSets().data);
+  const filters = parseFilters(params);
+  const { loaded, episodes, shown, triageOf, setOf, counts, summary, signals } = useTriagedEpisodes(
+    tab,
+    filters,
+  );
+  const phrases = useRubric().data?.rubric.phrases ?? [];
 
   const openEpisode = episodes.find((e) => e.id === params.get("episode"));
   if (openEpisode) {
@@ -74,9 +92,21 @@ export function EpisodesPage() {
               }}
             />
           </div>
-          <EpisodeTable episodes={shown} triageOf={triageOf} setOf={setOf} onOpen={open} />
+          <EpisodeFilterBar filters={filters} phrases={phrases} signals={signals} />
+          <EpisodeTable
+            episodes={shown}
+            triageOf={triageOf}
+            setOf={setOf}
+            sort={filters.sort}
+            onSort={() => {
+              navigate({ sort: nextSort(filters.sort) });
+            }}
+            onOpen={open}
+          />
           {shown.length === 0 && (
-            <p className="mt-4 text-sm text-muted-foreground">No Episodes in this tab.</p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              No Episodes match this tab and these filters.
+            </p>
           )}
         </>
       )}

@@ -8,6 +8,8 @@ export type TriageDecision = EpisodeTriage["decision"];
 export type CriterionResult = components["schemas"]["CriterionResult"];
 export type TextSpan = components["schemas"]["TextSpan"];
 export type Status = CriterionResult["status"];
+export type TriageRow = components["schemas"]["TriageRow"];
+export type UncertaintySignal = TriageRow["uncertainty"][number];
 
 export const triageKey = ["triage"] as const;
 

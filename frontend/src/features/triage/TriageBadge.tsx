@@ -18,6 +18,12 @@ export const STATUS_TEXT: Record<Status, string> = {
   unsure: "text-amber-700 dark:text-amber-400",
 };
 
+/** Small chips for a Phrase that failed or is unsure. */
+export const STATUS_CHIP: Record<"fail" | "unsure", string> = {
+  fail: DECISION_CLASSES.reject,
+  unsure: DECISION_CLASSES.needs_review,
+};
+
 export const STATUS_FILL: Record<Status, string> = {
   pass: "bg-emerald-600",
   fail: "bg-red-600",

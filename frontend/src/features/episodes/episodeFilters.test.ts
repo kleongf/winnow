@@ -1,0 +1,74 @@
+import { describe, expect, it } from "vitest";
+
+import type { SetName } from "../sets/useSets";
+import type { TriageRow } from "../triage/useTriage";
+import { applyFilters, nextSort, parseFilters, signalsIn } from "./episodeFilters";
+
+const PLACES = "places it on the target";
+
+function row(id: string, confidence: number, extra: Partial<TriageRow> = {}): TriageRow {
+  return {
+    episode_id: id,
+    decision: "needs_review",
+    reason: "",
+    confidence,
+    not_passed: [],
+    uncertainty: [],
+    ...extra,
+  };
+}
+
+const episodes = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
+const triageOf = new Map(
+  [
+    row("a", 0.9),
+    row("b", 0.6, {
+      not_passed: [{ phrase: PLACES, status: "unsure" }],
+      uncertainty: ["near threshold"],
+    }),
+    row("c", 0.7, {
+      not_passed: [{ phrase: PLACES, status: "unsure" }],
+      uncertainty: ["unconfirmed fail"],
+    }),
+  ].map((r) => [r.episode_id, r]),
+);
+const setOf = new Map<string, SetName>([["a", "dev"]]);
+
+function ids(params: string): string[] {
+  return applyFilters(episodes, parseFilters(new URLSearchParams(params)), triageOf, setOf).map(
+    (e) => e.id,
+  );
+}
+
+describe("applyFilters", () => {
+  it("keeps the Dataset's order with no filters", () => {
+    expect(ids("")).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("filters by a Phrase that didn't pass, an Uncertainty signal, and a set", () => {
+    expect(ids(`phrase=${encodeURIComponent(PLACES)}`)).toEqual(["b", "c"]);
+    expect(ids("signal=unconfirmed+fail")).toEqual(["c"]);
+    expect(ids("set=dev")).toEqual(["a"]);
+    expect(ids("set=none")).toEqual(["b", "c", "d"]);
+    expect(ids("set=dev&signal=near+threshold")).toEqual([]);
+  });
+
+  it("sorts by confidence either way, unscored Episodes last", () => {
+    expect(ids("sort=confidence")).toEqual(["b", "c", "a", "d"]);
+    expect(ids("sort=-confidence")).toEqual(["a", "c", "b", "d"]);
+  });
+});
+
+describe("nextSort", () => {
+  it("cycles least confident first, most confident first, then off", () => {
+    expect(nextSort(null)).toBe("confidence");
+    expect(nextSort("confidence")).toBe("-confidence");
+    expect(nextSort("-confidence")).toBeNull();
+  });
+});
+
+describe("signalsIn", () => {
+  it("lists each signal present once", () => {
+    expect(signalsIn([...triageOf.values()])).toEqual(["near threshold", "unconfirmed fail"]);
+  });
+});
