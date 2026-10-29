@@ -1,10 +1,9 @@
-"""The Rubric version every Project starts from, seeded from the frozen Description by hand until
-compile exists: its measured Criteria. "never drops it" waits for the tracked primitives, and
-"places it ..." gets its conclusive Criteria (target-box overlap, a visual question) with them;
-until then its release height can only send an Episode to review."""
+"""The Rubric version every Project starts from, seeded from the frozen Description by hand: its
+measured Criteria and the placement question Spark answers from a cropped clip. "never drops
+it" waits for the tracked primitives, and "places it ..." gains target-box overlap with them."""
 
 from winnow.baseline.prompts import FROZEN
-from winnow.criteria.models import Criterion, RubricSettings, Setting
+from winnow.criteria.models import Criterion, RubricSettings, Setting, Window
 from winnow.rubric.models import Rubric
 
 FIRST_TRY, _NEVER_DROPS, PLACES, NO_PAUSES = FROZEN.phrases
@@ -48,6 +47,24 @@ SEEDED = Rubric(
                 "Placed, not dropped: released within 5 cm above where it was picked up. "
                 "Inconclusive, since placing on top of something is a high release."
             ],
+        ),
+        Criterion(
+            id="placed-on-target",
+            phrase=PLACES,
+            primitive="ask_video",
+            comparator=">=",
+            threshold=3,
+            unit="samples",
+            window=Window(kind="after_release"),
+            views=["exterior_image_1_left"],
+            question="Is the object resting in or on the target named in the task when the clip "
+            "ends?",
+            paraphrases=[
+                "Once the gripper lets go, does the object end up in or on the task's target?",
+                "At the end, has the object been placed in or on the target rather than dropped "
+                "beside it or left somewhere else?",
+            ],
+            crop="placement",
         ),
         Criterion(
             id="longest-pause",

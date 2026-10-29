@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.visual.scripted import ScriptedVisual
 from winnow.app import create_app
 from winnow.core.settings import Settings
 from winnow.episodes.fixtures import write_fixture_source
@@ -42,4 +43,17 @@ def settings(tmp_path: Path, droid100_root: Path, droid101_root: Path) -> Settin
 @pytest.fixture
 def api(settings: Settings) -> Iterator[TestClient]:
     with TestClient(create_app(settings)) as client:
+        yield client
+
+
+@pytest.fixture
+def visual_spark() -> ScriptedVisual:
+    return ScriptedVisual()
+
+
+@pytest.fixture
+def asked_api(settings: Settings, visual_spark: ScriptedVisual) -> Iterator[TestClient]:
+    """The app with a scripted Meta API, so `tests.helpers.ask_visual` can answer the seeded
+    Rubric's placement question (pass on every sample, unless scripted otherwise)."""
+    with TestClient(create_app(settings, transport=visual_spark)) as client:
         yield client

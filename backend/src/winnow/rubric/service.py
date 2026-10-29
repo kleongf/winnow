@@ -9,6 +9,7 @@ from winnow.rubric.manifest import capabilities_manifest
 from winnow.rubric.models import AnchorPreview, DraftEdit, RubricDraft, RubricVersion
 from winnow.rubric.preview import anchor_preview, revealed_anchor_facts
 from winnow.rubric.seed import SEEDED_SETTINGS
+from winnow.visual.service import ask_visual
 
 
 class MetaUnavailableError(RuntimeError):
@@ -54,5 +55,9 @@ def preview_version(ctx: AppContext, version: RubricVersion) -> AnchorPreview:
 
 def run_draft(ctx: AppContext) -> RubricVersion:
     """Freezes the draft into the next Rubric version, which every Episode is then scored
-    against. Never waits for unconfirmed assumptions."""
-    return ctx.rubrics.add(_draft(ctx).rubric())
+    against, and asks Spark its visual Criteria in the background. Never waits for unconfirmed
+    assumptions."""
+    version = ctx.rubrics.add(_draft(ctx).rubric())
+    if ctx.meta is not None:  # without it, visual Criteria stay unsure: nothing asked
+        ask_visual(ctx, version)
+    return version

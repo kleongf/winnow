@@ -9,7 +9,8 @@ from winnow.triage.scoring import score
 
 
 def episode_facts(ctx: AppContext, episode: Episode) -> EpisodeFacts:
-    return EpisodeFacts(ctx.episodes.load_signals(episode))
+    signals = ctx.episodes.load_signals(episode)
+    return EpisodeFacts(signals, visual=ctx.visual.for_episode(episode.id))
 
 
 def _triage(ctx: AppContext, version: RubricVersion, episode: Episode) -> EpisodeTriage:

@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import OPEN_GRIPPER_EPISODE
-from tests.helpers import app_context, reference_label, wait_for_job
+from tests.helpers import app_context, ask_visual, reference_label, wait_for_job
 from winnow.baseline.prompts import FROZEN
 from winnow.rubric.models import Rubric
 from winnow.rubric.store import RubricStore
@@ -18,10 +18,12 @@ REGRASP_EPISODE = 2  # the fixture's failures (i % 3 == 2) are Episode 42-shaped
 
 
 @pytest.fixture
-def ingested(api: TestClient) -> TestClient:
+def ingested(asked_api: TestClient) -> TestClient:
+    api = asked_api  # Spark sees every Episode's object placed on its target
     indices = [0, HIGH_RELEASE_EPISODE, REGRASP_EPISODE, OPEN_GRIPPER_EPISODE]
     job = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": indices})
     wait_for_job(api, job.json()["job_id"])
+    ask_visual(api)
     for index in indices:  # their outputs show only once labelled
         reference_label(api, f"droid_100:{index}")
     return api
@@ -34,7 +36,7 @@ def test_the_rubric_is_seeded_from_the_frozen_description(api: TestClient):
     rubric = version["rubric"]
     assert rubric["description"] == FROZEN.text
     assert rubric["phrases"] == list(FROZEN.phrases)
-    attempts, release, pause = rubric["criteria"]
+    attempts, release, placed, pause = rubric["criteria"]
     assert (attempts["primitive"], attempts["phrase"], attempts["kind"]) == (
         "grasp_attempts",
         FIRST_TRY,
@@ -51,6 +53,17 @@ def test_the_rubric_is_seeded_from_the_frozen_description(api: TestClient):
         NO_PAUSES,
         {"speed_below_m_s": 0.01},
     )
+    assert (placed["primitive"], placed["phrase"], placed["kind"]) == (
+        "ask_video",
+        PLACES,
+        "visual",
+    )
+    assert (placed["window"]["kind"], placed["crop"], placed["hard"]) == (
+        "after_release",
+        "placement",
+        True,
+    )
+    assert placed["question"] and len(placed["paraphrases"]) == 2  # frozen
     assert release["assumptions"] and pause["assumptions"]  # guesses until the interview
     settings = rubric["settings"]
     assert settings["gripper_closed_level"]["value"] == 0.2

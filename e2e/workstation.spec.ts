@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { EPISODES, ingest } from "./helpers.ts";
+import { askVisual, EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
 
 // This spec's Episodes are 0 and 1.
 test.beforeEach(async ({ request }) => {
@@ -45,6 +45,32 @@ test("the wrist view shows SAM's box following the playhead", async ({ page }) =
   await page.getByLabel("Playhead").fill("2.4");
   await expect.poll(left).toBeGreaterThan(before + 10);
   await expect(page.getByTestId("track-status-wrist")).toHaveText("box on 15 of 15 frames");
+});
+
+test("a visual Criterion shows each of Spark's samples and the clip it watched", async ({
+  page,
+  request,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+  await referenceLabel(request, [episodeId(1)]); // its outputs show once labelled
+  await askVisual(request, [1]); // scripted to split 2-1
+
+  await page.goto("/?page=episodes&episode=droid_100%3A1");
+  const result = page.getByTestId("criterion-placed-on-target");
+  await expect(result).toContainText("samples split");
+  await result.getByRole("button", { name: /Is the object resting in or on the target/ }).click();
+
+  const evidence = result.getByTestId("visual-evidence");
+  const samples = evidence.getByRole("list", { name: "Spark's samples" }).getByRole("listitem");
+  await expect(samples).toHaveCount(3);
+  await expect(samples.filter({ hasText: "fail · confidence" })).toHaveCount(1);
+  await expect(evidence.getByLabel("Clip Spark watched")).toHaveAttribute(
+    "src",
+    /\/api\/episodes\/droid_100%3A1\/visual-clips\/[0-9a-f]{16}\.mp4$/,
+  );
+  await expect(evidence).toContainText("exterior_image_1_left");
+  expect(errors).toEqual([]);
 });
 
 test("J and K step through Episodes and Esc goes back to the table", async ({ page }) => {

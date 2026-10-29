@@ -35,6 +35,8 @@ from winnow.tracking.store import TrackStore
 from winnow.tracking.target import target_box_step
 from winnow.tracking.target_store import TargetBoxStore
 from winnow.tracking.wrist import track_wrist_step
+from winnow.visual.steps import VisualSources, crop_step, visual_step
+from winnow.visual.store import VisualStore
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,7 @@ class AppContext:
     drafts: DraftStore  # the Describe page's Rubric draft
     reference_labels: ReferenceLabelStore  # never read by scoring
     test_runs: TestRunLog
+    visual: VisualStore  # Spark's answers to visual Criteria
     jobs: JobStore
     runner: JobRunner
     meta: MetaClient | None  # None without a Meta API key: no step that calls Meta runs
@@ -84,15 +87,18 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     drafts = DraftStore(db)
     reference_labels = ReferenceLabelStore(db)
     test_runs = TestRunLog(db)
+    visual = VisualStore(db)
     jobs = JobStore(db)
     meta = _meta(settings, db, transport)
-    steps: dict[str, Step] = {"ingest": ingest_step(episodes, sources)}
+    asked = VisualSources(rubrics, episodes, boxes, tracks, targets, visual)
+    steps: dict[str, Step] = {"ingest": ingest_step(episodes, sources), "crop": crop_step(asked)}
     droid101 = sources.get("droid_1.0.1")
     if meta is not None:
         steps["baseline"] = baseline_step(meta, baseline, episodes)
         steps["track_wrist"] = track_wrist_step(meta, tracks, episodes)
         steps["track_exterior"] = track_exterior_step(meta, tracks, boxes, episodes)
         steps["target_box"] = target_box_step(meta, targets, boxes, episodes)
+        steps["visual"] = visual_step(meta, asked)
         if isinstance(droid101, Droid101):
             steps["select"] = select_step(meta, selection, droid101, settings.data_dir)
     runner = JobRunner(jobs, steps, concurrency=settings.ingest_concurrency)
@@ -111,6 +117,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         drafts,
         reference_labels,
         test_runs,
+        visual,
         jobs,
         runner,
         meta,

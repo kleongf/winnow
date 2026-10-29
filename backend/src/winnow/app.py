@@ -18,6 +18,7 @@ from winnow.selection.routes import router as selection_router
 from winnow.sets.routes import router as sets_router
 from winnow.tracking.routes import router as tracking_router
 from winnow.triage.routes import router as triage_router
+from winnow.visual.routes import router as visual_router
 
 
 def create_app(settings: Settings | None = None, transport: Transport | None = None) -> FastAPI:
@@ -43,6 +44,7 @@ def create_app(settings: Settings | None = None, transport: Transport | None = N
         triage_router,
         reference_labels_router,
         evaluation_router,
+        visual_router,
         jobs_router,
     ):
         app.include_router(router, prefix="/api")

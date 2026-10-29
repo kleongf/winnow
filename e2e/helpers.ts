@@ -86,6 +86,32 @@ export async function ingest(
     .toBe(true);
 }
 
+/** Ask the latest Rubric's visual Criteria of these Episodes and wait. Their answers are scripted
+ * for every unboxed fixture Episode (backend/tests/record_visual.py); a boxed one's clip is cut
+ * differently, so its visual Criteria fail their step and stay unsure. */
+export async function askVisual(
+  request: APIRequestContext,
+  indices: readonly number[],
+): Promise<void> {
+  const started = await request.post("/api/visual/ask", {
+    data: { episode_ids: indices.map(episodeId) },
+  });
+  expect(started.status()).toBe(202);
+  const { job_id: jobId } = (await started.json()) as { job_id: number | null };
+  if (jobId === null) return;
+  await expect
+    .poll(
+      async () => {
+        const job = (await (await request.get(`/api/jobs/${String(jobId)}`)).json()) as {
+          finished: boolean;
+        };
+        return job.finished;
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+}
+
 /** The box `dragBox` draws: from 40% to 60% of each side of the 320x180 frame. Its exterior
  * track and target box are recorded for every fixture Episode in both exterior views
  * (backend/tests/record_meta.py), so the work a saved box queues replays. */

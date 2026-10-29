@@ -68,6 +68,21 @@ def cut_h264(source: str, start_s: float, frames: int, out: Path) -> None:
     partial.replace(out)
 
 
+def cut_cropped(
+    source: Path, start_s: float, end_s: float, crop: tuple[int, int, int, int] | None, out: Path
+) -> None:
+    """The stretch from `start_s` to `end_s`, cropped to (left, top, width, height) if given."""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    partial = out.with_suffix(".partial.mp4")
+    filters = ["-vf", "crop={2}:{3}:{0}:{1}".format(*crop)] if crop else []
+    _ffmpeg(
+        "-ss", f"{start_s:.4f}", "-i", str(source), "-t", f"{end_s - start_s:.4f}", *filters,
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an",
+        str(partial),
+    )  # fmt: skip
+    partial.replace(out)
+
+
 def tile_frames(source: str, start_s: float, duration_s: float, count: int, out: Path) -> None:
     """`count` frames spread evenly over the stretch, in one row, as a JPEG."""
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -70,6 +70,13 @@ def _measure(
     return CATALOG[criterion.primitive].measure(criterion, facts, grasps, frames)
 
 
+def _camera(criterion: Criterion, measured: Measurement) -> str | None:
+    """The view to show: the one Spark watched, else the Criterion's first."""
+    if measured.visual is not None and measured.visual.clip is not None:
+        return measured.visual.clip.camera
+    return criterion.views[0] if criterion.views else None
+
+
 def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) -> CriterionResult:
     frames = resolve_window(criterion.window, grasps, facts.signals.fps)
     measured = _measure(criterion, facts, grasps, frames)
@@ -97,7 +104,7 @@ def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) 
         uncertainty=judged.uncertainty,
         margin=effective_margin(criterion),
         p_pass=judged.p_pass,
-        camera=criterion.views[0] if criterion.views else None,
+        camera=_camera(criterion, measured),
         visual=measured.visual,
     )
 

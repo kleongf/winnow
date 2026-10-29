@@ -43,8 +43,9 @@ def test_labelling_an_episode_reveals_its_outputs(ingested: TestClient):
     assert triage_rows(ingested)[UNLABELLED]["decision"] == "reject"
     triage = ingested.get(f"/api/episodes/{UNLABELLED}/triage").json()
     assert triage["decision"] == "reject"
-    # Grasp attempts fail; like Episode 42 it also releases high, an unconfirmed fail.
-    assert [r["status"] for r in triage["criteria"]] == ["fail", "fail", "pass"]
+    # Grasp attempts fail; like Episode 42 it also releases high, an unconfirmed fail. Spark
+    # hasn't been asked whether it was placed.
+    assert [r["status"] for r in triage["criteria"]] == ["fail", "fail", "unsure", "pass"]
 
 
 def test_the_episode_list_says_which_episodes_await_a_reference_label(ingested: TestClient):

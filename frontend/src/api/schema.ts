@@ -242,6 +242,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/episodes/{episode_id}/visual-clips/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Visual Clip
+         * @description The clip a visual Criterion asked Spark about.
+         */
+        get: operations["get_visual_clip_api_episodes__episode_id__visual_clips__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/evaluation/runs": {
         parameters: {
             query?: never;
@@ -694,6 +714,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/visual/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Ask
+         * @description Ask Spark the latest Rubric version's visual Criteria about each Episode, in the
+         *     background: crop one clip per Criterion and Episode, then 3 samples about it. Asking again
+         *     pays only for cache misses.
+         */
+        post: operations["post_ask_api_visual_ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -757,6 +799,16 @@ export interface components {
             status: "pass" | "fail" | "unsure";
             /** Value */
             value: number | null;
+        };
+        /** AskRequest */
+        AskRequest: {
+            /** Episode Ids */
+            episode_ids?: string[] | null;
+        };
+        /** AskStarted */
+        AskStarted: {
+            /** Job Id */
+            job_id: number | null;
         };
         /** Box */
         Box: {
@@ -2191,6 +2243,45 @@ export interface operations {
             };
         };
     };
+    get_visual_clip_api_episodes__episode_id__visual_clips__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "video/mp4": unknown;
+                };
+            };
+            /** @description No such clip */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_evaluation_run_api_evaluation_runs_post: {
         parameters: {
             query?: never;
@@ -2882,6 +2973,46 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TriageList"];
                 };
+            };
+        };
+    };
+    post_ask_api_visual_ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The Meta API isn't configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

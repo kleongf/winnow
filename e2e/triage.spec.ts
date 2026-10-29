@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
+import { askVisual, EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
 
 // Two Episodes that release inside the release height's margin (LESS_SURE nearer its fail
 // side), one that fails its grasp twice first, and one kept.
@@ -20,6 +20,7 @@ test.beforeEach(async ({ request }) => {
   await ingest(request, EPISODES.triage);
   // Their Triage decisions show only once labelled.
   await referenceLabel(request, EPISODES.triage.map(episodeId));
+  await askVisual(request, EPISODES.triage); // Spark sees each object placed on its target
 });
 
 test("the table sorts Episodes into Triage tabs with their Reasons", async ({ page }) => {
