@@ -69,7 +69,7 @@ def test_an_episodes_triage_has_its_criterion_results_with_moments(ingested: Tes
     assert result["status"] == "fail" and result["measurement"] == "3 attempts"
     assert [m["label"] for m in result["moments"]] == ["Attempt 1", "Attempt 2", "Grasp"]
     assert result["at_s"] == result["moments"][0]["t"]
-    assert result["window"] == [0.0, pytest.approx(44 / 15, abs=1e-3)]
+    assert result["window"] == {"start": 0.0, "end": pytest.approx(44 / 15, abs=1e-3)}
     assert [s["t"] for s in triage["reason"] if s["t"] is not None] == [
         m["t"] for m in result["moments"]
     ]

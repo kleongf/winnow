@@ -23,7 +23,7 @@ test("Prepare shows each set's size and frozen state; Episodes show their set", 
   await expect(page.getByTestId("set-test")).toContainText("not frozen");
 
   await page.goto("/?page=episodes");
-  await expect(page.getByRole("row", { name: /^0 .* Dev set$/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /^0 .* Dev set Keep/ })).toBeVisible();
   await page.getByRole("row", { name: /^0 / }).click();
   await expect(page.getByTestId("episode-set")).toHaveText("Dev set");
 });

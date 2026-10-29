@@ -609,11 +609,7 @@ export interface components {
             unit: string;
             /** Value */
             value: number | null;
-            /** Window */
-            window: [
-                number,
-                number
-            ] | null;
+            window: components["schemas"]["TimeWindow"] | null;
             /** Window Name */
             window_name: string;
         };
@@ -895,6 +891,13 @@ export interface components {
             t?: number | null;
             /** Text */
             text: string;
+        };
+        /** TimeWindow */
+        TimeWindow: {
+            /** End */
+            end: number;
+            /** Start */
+            start: number;
         };
         /** Track */
         Track: {

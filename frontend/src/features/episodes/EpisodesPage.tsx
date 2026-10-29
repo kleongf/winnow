@@ -1,91 +1,84 @@
-// Every ingested Episode in a dense table; a row opens the full-page Workstation. The open
-// Episode and its start time live in `?episode=` and `?t=`.
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
+// Every ingested Episode in a dense table, sorted into Triage tabs with its Reason; a row opens
+// the full-page Workstation. The tab, the open Episode and its start time live in `?triage=`,
+// `?episode=` and `?t=`; J/K step through the tab's Episodes.
 import { navigate, useSearchParams } from "../core/url";
-import { SetTag } from "../sets/SetTag";
 import { setsByEpisode, useSets } from "../sets/useSets";
+import { countDecisions, parseTriageTab, TriageTabs, type TriageTab } from "../triage/TriageTabs";
+import { useTriageList } from "../triage/useTriage";
 import { EpisodePage } from "./EpisodePage";
-import { useEpisodes } from "./useEpisodes";
+import { EpisodeTable } from "./EpisodeTable";
+import { useEpisodes, type Episode } from "./useEpisodes";
+
+function open(id: string | null) {
+  navigate({ episode: id, t: null });
+}
+
+function useTriagedEpisodes(tab: TriageTab) {
+  const all = useEpisodes().data;
+  const triage = useTriageList().data;
+  const triageOf = new Map(triage?.rows.map((r) => [r.episode_id, r]));
+  const episodes = all ?? [];
+  const shown =
+    tab === "all" ? episodes : episodes.filter((e) => triageOf.get(e.id)?.decision === tab);
+  const counts = countDecisions(triage?.rows.map((r) => r.decision) ?? []);
+  const summary = triage
+    ? `${String(counts.all - counts.needs_review)} of ${String(counts.all)} decided automatically · ${String(counts.needs_review)} Needs review · Rubric v${String(triage.rubric_version)}`
+    : `${String(episodes.length)} Episodes in the Dataset.`;
+  return { loaded: all !== undefined, episodes, shown, triageOf, counts, summary };
+}
+
+function OpenEpisode(props: { episode: Episode; ids: string[]; t: string | null }) {
+  const t = Number(props.t ?? 0);
+  return (
+    <EpisodePage
+      key={props.episode.id}
+      episode={props.episode}
+      ids={props.ids}
+      initialT={Number.isFinite(t) ? t : 0}
+      onOpen={open}
+    />
+  );
+}
 
 export function EpisodesPage() {
   const params = useSearchParams();
-  const episodes = useEpisodes();
+  const tab = parseTriageTab(params.get("triage"));
+  const { loaded, episodes, shown, triageOf, counts, summary } = useTriagedEpisodes(tab);
   const setOf = setsByEpisode(useSets().data);
-  const openId = params.get("episode");
-  const list = episodes.data ?? [];
-  const open = (id: string | null) => {
-    navigate({ episode: id, t: null });
-  };
 
-  const openEpisode = list.find((e) => e.id === openId);
+  const openEpisode = episodes.find((e) => e.id === params.get("episode"));
   if (openEpisode) {
-    const t = Number(params.get("t") ?? 0);
-    return (
-      <EpisodePage
-        key={openEpisode.id}
-        episode={openEpisode}
-        ids={list.map((e) => e.id)}
-        initialT={Number.isFinite(t) ? t : 0}
-        onOpen={open}
-      />
-    );
+    const ids = shown.map((e) => e.id);
+    const steps = ids.includes(openEpisode.id) ? ids : episodes.map((e) => e.id);
+    return <OpenEpisode episode={openEpisode} ids={steps} t={params.get("t")} />;
   }
 
   return (
     <div className="mx-auto max-w-6xl p-8">
       <div className="text-xs text-muted-foreground">Project</div>
       <h1 className="text-xl font-semibold">Episodes</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {list.length} Episodes in the Dataset. Open one to watch it with its robot data.
-      </p>
-      {list.length === 0 && !episodes.isPending && (
+      <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
+      {episodes.length === 0 && loaded && (
         <p className="mt-6 text-sm text-muted-foreground">
           No Episodes yet: ingest some on the Prepare page.
         </p>
       )}
-      {list.length > 0 && (
-        <Table className="mt-6">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-32">Episode</TableHead>
-              <TableHead>Instruction</TableHead>
-              <TableHead className="w-24 text-right">Length</TableHead>
-              <TableHead className="w-28">Source</TableHead>
-              <TableHead className="w-24">Set</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.map((e) => (
-              <TableRow
-                key={e.id}
-                className="cursor-pointer"
-                onClick={() => {
-                  open(e.id);
-                }}
-              >
-                <TableCell className="font-medium tabular-nums">{e.index}</TableCell>
-                <TableCell className="max-w-md truncate">
-                  {e.instruction ?? <span className="text-muted-foreground">None recorded</span>}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {e.duration_s.toFixed(1)} s
-                </TableCell>
-                <TableCell className="text-muted-foreground">{e.source}</TableCell>
-                <TableCell>
-                  <SetTag name={setOf.get(e.id)} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      {episodes.length > 0 && (
+        <>
+          <div className="mt-5">
+            <TriageTabs
+              tab={tab}
+              counts={counts}
+              onTab={(next) => {
+                navigate({ triage: next === "all" ? null : next });
+              }}
+            />
+          </div>
+          <EpisodeTable episodes={shown} triageOf={triageOf} setOf={setOf} onOpen={open} />
+          {shown.length === 0 && (
+            <p className="mt-4 text-sm text-muted-foreground">No Episodes in this tab.</p>
+          )}
+        </>
       )}
     </div>
   );

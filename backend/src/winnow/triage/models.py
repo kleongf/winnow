@@ -22,6 +22,11 @@ class PhraseLabel(BaseModel):
     source: LabelSource
 
 
+class TimeWindow(BaseModel):
+    start: float  # s
+    end: float  # s
+
+
 class CriterionResult(BaseModel):
     criterion_id: str
     phrase: str
@@ -37,7 +42,7 @@ class CriterionResult(BaseModel):
     unit: str
     evidence: list[TextSpan]
     moments: list[Moment]
-    window: tuple[float, float] | None  # s; None when the window is empty
+    window: TimeWindow | None  # None when the window is empty
     window_name: str
     at_s: float | None  # where it went wrong, for a fail
     uncertainty: UncertaintySignal | None

@@ -19,6 +19,7 @@ from winnow.triage.models import (
     CriterionResult,
     PhraseLabel,
     PhraseResult,
+    TimeWindow,
     Triage,
     TriageDecision,
 )
@@ -90,7 +91,9 @@ def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) 
         unit=criterion.unit,
         evidence=measured.evidence,
         moments=measured.moments,
-        window=None if frames is None else (facts.t[frames.start], facts.t[frames.end]),
+        window=None
+        if frames is None
+        else TimeWindow(start=facts.t[frames.start], end=facts.t[frames.end]),
         window_name=window_name(criterion.window),
         at_s=measured.at_s if status == "fail" else None,
         uncertainty="window empty" if frames is None else None,

@@ -1,14 +1,19 @@
 // The Workstation (#8, Variant A): one large video with camera tabs, one playhead driving the
-// video and the robot-data plots, and a right panel. Review and Reference label mode put their
-// controls in `actions`; Criterion lanes and results arrive with scoring.
+// video, a lane per Criterion and the robot-data plots, and a right panel with the Triage
+// decision, Reason and Criterion results. Review and Reference label mode put their controls in
+// `actions`.
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 
+import { useSignalLevels } from "../rubric/useRubric";
 import { SET_LABELS, setsByEpisode, useSets } from "../sets/useSets";
 import { TrackOverlay } from "../tracking/TrackOverlay";
 import { TrackStatus } from "../tracking/TrackStatus";
 import { useTracks } from "../tracking/useTracks";
+import { CriterionLanes } from "../triage/CriterionLanes";
+import { TriagePanel } from "../triage/TriagePanel";
+import { useTriageFocus } from "../triage/useTriageFocus";
 import { EpisodeVideo } from "./EpisodeVideo";
 import { SignalPlots } from "./SignalPlots";
 import { clipUrl, useSignals, type Episode } from "./useEpisodes";
@@ -28,7 +33,9 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
   const set = setsByEpisode(useSets().data).get(episode.id);
   const tracks = useTracks(episode.id).data ?? [];
   const shownTrack = tracks.find((t) => t.camera === camera && t.status === "tracked");
-  const { toggle } = playhead;
+  const levels = useSignalLevels();
+  const { toggle, seek } = playhead;
+  const { triage, openId, setOpenId, focus } = useTriageFocus(episode, seek, setCamera);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -75,12 +82,35 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
           </div>
         )}
         <Transport playhead={playhead} duration={episode.duration_s} canPlay={camera !== null} />
+        {triage && (
+          <CriterionLanes
+            results={triage.criteria}
+            duration={episode.duration_s}
+            t={playhead.t}
+            openId={openId}
+            onFocus={focus}
+          />
+        )}
         {signals.data && (
-          <SignalPlots signals={signals.data} playhead={playhead} duration={episode.duration_s} />
+          <SignalPlots
+            signals={signals.data}
+            playhead={playhead}
+            duration={episode.duration_s}
+            levels={levels}
+          />
         )}
       </section>
       <aside className="min-w-0 rounded-lg border bg-card p-4">
         {props.actions}
+        {triage && (
+          <TriagePanel
+            triage={triage}
+            openId={openId}
+            onOpen={setOpenId}
+            onFocus={focus}
+            onSeek={seek}
+          />
+        )}
         <div className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
           Instruction
         </div>
@@ -100,9 +130,6 @@ export function Workstation(props: { episode: Episode; initialT?: number; action
             <TrackStatus key={track.kind} track={track} />
           ))}
         </dl>
-        <p className="mt-6 text-xs text-muted-foreground">
-          The Triage decision, Reason and Criterion results appear here once the Episode is scored.
-        </p>
       </aside>
     </div>
   );
