@@ -28,7 +28,10 @@ from winnow.rubric.store import RubricStore
 from winnow.selection.service import select_step
 from winnow.selection.store import SelectionStore
 from winnow.sets.store import SetStore
+from winnow.tracking.exterior import track_exterior_step
 from winnow.tracking.store import TrackStore
+from winnow.tracking.target import target_box_step
+from winnow.tracking.target_store import TargetBoxStore
 from winnow.tracking.wrist import track_wrist_step
 
 
@@ -43,6 +46,7 @@ class AppContext:
     selection: SelectionStore
     sets: SetStore
     tracks: TrackStore
+    targets: TargetBoxStore
     rubrics: RubricStore
     reference_labels: ReferenceLabelStore  # never read by scoring
     jobs: JobStore
@@ -71,6 +75,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     selection = SelectionStore(db)
     sets = SetStore(db)
     tracks = TrackStore(db)
+    targets = TargetBoxStore(db)
     rubrics = RubricStore(db, SEEDED)
     reference_labels = ReferenceLabelStore(db)
     jobs = JobStore(db)
@@ -80,6 +85,8 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     if meta is not None:
         steps["baseline"] = baseline_step(meta, baseline, episodes)
         steps["track_wrist"] = track_wrist_step(meta, tracks, episodes)
+        steps["track_exterior"] = track_exterior_step(meta, tracks, boxes, episodes)
+        steps["target_box"] = target_box_step(meta, targets, boxes, episodes)
         if isinstance(droid101, Droid101):
             steps["select"] = select_step(meta, selection, droid101, settings.data_dir)
     runner = JobRunner(jobs, steps, concurrency=settings.ingest_concurrency)
@@ -93,6 +100,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         selection,
         sets,
         tracks,
+        targets,
         rubrics,
         reference_labels,
         jobs,

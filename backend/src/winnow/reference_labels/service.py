@@ -2,6 +2,7 @@ import sqlite3
 from datetime import UTC, datetime
 
 from winnow.baseline.prompts import FROZEN
+from winnow.boxes.service import queue_box_work
 from winnow.core.context import AppContext
 from winnow.episodes.models import Episode
 from winnow.reference_labels.models import ReferenceLabel, ReferenceLabelDraw
@@ -56,4 +57,5 @@ def save_label(ctx: AppContext, episode: Episode, draw: ReferenceLabelDraw) -> R
     if episode.instruction is None:
         # Scoring and the baseline read the Episode, never its Reference label.
         ctx.episodes.write_instruction(episode.id, instruction)
+        queue_box_work(ctx, episode.id, ("target_box",))  # it names the target to look for
     return label

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 
 import { useSignalLevels } from "../rubric/useRubric";
 import { SET_LABELS, setsByEpisode, useSets } from "../sets/useSets";
+import { TargetOverlay } from "../tracking/TargetOverlay";
+import { TargetStatus } from "../tracking/TargetStatus";
 import { TrackOverlay } from "../tracking/TrackOverlay";
 import { TrackStatus } from "../tracking/TrackStatus";
 import { useTracks, type Track } from "../tracking/useTracks";
@@ -84,6 +86,7 @@ export function Workstation(props: {
           <div className="relative">
             <EpisodeVideo key={camera} src={clipUrl(episode.id, camera)} playhead={playhead} />
             {shownTrack && <TrackOverlay track={shownTrack} playhead={playhead} />}
+            <TargetOverlay episodeId={episode.id} camera={camera} hidden={props.blind} />
           </div>
         ) : (
           <div className="grid aspect-video w-full place-items-center rounded bg-black text-sm text-white/60">
@@ -138,6 +141,7 @@ export function Workstation(props: {
           {tracks.map((track) => (
             <TrackStatus key={track.kind} track={track} />
           ))}
+          <TargetStatus episodeId={episode.id} hidden={props.blind} />
         </dl>
       </aside>
     </div>
