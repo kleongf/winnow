@@ -1,29 +1,19 @@
 // The Describe page: write a Description on the left and compile it; the live Rubric draft is
-// on the right. Every number here comes from the anchor pool (the Dev set), never the Test set.
+// on the right, edited directly on its cards. Every number here comes from the anchor pool (the
+// Dev set), never the Test set. `?version=` shows a frozen Rubric version instead.
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
+import { useSearchParams } from "../core/url";
+import { DescribeHeader } from "./DescribeHeader";
 import { RubricPanel } from "./RubricPanel";
-import { useAnchorPool, useCompile, useDraft } from "./useDraft";
-import { useRubric } from "./useRubric";
-
-function plural(n: number, word: string): string {
-  return `${String(n)} ${word}${n === 1 ? "" : "s"}`;
-}
-
-function AnchorPoolLine() {
-  const pool = useAnchorPool().data;
-  if (!pool) return null;
-  return (
-    <p className="text-xs text-muted-foreground" data-testid="anchor-pool">
-      Anchor pool: <span className="font-medium text-foreground">Dev set</span> ·{" "}
-      {plural(pool.episode_ids.length, "Episode")} ·{" "}
-      {plural(pool.hidden_test_episodes, "Test set Episode")} hidden
-    </p>
-  );
-}
+import { useCompile, useDraft } from "./useDraft";
+import { useDraftEditor } from "./useDraftEditor";
+import { useVersionPreview } from "./useDraftEdits";
+import { useRubric, useVersions } from "./useRubric";
+import { VersionPanel } from "./VersionPanel";
 
 function DescriptionForm() {
   const draft = useDraft().data;
@@ -68,22 +58,38 @@ function DescriptionForm() {
   );
 }
 
+function shownVersion(params: URLSearchParams): number | null {
+  const version = Number(params.get("version"));
+  return Number.isInteger(version) && version > 0 ? version : null;
+}
+
 export function DescribePage() {
+  const version = shownVersion(useSearchParams());
   const draft = useDraft();
+  const { editing, preview, error } = useDraftEditor(draft.data);
+  const frozen = useVersions().data?.find((v) => v.version === version);
+  const frozenPreview = useVersionPreview(version).data;
   return (
     <div>
-      <header className="sticky top-0 z-10 border-b bg-background/95 px-8 py-3 backdrop-blur">
-        <div className="text-xs text-muted-foreground">Project</div>
-        <h1 className="text-xl font-semibold">Describe</h1>
-        <AnchorPoolLine />
-      </header>
+      <DescribeHeader
+        version={version}
+        draft={draft.data}
+        preview={version === null ? preview : frozenPreview}
+      />
       <div className="grid grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-8 px-8 py-5">
-        <div className="sticky top-28 self-start">
+        <div className="sticky top-32 self-start">
           <DescriptionForm />
         </div>
-        <div aria-label="Rubric draft" role="region">
-          {draft.data ? (
-            <RubricPanel draft={draft.data} />
+        <div aria-label={version === null ? "Rubric draft" : "Rubric version"} role="region">
+          {error && <p className="mb-2 text-sm text-destructive">{error.message}</p>}
+          {version !== null ? (
+            frozen ? (
+              <VersionPanel version={frozen} preview={frozenPreview} />
+            ) : (
+              <p className="text-sm text-muted-foreground">Loading v{version}…</p>
+            )
+          ) : draft.data ? (
+            <RubricPanel draft={draft.data} editing={editing} />
           ) : (
             <p className="text-sm text-muted-foreground">
               {draft.isPending ? "Loading…" : "Compile a Description to see its Rubric draft."}
