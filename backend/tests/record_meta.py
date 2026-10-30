@@ -158,6 +158,7 @@ def main(argv: list[str]) -> int:
         if isinstance(transport, ReplayThenRecord):
             at = datetime.now(UTC).isoformat()
             entries = [{"at": at, **asdict(e)} for e in transport.made]
+        main_settings.cost_log_path.parent.mkdir(parents=True, exist_ok=True)
         with main_settings.cost_log_path.open("a") as log:
             log.writelines(json.dumps(e) + "\n" for e in entries)
         sys.stdout.write(f"spent ${sum(float(e['usd']) for e in entries):.4f}\n")

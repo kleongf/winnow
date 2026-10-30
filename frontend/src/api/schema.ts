@@ -57,7 +57,7 @@ export interface paths {
         /**
          * Post Audit Sample
          * @description Draws the Audit sample from the Episodes with a Reference label outside the Test set:
-         *     once per Rubric version, so drawing again returns the stored one.
+         *     once per Rubric version and margin multiplier s, so drawing again returns the stored one.
          */
         post: operations["post_audit_sample_api_audit_sample_post"];
         delete?: never;
