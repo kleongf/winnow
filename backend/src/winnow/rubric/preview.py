@@ -21,7 +21,7 @@ from winnow.rubric.models import (
     CriterionPreview,
     Rubric,
 )
-from winnow.triage.confidence import effective_margin
+from winnow.triage.confidence import UNCALIBRATED, effective_margin
 from winnow.triage.models import CriterionResult, Label, Triage
 from winnow.triage.scoring import score
 from winnow.triage.service import episode_facts
@@ -38,13 +38,15 @@ def anchor_labels(ctx: AppContext, ids: list[str]) -> dict[str, list[Label]]:
     return {id_: list(ctx.labels.in_force(id_)) for id_ in ids}
 
 
-def _criterion(criterion: Criterion, results: dict[str, CriterionResult]) -> CriterionPreview:
+def _criterion(
+    criterion: Criterion, results: dict[str, CriterionResult], s: float
+) -> CriterionPreview:
     statuses = [r.status for r in results.values()]
     return CriterionPreview(
         criterion_id=criterion.id,
         english=english(criterion),
         threshold=criterion.threshold,
-        margin=effective_margin(criterion),
+        margin=effective_margin(criterion, s),
         unit=criterion.unit,
         passing=statuses.count("pass"),
         failing=statuses.count("fail"),
@@ -62,15 +64,17 @@ def anchor_preview(
     shown: list[Criterion],
     version: int | None,
     labels: Mapping[str, Sequence[Label]],
+    s: float = UNCALIBRATED,
 ) -> AnchorPreview:
-    """`rubric` decides each Episode, with its `labels`; `shown` are the Criteria to histogram,
-    a superset of the Rubric's when some are switched off."""
+    """`rubric` decides each Episode, with its `labels` and margin multiplier `s`; `shown` are
+    the Criteria to histogram, a superset of the Rubric's when some are switched off."""
     everything = rubric.model_copy(update={"criteria": shown})
     triages: dict[str, Triage] = {
-        id_: score(rubric, f, labels.get(id_, ())) for id_, f in facts.items()
+        id_: score(rubric, f, labels.get(id_, ()), s) for id_, f in facts.items()
     }
     results = {
-        id_: {r.criterion_id: r for r in score(everything, f).criteria} for id_, f in facts.items()
+        id_: {r.criterion_id: r for r in score(everything, f, (), s).criteria}
+        for id_, f in facts.items()
     }
     decisions = [t.decision for t in triages.values()]
     episodes = [
@@ -84,6 +88,6 @@ def anchor_preview(
         needs_review=decisions.count("needs_review"),
         episodes=sorted(episodes, key=lambda e: e.confidence),
         criteria=[
-            _criterion(c, {id_: found[c.id] for id_, found in results.items()}) for c in shown
+            _criterion(c, {id_: found[c.id] for id_, found in results.items()}, s) for c in shown
         ],
     )

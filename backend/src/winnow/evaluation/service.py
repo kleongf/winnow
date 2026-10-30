@@ -3,7 +3,8 @@
 Reference labels are read here and nowhere in scoring. Only Episodes the blind gate reveals
 (those with a first-pass Reference label) are scored, and only aggregates and labels leave this
 module: no per-Episode decision is in the report. Interview and review labels tune the
-Rubric on the Dev set, so they are applied to Dev set Episodes only, never to the Test set.
+Rubric on the Dev set, so they are applied to Dev set Episodes only, never to the Test set; the
+margin multiplier s they calibrate is the version's, so it scores both.
 Everything is re-scored from stored facts and answers, so a report makes no Meta call.
 """
 
@@ -37,6 +38,7 @@ from winnow.reference_labels.gate import revealed_ids
 from winnow.reference_labels.models import ReferenceLabel
 from winnow.rubric.models import Rubric, RubricVersion
 from winnow.sets.models import SetName
+from winnow.triage.confidence import UNCALIBRATED
 from winnow.triage.models import Label
 from winnow.triage.scoring import score
 from winnow.triage.service import episode_facts
@@ -82,8 +84,8 @@ def _labelled(ctx: AppContext, label: ReferenceLabel, labels: Sequence[Label]) -
     )
 
 
-def case(item: Labelled, rubric: Rubric) -> EvaluationCase:
-    triage = score(rubric, item.facts, item.labels)
+def case(item: Labelled, rubric: Rubric, s: float = UNCALIBRATED) -> EvaluationCase:
+    triage = score(rubric, item.facts, item.labels, s)
     failbench = item.baseline.failbench
     return EvaluationCase(
         episode_id=item.episode.id,
@@ -124,8 +126,10 @@ def evaluation_report(
 
     items = [_labelled(ctx, first_pass[id], applied(id)) for id in members if id in first_pass]
 
+    s = ctx.calibrations.s_for(version.version)  # tuned on the Dev set's labels alone
+
     def scored(rubric: Rubric) -> list[EvaluationCase]:
-        return [case(item, rubric) for item in items]
+        return [case(item, rubric, s) for item in items]
 
     cases = scored(version.rubric)
     costs = CostLog(ctx.settings.cost_log_path, ctx.settings.meta_budget_usd)  # read, never spent

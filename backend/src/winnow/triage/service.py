@@ -1,5 +1,5 @@
-"""Gathers each Episode's facts and labels and scores it against the latest Rubric version, on
-every read."""
+"""Gathers each Episode's facts and labels and scores it against the latest Rubric version, with
+the margin multiplier s it was calibrated with (1 until then), on every read."""
 
 from winnow.core.context import AppContext
 from winnow.criteria.facts import EpisodeFacts
@@ -26,7 +26,9 @@ def episode_facts(ctx: AppContext, episode: Episode) -> EpisodeFacts:
 
 
 def _triage(ctx: AppContext, version: RubricVersion, episode: Episode) -> EpisodeTriage:
-    triage = score(version.rubric, episode_facts(ctx, episode), ctx.labels.in_force(episode.id))
+    s = ctx.calibrations.s_for(version.version)
+    facts = episode_facts(ctx, episode)
+    triage = score(version.rubric, facts, ctx.labels.in_force(episode.id), s)
     return EpisodeTriage(
         **triage.model_dump(), episode_id=episode.id, rubric_version=version.version
     )

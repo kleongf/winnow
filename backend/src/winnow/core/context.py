@@ -10,6 +10,7 @@ from winnow.audit.store import AuditStore
 from winnow.baseline.service import baseline_step
 from winnow.baseline.store import BaselineStore
 from winnow.boxes.store import BoxStore
+from winnow.calibration.store import CalibrationStore
 from winnow.core.db import open_db
 from winnow.core.settings import Settings
 from winnow.episodes.droid101 import Droid101
@@ -59,6 +60,7 @@ class AppContext:
     reference_labels: ReferenceLabelStore  # never read by scoring
     labels: LabelStore  # each overrides its Phrase's result, except an audit label
     audit: AuditStore  # the Audit sample drawn for each Rubric version
+    calibrations: CalibrationStore  # the margin multiplier s each Rubric version is scored with
     interview: InterviewStore  # the Describe interview's answers on the draft
     test_runs: TestRunLog
     visual: VisualStore  # Spark's answers to visual Criteria
@@ -94,6 +96,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     reference_labels = ReferenceLabelStore(db)
     labels = LabelStore(db)
     audit = AuditStore(db)
+    calibrations = CalibrationStore(db)
     interview = InterviewStore(db)
     test_runs = TestRunLog(db)
     visual = VisualStore(db)
@@ -130,6 +133,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         reference_labels,
         labels,
         audit,
+        calibrations,
         interview,
         test_runs,
         visual,
