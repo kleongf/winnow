@@ -30,6 +30,8 @@ NO_DRAFT: dict[int | str, dict[str, object]] = {
 
 class CompileRequest(BaseModel):
     description: str = Field(min_length=1, max_length=2000)
+    # Compile every Phrase anew, discarding the draft's Criteria, edits and interview.
+    fresh: bool = False
 
 
 @router.get("/rubric")
@@ -70,11 +72,12 @@ async def get_draft(ctx: Context) -> RubricDraft | None:
     },
 )
 async def post_compile(request: CompileRequest, ctx: Context) -> RubricDraft:
-    """Compile a Description into the Rubric draft, replacing the one there: one Spark call,
-    plus one repair turn when its answer fails code's checks."""
+    """Compile a Description into the Rubric draft: one Spark call, plus one repair turn when its
+    answer fails code's checks. An edit of the draft's Description compiles only the changed
+    Phrases, keeping the rest with their Criteria; `fresh` compiles all of it."""
     description = request.description.strip()
     try:
-        return await compile_draft(ctx, description)
+        return await compile_draft(ctx, description, request.fresh)
     except MetaUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
     except RuntimeError as error:  # the Meta API failed, or its answer couldn't be read

@@ -29,13 +29,14 @@ export function useDraft() {
   });
 }
 
-/** Compile a Description into the draft: one Spark call, so it takes a while. */
+/** Compile a Description into the draft: one Spark call, so it takes a while. An edit of the
+ * draft's Description compiles only the changed Phrases. */
 export function useCompile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (description: string) => {
       const { data, error, response } = await api.POST("/api/rubric/draft/compile", {
-        body: { description },
+        body: { description, fresh: false },
       });
       if (!response.ok || !data) {
         const detail = (error as { detail?: unknown } | undefined)?.detail;

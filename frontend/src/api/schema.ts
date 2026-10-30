@@ -550,8 +550,9 @@ export interface paths {
         put?: never;
         /**
          * Post Compile
-         * @description Compile a Description into the Rubric draft, replacing the one there: one Spark call,
-         *     plus one repair turn when its answer fails code's checks.
+         * @description Compile a Description into the Rubric draft: one Spark call, plus one repair turn when its
+         *     answer fails code's checks. An edit of the draft's Description compiles only the changed
+         *     Phrases, keeping the rest with their Criteria; `fresh` compiles all of it.
          */
         post: operations["post_compile_api_rubric_draft_compile_post"];
         delete?: never;
@@ -1019,6 +1020,11 @@ export interface components {
         CompileRequest: {
             /** Description */
             description: string;
+            /**
+             * Fresh
+             * @default false
+             */
+            fresh: boolean;
         };
         /** Confirm */
         Confirm: {
@@ -1895,6 +1901,8 @@ export interface components {
             };
             /** Phrases */
             phrases: components["schemas"]["DraftPhrase"][];
+            /** Recompiled */
+            recompiled?: components["schemas"]["TextRange"][] | null;
             /**
              * Rejected
              * @default []
