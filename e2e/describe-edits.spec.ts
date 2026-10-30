@@ -13,7 +13,9 @@ test("dragging a threshold re-sorts the anchor pool, and the edit is kept", asyn
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (err) => errors.push(err.message));
-  await freezeDevSet(request); // one Dev set Episode, grasping first time
+  // One Dev set Episode, grasping first time. It's unboxed (compile's recording needs it so),
+  // so its tracked Criteria are unsure and it needs review until a hard fail rejects it.
+  await freezeDevSet(request);
 
   await page.goto("/?page=describe");
   await page.getByLabel("Description", { exact: true }).fill(FROZEN);
@@ -25,7 +27,7 @@ test("dragging a threshold re-sorts the anchor pool, and the edit is kept", asyn
   const counts = card.getByTestId("anchor-counts");
   await expect(counts).toHaveText("Anchor pool: 1 pass · 0 fail · 0 unsure");
   await expect(page.getByTestId("anchor-sort")).toHaveText(
-    "Sorts it: 1 Keep · 0 Reject · 0 Needs review",
+    "Sorts it: 0 Keep · 0 Reject · 1 Needs review",
   );
   await expect(
     page.getByRole("button", { name: /^Run v\d+ · \d+ assumptions unconfirmed$/ }),
@@ -63,7 +65,7 @@ test("dragging a threshold re-sorts the anchor pool, and the edit is kept", asyn
   await saved.getByRole("switch", { name: "Hard" }).click();
   await expect(saved).toContainText("soft · never rejects");
   await expect(page.getByTestId("anchor-sort")).toHaveText(
-    "Sorts it: 1 Keep · 0 Reject · 0 Needs review",
+    "Sorts it: 0 Keep · 0 Reject · 1 Needs review",
   );
   expect(errors).toEqual([]);
 });

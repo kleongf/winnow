@@ -28,8 +28,8 @@ test("a Description compiles into a Rubric draft: Phrases tinted and linked to C
     "data-status",
     "checked",
   );
-  await expect(phrase("Expert pick-and-place")).toHaveAttribute("data-status", "context");
-  await expect(phrase("never drops it")).toHaveAttribute("data-status", "unsupported");
+  await expect(phrase("Expert pick-and-place:")).toHaveAttribute("data-status", "context");
+  await expect(phrase("never drops it")).toHaveAttribute("data-status", "checked");
   await expect(description.getByTestId("uncovered-word")).toHaveCount(0);
 
   // A Phrase links to its section: status, reason, and its Criteria in English.
@@ -42,8 +42,13 @@ test("a Description compiles into a Rubric draft: Phrases tinted and linked to C
   ).toBeVisible();
   await expect(pauses.getByTestId("assumption")).toContainText("Assumed: ");
   const drops = page.getByRole("region", { name: "Phrase: never drops it" });
-  await expect(drops).toContainText("not checked");
-  await expect(drops.getByTestId("phrase-reason")).not.toBeEmpty();
+  await expect(
+    drops.getByRole("article", {
+      name: "Time the object is out of the closed gripper (wrist view), while holding, ≤ 0.2 s",
+    }),
+  ).toBeVisible();
+  const framing = page.getByRole("region", { name: "Phrase: Expert pick-and-place:" });
+  await expect(framing.getByTestId("phrase-reason")).not.toBeEmpty(); // Context says why
 
   // The Rubric-level settings start assumed.
   await expect(page.getByTestId("rubric-setting")).toHaveCount(2);

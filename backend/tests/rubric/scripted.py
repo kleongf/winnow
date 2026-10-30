@@ -40,11 +40,11 @@ def phrase(
     reason: str | None = None,
 ) -> dict[str, object]:
     return {
-        "text": text,
+        "phrase": text,
         "restatement": f"Precisely: {text}.",
         "status": status,
-        "reason": reason,
-        "criteria": criteria or [],
+        "status_reason": reason,
+        "typed_criteria": criteria or [],
     }
 
 

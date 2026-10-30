@@ -32,15 +32,18 @@ def test_the_frozen_description_compiles_to_the_expected_criteria(replay_api: Te
     assert response.status_code == 200, response.text
     draft = response.json()
     assert [(p["text"], p["status"]) for p in draft["phrases"]] == [
-        ("Expert pick-and-place", "context"),
+        ("Expert pick-and-place:", "context"),
         (FIRST_TRY, "checked"),
-        (NEVER_DROPS, "unsupported"),
-        (PLACES, "unsupported"),
+        (NEVER_DROPS, "checked"),
+        (PLACES, "checked"),
         (NO_PAUSES, "checked"),
     ]
     by_phrase = {c["phrase"]: draft["english"][c["id"]] for c in draft["criteria"]}
     assert by_phrase == {
         FIRST_TRY: "Grasp attempts, up to and including the grasp, ≤ 1",
+        NEVER_DROPS: "Time the object is out of the closed gripper (wrist view), while holding, "
+        "≤ 0.2 s",
+        PLACES: "Share of the object's final box inside the target box ≥ 0.50",
         NO_PAUSES: "Longest stretch with the arm under 0.01 m/s < 1 s",
     }
     pauses = next(c for c in draft["criteria"] if c["phrase"] == NO_PAUSES)

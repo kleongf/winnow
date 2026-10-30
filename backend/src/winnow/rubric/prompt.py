@@ -23,13 +23,14 @@ Criteria that code measures on every Episode. You never measure anything yoursel
 How to answer:
 1. Split the Description into Phrases, in order. Each Phrase is one requirement (or one piece of \
 framing), copied from the Description exactly, character for character, as one contiguous \
-stretch of it. Phrases never overlap. Every meaningful word should fall inside some Phrase.
+stretch of it ("phrase"). Phrases never overlap. Every meaningful word should fall inside some \
+Phrase.
 2. For each Phrase, first restate precisely what it requires of an Episode ("restatement"), \
 then give it a status:
-   - "checked": the primitives above can check it. Give one or more Criteria; most Phrases need \
-one.
+   - "checked": the primitives above can check it. Give one or more Criteria \
+("typed_criteria"); most Phrases need one.
    - "context": it frames the Description and asks nothing checkable of an Episode (e.g. it \
-names the task). Give a one-line reason. No Criteria.
+names the task). Give a one-line reason ("status_reason"). No Criteria.
    - "unsupported": it asks something of an Episode, but no primitive above can check it. Give a \
 one-line reason naming what is missing. No Criteria. Never stretch a primitive to cover a \
 Phrase it doesn't measure.

@@ -96,7 +96,7 @@ async def _repair(
 ) -> list[_Failure]:
     """The one repair turn: Spark sees its answer and the errors, and answers again for the
     failing Phrases only. Returns those still failing."""
-    errors = [f"Phrase {f.answer.text!r}: {f.error}" for f in failures]
+    errors = [f"Phrase {f.answer.phrase!r}: {f.error}" for f in failures]
     reply = await _ask(meta, *asked, repair_prompt(errors, whole=False))
     try:
         repaired = parse_answer(reply).phrases[: len(failures)]
@@ -129,13 +129,13 @@ def _draft(
     for failure in failures:
         answer = failure.answer
         try:
-            start, end = locate(description, answer.text, [(p.start, p.end) for p in phrases])
+            start, end = locate(description, answer.phrase, [(p.start, p.end) for p in phrases])
         except ValueError:
-            rejected.append(RejectedPhrase(text=answer.text, reason=failure.error))
+            rejected.append(RejectedPhrase(text=answer.phrase, reason=failure.error))
             continue
         phrases.append(
             DraftPhrase(
-                text=answer.text,
+                text=answer.phrase,
                 start=start,
                 end=end,
                 restatement=answer.restatement,

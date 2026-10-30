@@ -2,15 +2,14 @@ import { expect, test } from "@playwright/test";
 
 import { freezeDevSet } from "./helpers.ts";
 
-// The frozen Description, whose compile against the Dev set is recorded: two Phrases are
-// Unsupported, and Spark assumed the pause threshold.
+// The frozen Description, whose compile against the Dev set is recorded: every Phrase is covered,
+// and Spark assumed its thresholds, the pause one among them.
 const FROZEN =
   "Expert pick-and-place: grasps the object on the first try, never drops it, places it in or " +
   "on the target named in the instruction, no long pauses.";
-const PLACES = "places it in or on the target named in the instruction";
 const PAUSES = "Longest stretch with the arm under 0.01 m/s < 1 s";
 
-test("the interview covers the Phrases, then a bisection card confirms the pause threshold", async ({
+test("with every Phrase covered, a bisection card confirms the pause threshold", async ({
   page,
   request,
 }) => {
@@ -20,22 +19,34 @@ test("the interview covers the Phrases, then a bisection card confirms the pause
 
   await page.goto("/?page=describe");
   await page.getByLabel("Description", { exact: true }).fill(FROZEN);
+  // Other specs (and earlier runs) leave drafts behind: read the interview only once it is the
+  // one for this compile, fetched after the compile returned.
+  let compiled = false;
+  const compiling = page.waitForResponse((r) => {
+    if (r.url().endsWith("/api/rubric/draft/compile") && r.ok()) compiled = true;
+    return compiled;
+  });
+  const fresh = page.waitForResponse(
+    (r) => compiled && r.url().endsWith("/api/interview") && r.request().method() === "GET",
+  );
   await page.getByRole("button", { name: "Compile" }).click();
+  await compiling;
+  await fresh;
 
   const interview = page.getByRole("region", { name: "Interview" });
   const question = interview.getByRole("region", { name: "Question" });
-  await expect(question).toContainText("Nothing checks “never drops it”");
-  await question.getByRole("button", { name: /^Leave it unchecked/ }).click();
-
-  await expect(question).toContainText(`Nothing checks “${PLACES}”`);
-  await question.getByRole("button", { name: /^Mark it Context/ }).click();
-  const places = page.getByRole("region", { name: `Phrase: ${PLACES}` });
-  await expect(places.getByTestId("phrase-status")).toHaveText("Context");
   await expect(interview.getByTestId("interview-status")).toHaveText(
     /^Every Phrase is covered: the interview is done\./,
   );
 
-  // Every Phrase is covered; the assumed pause threshold is asked on the anchor Episode.
+  // Assumed thresholds are asked on the anchor Episode; skip the others to reach the pauses.
+  await expect(question).toContainText(/Is .+ fine for “/);
+  for (let i = 0; i < 4; i++) {
+    const asked = (await question.textContent()) ?? "";
+    if (asked.includes("no long pauses")) break;
+    await question.getByRole("button", { name: /^Skip/ }).click();
+    await expect(question).not.toHaveText(asked); // the next question is up
+  }
   const pauses = page.getByRole("article", { name: PAUSES });
   await expect(pauses.getByTestId("assumption")).toHaveCount(1);
   await expect(question).toContainText(/Is .+ s fine for “no long pauses”\?/);

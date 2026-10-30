@@ -17,12 +17,14 @@ from winnow.rubric.phrases import locate
 
 
 class AnswerPhrase(BaseModel):
-    text: str
+    # Spark writes an answer's keys in alphabetical order, so these names put the Phrase first,
+    # then its restatement and status, and its typed Criteria last: it restates, then maps.
+    phrase: str
     restatement: str
     status: PhraseStatus
-    reason: str | None
+    status_reason: str | None
     # Checked one by one against the catalog, so one bad Criterion fails only its Phrase.
-    criteria: list[dict[str, object]]
+    typed_criteria: list[dict[str, object]]
 
 
 class CompileAnswer(BaseModel):
@@ -70,11 +72,11 @@ def answer_schema() -> dict[str, object]:
     )
     phrase = _object(
         {
-            "text": {"type": "string"},
+            "phrase": {"type": "string"},
             "restatement": {"type": "string"},
             "status": {"type": "string", "enum": list(get_args(PhraseStatus))},
-            "reason": _nullable("string"),
-            "criteria": {"type": "array", "items": criterion},
+            "status_reason": _nullable("string"),
+            "typed_criteria": {"type": "array", "items": criterion},
         }
     )
     return _object({"phrases": {"type": "array", "items": phrase}})
@@ -121,11 +123,11 @@ def _criterion(raw: dict[str, object], phrase: str, number: int) -> Criterion:
 
 
 def _status_problem(answer: AnswerPhrase) -> str | None:
-    if answer.status == "checked" and not answer.criteria:
+    if answer.status == "checked" and not answer.typed_criteria:
         return "a checked Phrase needs at least one Criterion"
-    if answer.status != "checked" and answer.criteria:
+    if answer.status != "checked" and answer.typed_criteria:
         return f"a {answer.status} Phrase has no Criteria; mark it checked or drop them"
-    if answer.status != "checked" and not (answer.reason or "").strip():
+    if answer.status != "checked" and not (answer.status_reason or "").strip():
         return f"a {answer.status} Phrase needs a one-line reason"
     return None
 
@@ -136,16 +138,18 @@ def check_phrase(
     """Raises PhraseError, saying what is wrong, unless the Phrase is in the Description where
     no other Phrase is and every Criterion is valid."""
     try:
-        start, end = locate(description, answer.text, taken)
+        start, end = locate(description, answer.phrase, taken)
     except ValueError as error:
         raise PhraseError(str(error)) from error
     problem = _status_problem(answer)
     if problem:
         raise PhraseError(problem)
-    criteria = [_criterion(raw, answer.text, i + 1) for i, raw in enumerate(answer.criteria)]
-    reason = None if answer.status == "checked" else answer.reason
+    criteria = [
+        _criterion(raw, answer.phrase, i + 1) for i, raw in enumerate(answer.typed_criteria)
+    ]
+    reason = None if answer.status == "checked" else answer.status_reason
     phrase = DraftPhrase(
-        text=answer.text,
+        text=answer.phrase,
         start=start,
         end=end,
         restatement=answer.restatement,
