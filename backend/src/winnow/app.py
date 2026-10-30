@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from winnow.audit.routes import router as audit_router
 from winnow.boxes.routes import router as boxes_router
 from winnow.core.context import build_context
 from winnow.core.routes import router as core_router
@@ -49,6 +50,7 @@ def create_app(settings: Settings | None = None, transport: Transport | None = N
         reference_labels_router,
         labels_router,
         review_router,
+        audit_router,
         evaluation_router,
         visual_router,
         jobs_router,

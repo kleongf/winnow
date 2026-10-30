@@ -6,6 +6,7 @@ from typing import cast
 
 from fastapi import Request
 
+from winnow.audit.store import AuditStore
 from winnow.baseline.service import baseline_step
 from winnow.baseline.store import BaselineStore
 from winnow.boxes.store import BoxStore
@@ -56,7 +57,8 @@ class AppContext:
     rubrics: RubricStore
     drafts: DraftStore  # the Describe page's Rubric draft
     reference_labels: ReferenceLabelStore  # never read by scoring
-    labels: LabelStore  # interview and review labels: each overrides its Phrase's result
+    labels: LabelStore  # each overrides its Phrase's result, except an audit label
+    audit: AuditStore  # the Audit sample drawn for each Rubric version
     interview: InterviewStore  # the Describe interview's answers on the draft
     test_runs: TestRunLog
     visual: VisualStore  # Spark's answers to visual Criteria
@@ -91,6 +93,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     drafts = DraftStore(db)
     reference_labels = ReferenceLabelStore(db)
     labels = LabelStore(db)
+    audit = AuditStore(db)
     interview = InterviewStore(db)
     test_runs = TestRunLog(db)
     visual = VisualStore(db)
@@ -126,6 +129,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         drafts,
         reference_labels,
         labels,
+        audit,
         interview,
         test_runs,
         visual,

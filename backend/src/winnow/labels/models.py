@@ -1,6 +1,7 @@
 """Labels: a human's pass or fail on one Phrase of one Episode, from the interview, Review or the
-Audit tab. Unlike Reference labels, scoring reads them: each overrides its Phrase's result, until
-it is withdrawn (an interview answer undone)."""
+Audit tab. Unlike Reference labels, scoring reads interview and review labels: each overrides its
+Phrase's result, until it is withdrawn (an interview answer undone). Audit labels only measure
+Keep precision; scoring never reads them."""
 
 from typing import Literal
 

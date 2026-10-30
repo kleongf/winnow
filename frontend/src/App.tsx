@@ -1,3 +1,4 @@
+import { AuditPage } from "./features/audit/AuditPage";
 import { usePage } from "./features/core/pages";
 import { Sidebar } from "./features/core/Sidebar";
 import { PreparePage } from "./features/dataset/PreparePage";
@@ -19,6 +20,7 @@ export function App() {
         {page === "describe" && <DescribePage />}
         {page === "episodes" && <EpisodesPage />}
         {page === "review" && <ReviewPage />}
+        {page === "audit" && <AuditPage />}
         {page === "reference" && <ReferenceLabelsPage />}
         {page === "evaluation" && <EvaluationPage />}
       </main>

@@ -2,7 +2,14 @@
 import { navigate, useSearchParams } from "./url";
 
 export const datasetPages = ["prepare", "select"] as const;
-export const projectPages = ["describe", "episodes", "review", "reference", "evaluation"] as const;
+export const projectPages = [
+  "describe",
+  "episodes",
+  "review",
+  "audit",
+  "reference",
+  "evaluation",
+] as const;
 export type Page = (typeof datasetPages)[number] | (typeof projectPages)[number];
 
 export const pageLabels: Record<Page, string> = {
@@ -11,6 +18,7 @@ export const pageLabels: Record<Page, string> = {
   describe: "Describe",
   episodes: "Episodes",
   review: "Review",
+  audit: "Audit",
   reference: "Reference labels",
   evaluation: "Evaluation",
 };

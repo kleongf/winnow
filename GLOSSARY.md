@@ -60,6 +60,10 @@ _Avoid_: Explanation, rationale, justification
 The Triage decision for an Episode Winnow isn't confident about, routed to a human instead of being kept or rejected automatically.
 _Avoid_: Uncertain, flagged, borderline
 
+**Audit sample**:
+A seeded random sample of the Episodes Winnow decided on its own (up to 12 Keeps and 5 Rejects) outside the Test set, drawn once per Rubric version. An auditor marks each Good (every Phrase passes) or Bad (naming a failing Phrase); the marks measure Keep precision and never change a Triage decision.
+_Avoid_: Spot check, QA sample
+
 **Reference label**:
 A human's judgment of one Episode against the description, made without seeing what Winnow or a baseline said, used to score them.
 _Avoid_: Ground truth, gold label, annotation

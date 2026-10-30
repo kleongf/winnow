@@ -1,6 +1,7 @@
 // The workspace sidebar: the Dataset and its Prepare page, then the Project and its stages.
 import {
   BarChart3,
+  ClipboardCheck,
   Database,
   FolderKanban,
   ListFilter,
@@ -27,6 +28,7 @@ const icons: Record<Page, ComponentType<{ className?: string }>> = {
   describe: MessageSquareText,
   episodes: ListChecks,
   review: ScanSearch,
+  audit: ClipboardCheck,
   reference: Tags,
   evaluation: BarChart3,
 };

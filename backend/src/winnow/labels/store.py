@@ -1,7 +1,13 @@
 import sqlite3
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from winnow.labels.models import StoredLabel
+from winnow.triage.models import LabelSource
+
+# The sources scoring applies. Audit labels feed only Keep precision, so they never override a
+# Phrase's result, nor supersede an interview or review label on it.
+SCORED: tuple[LabelSource, ...] = ("interview", "review")
 
 # Append-only: a new answer for a Phrase supersedes the last one but never erases it, and undoing
 # an interview answer withdraws its label rather than deleting it, so every label stays in
@@ -70,14 +76,18 @@ class LabelStore:
         rows = self._db.execute(SELECT + "WHERE episode_id = ? ORDER BY labels.id", (episode_id,))
         return [self._label(row) for row in rows]
 
-    def in_force(self, episode_id: str) -> list[StoredLabel]:
-        """The newest label for each Phrase that isn't withdrawn, whatever its source: the ones
-        scoring applies."""
+    def in_force(
+        self, episode_id: str, sources: Sequence[LabelSource] = SCORED
+    ) -> list[StoredLabel]:
+        """The newest label for each Phrase that isn't withdrawn, among those from `sources`: by
+        default the ones scoring applies."""
+        marks = ",".join("?" * len(sources))
         rows = self._db.execute(
             SELECT + "WHERE labels.id IN (SELECT MAX(id) FROM labels WHERE episode_id = ? "
+            f"AND source IN ({marks}) "
             "AND id NOT IN (SELECT label_id FROM label_withdrawals) GROUP BY phrase) "
             "ORDER BY labels.id",
-            (episode_id,),
+            (episode_id, *sources),
         )
         return [self._label(row) for row in rows]
 
