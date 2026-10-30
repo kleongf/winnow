@@ -1,12 +1,18 @@
 // The Evaluation page: Winnow against Spark alone and length alone, scored on the Episodes with
-// a Reference label, for a set and a Rubric version. `winnow eval` returns the same report.
+// a Reference label, for a set and a Rubric version, with the source ablation, tracking health,
+// cost and the Dataset outcome; `winnow eval` returns the same report. Below it, the live list of
+// Episodes where Spark alone and Winnow disagree.
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
 import { useRubric } from "../rubric/useRubric";
 import { SET_LABELS, type SetName } from "../sets/useSets";
+import { AblationTable, TrackingHealthTable } from "./AblationTable";
 import { ComparisonTable } from "./ComparisonTable";
+import { CostSummary } from "./CostSummary";
+import { DatasetOutcomeSection } from "./DatasetOutcomeSection";
+import { DisagreementList } from "./DisagreementList";
 import { ReportBreakdown } from "./ReportBreakdown";
 import { ReportCurves } from "./ReportCurves";
 import { TestRunLog } from "./TestRunLog";
@@ -116,12 +122,26 @@ export function EvaluationPage() {
           <ComparisonTable report={shown.report} />
           <ReportCurves report={shown.report} />
           <ReportBreakdown report={shown.report} />
+          <div className="mt-8 grid gap-8 lg:grid-cols-[3fr_2fr]">
+            <AblationTable rows={shown.report.ablation} />
+            <TrackingHealthTable rows={shown.report.tracking_health} />
+          </div>
+          <div className="mt-8">
+            <CostSummary cost={shown.report.cost} time={shown.report.review_time} />
+          </div>
+          <DatasetOutcomeSection
+            outcome={shown.report.dataset_outcome}
+            failbench={shown.report.failbench}
+          />
         </section>
       ) : (
         <p className="mt-6 text-sm text-muted-foreground">
           Run a set, or open a logged Test set run below, to see the comparison.
         </p>
       )}
+      <section className="mt-10">
+        <DisagreementList />
+      </section>
       <section className="mt-10">
         <h2 className="text-sm font-medium">Test run log</h2>
         <TestRunLog
