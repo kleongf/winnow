@@ -52,6 +52,23 @@ Now the curator's Description:
 {json.dumps(description)}"""
 
 
+def recompile_prompt(
+    description: str, manifest: str, kept: Sequence[str], changed: Sequence[str]
+) -> str:
+    """The compile call after an edit: the whole Description, answered only for what changed."""
+    unchanged = "\n".join(f"- {json.dumps(k)}" for k in kept)
+    asked = "\n".join(f"- {json.dumps(c)}" for c in changed)
+    return f"""{compile_prompt(description, manifest)}
+
+The curator edited this Description after it was compiled. These Phrases are unchanged and \
+already compiled, so leave them out of your answer:
+{unchanged}
+
+Answer only for the changed text below, split into Phrases as above. Each Phrase is still \
+copied exactly from the Description and overlaps none of the unchanged Phrases:
+{asked}"""
+
+
 def repair_prompt(errors: Sequence[str], whole: bool) -> str:
     """The follow-up after an answer failed code's checks: fix the listed Phrases, or the whole
     answer when it couldn't be read at all."""

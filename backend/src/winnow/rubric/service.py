@@ -2,12 +2,16 @@
 anchor pool, and frozen by Run."""
 
 from winnow.core.context import AppContext
+from winnow.criteria.models import RubricSettings
+from winnow.meta.client import MetaClient
 from winnow.rubric.anchor_pool import anchor_episodes
 from winnow.rubric.compile import compile_rubric
+from winnow.rubric.diff import diff_description
 from winnow.rubric.edits import apply_edit
 from winnow.rubric.manifest import capabilities_manifest
 from winnow.rubric.models import AnchorPreview, DraftEdit, RubricDraft, RubricVersion
 from winnow.rubric.preview import anchor_labels, anchor_preview, revealed_anchor_facts
+from winnow.rubric.recompile import recompile_rubric
 from winnow.rubric.seed import SEEDED_SETTINGS
 
 
@@ -19,14 +23,40 @@ class NoDraftError(LookupError):
     pass
 
 
-async def compile_draft(ctx: AppContext, description: str) -> RubricDraft:
-    """Compiles `description` against the anchor pool and saves it as the draft. The Rubric
-    settings start at their assumed defaults, for the curator to confirm."""
+async def compile_draft(ctx: AppContext, description: str, fresh: bool = False) -> RubricDraft:
+    """Compiles `description` against the anchor pool and saves it as the draft.
+
+    When it edits the draft's Description, only the changed text is compiled (`recompile`): the
+    unchanged Phrases keep their Criteria, edits and labels. Otherwise, or when `fresh`, the
+    whole Description is, and the Rubric settings start at their assumed defaults, for the
+    curator to confirm. Compiling an unchanged Description again starts it afresh, at no cost
+    when the Meta cache has seen it."""
+    draft = ctx.drafts.get()
+    if fresh or draft is None or draft.description == description:
+        return ctx.drafts.save(await _compile_afresh(ctx, description))
+    diff = diff_description(draft.description, draft.phrases, description)
+    if not diff.kept:
+        return ctx.drafts.save(await _compile_afresh(ctx, description))
+    meta, manifest = None, ""
+    if diff.stretches:
+        meta, manifest = _meta(ctx), _manifest(ctx, draft.settings)
+    return ctx.drafts.save(await recompile_rubric(meta, draft, description, manifest, diff))
+
+
+def _meta(ctx: AppContext) -> MetaClient:
     if ctx.meta is None:
         raise MetaUnavailableError("Compiling needs the Meta API: set MODEL_API_KEY in .env")
-    manifest = capabilities_manifest(ctx, anchor_episodes(ctx), SEEDED_SETTINGS)
-    draft = await compile_rubric(ctx.meta, description, manifest, SEEDED_SETTINGS)
-    return ctx.drafts.save(draft)
+    return ctx.meta
+
+
+def _manifest(ctx: AppContext, settings: RubricSettings) -> str:
+    return capabilities_manifest(ctx, anchor_episodes(ctx), settings)
+
+
+async def _compile_afresh(ctx: AppContext, description: str) -> RubricDraft:
+    meta = _meta(ctx)
+    manifest = _manifest(ctx, SEEDED_SETTINGS)
+    return await compile_rubric(meta, description, manifest, SEEDED_SETTINGS)
 
 
 def current_draft(ctx: AppContext) -> RubricDraft:

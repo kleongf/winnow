@@ -10,12 +10,42 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSearchParams } from "../core/url";
 import { InterviewTimeline } from "../interview/InterviewTimeline";
 import { DescribeHeader } from "./DescribeHeader";
+import { recompileNote } from "./recompileNote";
 import { RubricPanel } from "./RubricPanel";
-import { useCompile, useDraft } from "./useDraft";
+import { type RubricDraft, useCompile, useDraft } from "./useDraft";
 import { useDraftEditor } from "./useDraftEditor";
 import { useVersionPreview } from "./useDraftEdits";
 import { useRubric, useVersions } from "./useRubric";
 import { VersionPanel } from "./VersionPanel";
+
+/** Compile, or after an edit of the draft's Description, recompile only the changed Phrases. */
+function CompileRow(props: { editing: boolean; pending: boolean; empty: boolean }) {
+  const { editing, pending } = props;
+  return (
+    <div className="mt-2 flex items-center gap-3">
+      <Button type="submit" size="sm" disabled={pending || props.empty}>
+        {pending ? "Compiling…" : editing ? "Recompile changes" : "Compile"}
+      </Button>
+      {pending && (
+        <span className="text-xs text-muted-foreground">
+          {editing
+            ? "Spark is reading the changed Phrases against the catalog."
+            : "Spark is reading it against the catalog; this can take a minute."}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function RecompileNote(props: { draft: RubricDraft | null | undefined }) {
+  const note = recompileNote(props.draft?.recompiled, props.draft?.phrases ?? []);
+  if (!note) return null;
+  return (
+    <p className="mt-2 text-xs text-muted-foreground" data-testid="recompile-note">
+      {note}
+    </p>
+  );
+}
 
 function DescriptionForm() {
   const draft = useDraft().data;
@@ -24,6 +54,7 @@ function DescriptionForm() {
   const [edited, setEdited] = useState<string | null>(null);
   // Starts from the draft, or else the Rubric in use.
   const text = edited ?? draft?.description ?? latest?.rubric.description ?? "";
+  const editing = draft ? text.trim() !== draft.description : false;
   return (
     <form
       onSubmit={(e) => {
@@ -35,7 +66,8 @@ function DescriptionForm() {
         Description
       </label>
       <p className="mt-0.5 text-xs text-muted-foreground">
-        What an expert Episode looks like, in plain English. Spark compiles it into Criteria.
+        What an expert Episode looks like, in plain English. Spark compiles it into Criteria; after
+        an edit, only the Phrases you changed.
       </p>
       <Textarea
         id="description"
@@ -45,16 +77,8 @@ function DescriptionForm() {
           setEdited(e.target.value);
         }}
       />
-      <div className="mt-2 flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={compile.isPending || !text.trim()}>
-          {compile.isPending ? "Compiling…" : "Compile"}
-        </Button>
-        {compile.isPending && (
-          <span className="text-xs text-muted-foreground">
-            Spark is reading it against the catalog; this can take a minute.
-          </span>
-        )}
-      </div>
+      <CompileRow editing={editing} pending={compile.isPending} empty={!text.trim()} />
+      {!compile.isPending && <RecompileNote draft={draft} />}
       {compile.error && <p className="mt-2 text-sm text-destructive">{compile.error.message}</p>}
     </form>
   );

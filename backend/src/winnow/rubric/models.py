@@ -76,6 +76,9 @@ class RubricDraft(BaseModel):
     criteria: list[Criterion]
     disabled: list[str] = []  # ids of Criteria switched off: shown, never scored or Run
     rejected: list[RejectedPhrase] = []
+    # The changed text the last compile asked Spark about, keeping every other Phrase; None when
+    # it compiled the whole Description.
+    recompiled: list[TextRange] | None = None
     compiled_at: str
 
     def rubric(self) -> Rubric:

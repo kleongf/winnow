@@ -190,3 +190,24 @@ def test_a_sample_spark_answers_unsure_sends_the_episode_to_review(
 
     assert triage["decision"] == "needs_review"
     assert "Spark said unsure" in "".join(s["text"] for s in triage["reason"])
+
+
+def test_two_criteria_with_one_window_and_view_share_one_clip(
+    app_api: TestClient, spark: ScriptedVisual
+):
+    ingest(app_api, 0)
+    draft_of_the_seed(app_api)
+    draft = app_context(app_api).drafts.get()
+    assert draft is not None
+    placed = next(c for c in draft.criteria if c.kind == "visual")
+    upright = placed.model_copy(update={"id": "upright", "question": "Is the object upright?"})
+    app_context(app_api).drafts.save(
+        draft.model_copy(update={"criteria": [*draft.criteria, upright]})
+    )
+    app_api.post("/api/rubric/draft/run")
+
+    job = ask(app_api)
+
+    assert [i["status"] for i in job["items"]] == ["done"] * 4  # cut at once, neither fails
+    assert len(spark.calls) == 4  # the paraphrases they share are Meta cache hits
+    assert len({c.clip for c in spark.calls}) == 1
