@@ -1,6 +1,7 @@
 """Video conversions with ffmpeg: H.264 for Spark and the browser, 5 fps for SAM."""
 
 import subprocess
+import uuid
 from pathlib import Path
 
 SAM_FPS = 5
@@ -71,9 +72,11 @@ def cut_h264(source: str, start_s: float, frames: int, out: Path) -> None:
 def cut_cropped(
     source: Path, start_s: float, end_s: float, crop: tuple[int, int, int, int] | None, out: Path
 ) -> None:
-    """The stretch from `start_s` to `end_s`, cropped to (left, top, width, height) if given."""
+    """The stretch from `start_s` to `end_s`, cropped to (left, top, width, height) if given.
+    Visual Criteria with the same window and view share a clip and may cut it at once, so each
+    cut writes its own partial file before replacing `out` with it."""
     out.parent.mkdir(parents=True, exist_ok=True)
-    partial = out.with_suffix(".partial.mp4")
+    partial = out.with_suffix(f".{uuid.uuid4().hex[:8]}.partial.mp4")
     filters = ["-vf", "crop={2}:{3}:{0}:{1}".format(*crop)] if crop else []
     _ffmpeg(
         "-ss", f"{start_s:.4f}", "-i", str(source), "-t", f"{end_s - start_s:.4f}", *filters,
