@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -16,6 +16,7 @@ export function underDraft(query: { queryKey: readonly unknown[] }): boolean {
   return query.queryKey.length > draftKey.length;
 }
 const anchorPoolKey = ["anchor-pool"] as const;
+const compileKey = ["compile"] as const;
 
 /** The Rubric draft on the Describe page; null until a Description is compiled. */
 export function useDraft() {
@@ -30,10 +31,11 @@ export function useDraft() {
 }
 
 /** Compile a Description into the draft: one Spark call, so it takes a while. An edit of the
- * draft's Description compiles only the changed Phrases. */
+ * draft's Description compiles only the changed Phrases, and the interview goes on. */
 export function useCompile() {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: compileKey,
     mutationFn: async (description: string) => {
       const { data, error, response } = await api.POST("/api/rubric/draft/compile", {
         body: { description, fresh: false },
@@ -46,10 +48,16 @@ export function useCompile() {
     },
     onSuccess: async (draft) => {
       queryClient.setQueryData(draftKey, draft);
-      // A new draft re-sorts the anchor pool and starts a new interview: refetch both.
+      // A new draft re-sorts the anchor pool and changes the interview: a compile afresh starts a
+      // new one, a recompile carries over the answers about text it left alone. Refetch both.
       await queryClient.invalidateQueries({ queryKey: draftKey, predicate: underDraft });
     },
   });
+}
+
+/** Whether a compile is under way, wherever on the page it was started. */
+export function useCompiling(): boolean {
+  return useIsMutating({ mutationKey: compileKey }) > 0;
 }
 
 /** The Episodes the Rubric is written against: the Dev set, never the Test set. */

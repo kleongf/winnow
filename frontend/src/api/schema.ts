@@ -3469,6 +3469,13 @@ export interface operations {
                     "application/json": components["schemas"]["RubricDraft"];
                 };
             };
+            /** @description The Description changed while Spark read the edit */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {

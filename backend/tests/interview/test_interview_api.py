@@ -38,8 +38,7 @@ def api(settings: Settings, spark: ScriptedCompile) -> Iterator[TestClient]:
         yield client
 
 
-def compile_answer() -> dict[str, object]:
-    grasps = criterion("grasp_attempts", "<=", 1, assumptions=["One attempt is the most."])
+def pauses_phrase(text: str = NO_PAUSES) -> dict[str, object]:
     # 0.1 s: every anchor Episode's 0 s pause sits within its 0.2 s noise floor.
     pauses = criterion(
         "longest_still_s",
@@ -48,12 +47,17 @@ def compile_answer() -> dict[str, object]:
         params={"speed_below_m_s": 0.01},
         assumptions=["A long pause is 0.1 s or more."],
     )
+    return phrase(text, criteria=[pauses])
+
+
+def compile_answer() -> dict[str, object]:
+    grasps = criterion("grasp_attempts", "<=", 1, assumptions=["One attempt is the most."])
     return {
         "phrases": [
             phrase("Tidy pick", "context", reason="Names the task."),
             phrase(ONE_GRASP, criteria=[grasps]),
             phrase(NEVER_DROPS, "unsupported", reason="Nothing tracks the object yet."),
-            phrase(NO_PAUSES, criteria=[pauses]),
+            pauses_phrase(),
         ]
     }
 
@@ -206,7 +210,7 @@ def test_an_answer_to_a_question_not_being_asked_is_refused(drafted: TestClient)
     assert interview(drafted)["answered"] == []
 
 
-def test_a_recompile_starts_a_new_interview(drafted: TestClient, spark: ScriptedCompile):
+def test_compiling_afresh_starts_a_new_interview(drafted: TestClient, spark: ScriptedCompile):
     answer(drafted, "context")
     spark.answers.append(compile_answer())
 
@@ -214,6 +218,58 @@ def test_a_recompile_starts_a_new_interview(drafted: TestClient, spark: Scripted
 
     assert interview(drafted)["answered"] == []
     assert interview(drafted)["question"]["text"] == NEVER_DROPS
+
+
+def recompile(api: TestClient, spark: ScriptedCompile, edited: str, *phrases: object) -> None:
+    spark.answers.append({"phrases": list(phrases)})
+    response = api.post("/api/rubric/draft/compile", json={"description": edited})
+    assert response.status_code == 200, response.text
+    assert response.json()["recompiled"] is not None  # only the edit was compiled
+
+
+def test_answers_on_phrases_an_edit_left_alone_survive_it_and_can_be_undone(
+    drafted: TestClient, spark: ScriptedCompile
+):
+    answer(drafted, "accept")  # "never drops it" stays unchecked
+    answer(drafted, "context")  # "smoothly" checks nothing
+    answer(drafted, "skip")  # the pause threshold
+    answer(drafted, "pass")
+    answer(drafted, "fail")  # the grasp threshold settles at 2
+    before = interview(drafted)["answered"]
+    edited = DESCRIPTION.replace("Tidy pick", "Careful tidy pick")  # moves everything after it
+    careful = phrase("Careful tidy pick", "context", reason="Names the task.")
+
+    recompile(drafted, spark, edited, careful)
+
+    after = interview(drafted)
+    assert [(a["kind"], a["subject"], a["answer"]) for a in after["answered"]] == [
+        (a["kind"], a["subject"], a["answer"]) for a in before
+    ]
+    assert (after["question"], after["covered"]) == (None, True)
+    assert criterion_of(drafted, ONE_GRASP)["threshold"] == 2.0
+    by_subject = {a["subject"]: a for a in after["answered"]}
+
+    undone = drafted.delete(f"/api/interview/answers/{by_subject['smoothly']['id']}").json()
+    assert undone["question"]["text"] == "smoothly"
+    assert phrase_statuses(drafted).get("smoothly") is None  # in no Phrase again
+    first_grasp = next(a for a in after["answered"] if a["subject"] == ONE_GRASP)
+    drafted.delete(f"/api/interview/answers/{first_grasp['id']}")
+    assert criterion_of(drafted, ONE_GRASP)["threshold"] == 1.0
+    undone = drafted.delete(f"/api/interview/answers/{by_subject[NEVER_DROPS]['id']}").json()
+    assert undone["question"]["text"] == NEVER_DROPS
+
+
+def test_a_question_on_an_edited_phrase_is_asked_again(drafted: TestClient, spark: ScriptedCompile):
+    answer(drafted, "accept")  # "never drops it"
+    answer(drafted, "accept")  # "smoothly"
+    answer(drafted, "skip")  # the pause threshold
+    at_all = "no pauses at all"
+
+    recompile(drafted, spark, DESCRIPTION.replace(NO_PAUSES, at_all), pauses_phrase(at_all))
+
+    after = interview(drafted)
+    assert [a["subject"] for a in after["answered"]] == [NEVER_DROPS, "smoothly"]
+    assert after["question"]["phrase"] == at_all
 
 
 def test_there_is_no_interview_before_a_compile(api: TestClient):

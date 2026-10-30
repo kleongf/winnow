@@ -9,10 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useSearchParams } from "../core/url";
 import { InterviewTimeline } from "../interview/InterviewTimeline";
+import { ConfirmAfresh } from "./ConfirmAfresh";
 import { DescribeHeader } from "./DescribeHeader";
 import { recompileNote } from "./recompileNote";
 import { RubricPanel } from "./RubricPanel";
-import { type RubricDraft, useCompile, useDraft } from "./useDraft";
+import { type RubricDraft, useCompile, useCompiling, useDraft } from "./useDraft";
 import { useDraftEditor } from "./useDraftEditor";
 import { useVersionPreview } from "./useDraftEdits";
 import { useRubric, useVersions } from "./useRubric";
@@ -52,16 +53,23 @@ function DescriptionForm() {
   const latest = useRubric().data;
   const compile = useCompile();
   const [edited, setEdited] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   // Starts from the draft, or else the Rubric in use.
   const text = edited ?? draft?.description ?? latest?.rubric.description ?? "";
   const editing = draft ? text.trim() !== draft.description : false;
+  const run = () => {
+    compile.mutate(text.trim());
+  };
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        compile.mutate(text.trim());
+        // The draft's own Description compiles afresh, losing its edits: confirm that first.
+        if (draft && !editing) setConfirming(true);
+        else run();
       }}
     >
+      <ConfirmAfresh open={confirming} onOpenChange={setConfirming} onConfirm={run} />
       <label htmlFor="description" className="text-sm font-medium">
         Description
       </label>
@@ -136,7 +144,7 @@ function shownVersion(params: URLSearchParams): number | null {
 export function DescribePage() {
   const version = shownVersion(useSearchParams());
   const draft = useDraft();
-  const { editing, preview, error } = useDraftEditor(draft.data);
+  const { editing, preview, error } = useDraftEditor(draft.data, useCompiling());
   const frozen = useVersions().data?.find((v) => v.version === version);
   const frozenPreview = useVersionPreview(version).data;
   const { highlighted, show, clear } = useHighlight();

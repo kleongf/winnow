@@ -9,6 +9,7 @@ from winnow.rubric.anchor_pool import AnchorPool, anchor_pool
 from winnow.rubric.edits import UnknownCriterionError
 from winnow.rubric.models import AnchorPreview, DraftEdit, RubricDraft, RubricVersion
 from winnow.rubric.service import (
+    DraftChangedError,
     MetaUnavailableError,
     NoDraftError,
     compile_draft,
@@ -67,6 +68,7 @@ async def get_draft(ctx: Context) -> RubricDraft | None:
 @router.post(
     "/rubric/draft/compile",
     responses={
+        409: {"description": "The Description changed while Spark read the edit"},
         502: {"description": "Spark's answer couldn't be used"},
         503: {"description": "The Meta API isn't configured"},
     },
@@ -80,6 +82,8 @@ async def post_compile(request: CompileRequest, ctx: Context) -> RubricDraft:
         return await compile_draft(ctx, description, request.fresh)
     except MetaUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
+    except DraftChangedError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except RuntimeError as error:  # the Meta API failed, or its answer couldn't be read
         raise HTTPException(status_code=502, detail=f"Compile failed: {error}") from error
 

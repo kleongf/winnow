@@ -1,5 +1,7 @@
-"""Interview answers, kept per Rubric draft: a recompile starts a new interview, and undo removes
-an answer here (its label stays in the label store's history, withdrawn)."""
+"""Interview answers, kept per Rubric draft (by its `compiled_at`). A compile afresh starts a new
+interview; a recompile of an edit carries the answers that still hold over to the recompiled
+draft (`interview.carry`), leaving the old draft's answers as they were. Undo removes an answer
+here (its label stays in the label store's history, withdrawn)."""
 
 import sqlite3
 

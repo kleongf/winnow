@@ -25,22 +25,29 @@ from winnow.rubric.models import RubricDraft
 from winnow.rubric.prompt import recompile_prompt
 
 
-async def recompile_rubric(
-    meta: MetaClient | None,
-    draft: RubricDraft,
-    description: str,
-    manifest: str,
-    diff: DescriptionDiff,
+def _scope(description: str, diff: DescriptionDiff) -> Scope:
+    return Scope(description, tuple((p.start, p.end) for p in diff.kept))
+
+
+async def ask_changes(
+    meta: MetaClient, description: str, manifest: str, diff: DescriptionDiff
+) -> Compiled:
+    """Spark's answer about the changed text of `description`: one call, and its repair turn.
+    `diff` must have stretches. It has none, and needs no call, only when the edit touched no
+    Phrase and added no meaningful word, such as taking out whole Phrases; a deletion inside a
+    Phrase changes that Phrase, which is asked about again."""
+    kept, changed = [p.text for p in diff.kept], [s.text for s in diff.stretches]
+    prompt = recompile_prompt(description, manifest, kept, changed)
+    return await ask_phrases(meta, prompt, _scope(description, diff))
+
+
+def recompile_rubric(
+    draft: RubricDraft, description: str, diff: DescriptionDiff, compiled: Compiled
 ) -> RubricDraft:
-    """`diff` is from the draft's Description to `description`. Makes no Spark call (and needs no
-    `meta`) when the edit only took text out."""
-    scope = Scope(description, tuple((p.start, p.end) for p in diff.kept))
-    compiled = Compiled([], [])
-    if diff.stretches:
-        assert meta is not None
-        kept, changed = [p.text for p in diff.kept], [s.text for s in diff.stretches]
-        prompt = recompile_prompt(description, manifest, kept, changed)
-        compiled = await ask_phrases(meta, prompt, scope)
+    """The draft with its Description edited to `description`: `diff` is from the draft's
+    Description, and `compiled` is Spark's answer about its stretches (`ask_changes`), or empty
+    when there are none. Everything else, such as the kept Criteria's edits, comes from `draft`."""
+    scope = _scope(description, diff)
     added, rejected = draft_phrases(compiled, scope)
     phrases = sorted([*diff.kept, *added], key=lambda p: p.start)
     criteria = in_phrase_order(_criteria(draft, diff, compiled), phrases)

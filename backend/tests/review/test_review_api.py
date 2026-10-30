@@ -71,3 +71,22 @@ def test_the_queue_is_ordered_least_confident_first(ingested: TestClient):
 
     assert [i["episode_id"] for i in items] == ["droid_100:2", "droid_100:4", "droid_100:1"]
     assert [i["confidence"] for i in items] == pytest.approx([0.5, 0.5, 0.65], abs=0.01)
+
+
+def test_a_review_label_on_a_phrase_the_rubric_no_longer_has_is_not_counted(
+    ingested: TestClient,
+):
+    ingested.post(
+        "/api/episodes/droid_100:1/labels",
+        json={"phrase": NEVER_DROPS, "value": "pass", "source": "review"},
+    )
+    rubrics = app_context(ingested).rubrics
+    edited = rubrics.latest().rubric.model_copy(deep=True)
+    edited.phrases = [p for p in edited.phrases if p != NEVER_DROPS]
+    edited.criteria = [c for c in edited.criteria if c.phrase != NEVER_DROPS]
+    rubrics.add(Rubric.model_validate(edited.model_dump()))
+
+    listed = queue(ingested)
+
+    assert listed["items"] == []  # decided without the Phrase, not by the detached label
+    assert listed["reviewed"] == 0

@@ -12,13 +12,14 @@ from winnow.triage.service import plain_reason, scored
 def review_queue(ctx: AppContext, episodes: list[Episode]) -> ReviewQueue:
     version, triages = scored(ctx, episodes)
     waiting = [t for t in triages if t.decision == "needs_review"]
-    reviewed = {
-        label.episode_id
+    # Scoring found each in-force label by the Phrase it's on, so a label on a Phrase the Rubric no
+    # longer has (detached by an edit, kept in history) is on no Phrase here and isn't counted.
+    reviewed = [
+        t
         for t in triages
         if t.decision != "needs_review"
-        for label in ctx.labels.in_force(t.episode_id)
-        if label.source == "review"
-    }
+        and any(p.label is not None and p.label.source == "review" for p in t.phrases)
+    ]
     return ReviewQueue(
         rubric_version=version.version,
         reviewed=len(reviewed),

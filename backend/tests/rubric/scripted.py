@@ -1,6 +1,7 @@
 """A scripted Spark for compile tests: answers each compile call with the next scripted answer."""
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
@@ -52,6 +53,7 @@ def phrase(
 class ScriptedCompile:
     answers: list[object]  # a dict is sent as JSON, a str as is
     prompts: list[list[str]] = field(default_factory=list[list[str]])  # each call's text parts
+    while_reading: Callable[[], object] | None = None  # runs during the next compile call, once
 
     async def upload(self, path: Path) -> str:
         return path.name
@@ -65,4 +67,7 @@ class ScriptedCompile:
             return Reply("", USAGE)  # ingest's Meta steps find nothing
         self.prompts.append([str(part["text"]) for part in content if "text" in part])
         answer = self.answers.pop(0)
+        if self.while_reading is not None:
+            act, self.while_reading = self.while_reading, None
+            act()
         return Reply(answer if isinstance(answer, str) else json.dumps(answer), USAGE)
