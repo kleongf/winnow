@@ -1,5 +1,7 @@
 """Intervals from few labels, checked against known values."""
 
+from math import comb
+
 import pytest
 
 from winnow.evaluation.stats import clopper_pearson_lower, clopper_pearson_upper, wilson
@@ -38,3 +40,16 @@ def test_an_impossible_count_is_refused():
         clopper_pearson_upper(11, 10, 0.90)
     with pytest.raises(ValueError):
         clopper_pearson_lower(1, 2, 1.0)
+
+
+def test_below_50_percent_confidence_the_bounds_cross_to_the_other_side_of_the_rate():
+    # At 30% the upper bound is where P(X <= 5) = 0.7, below the observed 0.5; the lower bound
+    # mirrors it above.
+    upper = clopper_pearson_upper(5, 10, 0.3)
+    lower = clopper_pearson_lower(5, 10, 0.3)
+
+    assert upper < 0.5 < lower
+    assert sum(comb(10, i) * upper**i * (1 - upper) ** (10 - i) for i in range(6)) == pytest.approx(
+        0.7, abs=1e-9
+    )
+    assert lower == pytest.approx(1 - upper, abs=1e-9)

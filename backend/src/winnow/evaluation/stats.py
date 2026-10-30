@@ -59,7 +59,7 @@ def clopper_pearson_upper(k: int, n: int, conf: float) -> float:
     _check(k, n, conf)
     if k == n:
         return 1.0
-    return _bisect(lambda p: _binomial_cdf(k, n, p), 1 - conf, k / n, 1.0)
+    return _bisect(lambda p: _binomial_cdf(k, n, p), 1 - conf, 0.0, 1.0)
 
 
 def clopper_pearson_lower(k: int, n: int, conf: float) -> float:
@@ -69,4 +69,4 @@ def clopper_pearson_lower(k: int, n: int, conf: float) -> float:
     if k == 0:
         return 0.0
     # P(X >= k) = 1 - P(X <= k - 1) rises with p; the bound is where it reaches 1 - conf.
-    return _bisect(lambda p: _binomial_cdf(k - 1, n, p), conf, 0.0, k / n)
+    return _bisect(lambda p: _binomial_cdf(k - 1, n, p), conf, 0.0, 1.0)
