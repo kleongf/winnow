@@ -1,6 +1,7 @@
 """Honest statistics from few labels: a count plus an interval, never "±"."""
 
-from math import sqrt
+from collections.abc import Callable
+from math import comb, sqrt
 
 from pydantic import BaseModel
 
@@ -27,3 +28,45 @@ def wilson(count: int, of: int, z: float = Z_95) -> Proportion:
     centre = (p + z2 / (2 * of)) / denominator
     half = z * sqrt(p * (1 - p) / of + z2 / (4 * of * of)) / denominator
     return Proportion(count=count, of=of, low=max(0.0, centre - half), high=min(1.0, centre + half))
+
+
+def _binomial_cdf(k: int, n: int, p: float) -> float:
+    """P(X <= k) for X ~ Binomial(n, p)."""
+    return sum(comb(n, i) * p**i * (1 - p) ** (n - i) for i in range(k + 1))
+
+
+def _bisect(falling: Callable[[float], float], target: float, low: float, high: float) -> float:
+    """The p in [low, high] where `falling`, which falls as p rises, crosses `target`."""
+    for _ in range(100):
+        mid = (low + high) / 2
+        if falling(mid) > target:
+            low = mid
+        else:
+            high = mid
+    return (low + high) / 2
+
+
+def _check(k: int, n: int, conf: float) -> None:
+    if not 0 <= k <= n:
+        raise ValueError(f"{k} of {n} isn't a count")
+    if not 0 < conf < 1:
+        raise ValueError(f"A confidence of {conf} isn't between 0 and 1")
+
+
+def clopper_pearson_upper(k: int, n: int, conf: float) -> float:
+    """The exact one-sided upper bound on a rate seen `k` times in `n`, at `conf` (e.g. 0.9):
+    the rate at which `k` or fewer would turn up only 1 - `conf` of the time."""
+    _check(k, n, conf)
+    if k == n:
+        return 1.0
+    return _bisect(lambda p: _binomial_cdf(k, n, p), 1 - conf, k / n, 1.0)
+
+
+def clopper_pearson_lower(k: int, n: int, conf: float) -> float:
+    """The exact one-sided lower bound on a rate seen `k` times in `n`, at `conf`. When every one
+    is seen (k = n) it is (1 - conf)^(1/n): 15 of 15 at 90% gives 0.86."""
+    _check(k, n, conf)
+    if k == 0:
+        return 0.0
+    # P(X >= k) = 1 - P(X <= k - 1) rises with p; the bound is where it reaches 1 - conf.
+    return _bisect(lambda p: _binomial_cdf(k - 1, n, p), conf, 0.0, k / n)
