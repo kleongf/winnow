@@ -2,7 +2,7 @@
 p, P_keep and the Episode's confidence.
 
 p = 1/(1 + e^(-3m)), with m the signed distance from the threshold in effective margins
-(effective margin = max(noise floor, interview gap) * S). A measurement within one effective
+(effective margin = max(noise floor, interview gap) * s). A measurement within one effective
 margin of its threshold is unsure ("near threshold"); an inconclusive primitive never pulls p
 below 0.5; no value gives 0.5; a human label gives 1 or 0.
 """
@@ -16,7 +16,9 @@ from winnow.criteria.measured import Measurement
 from winnow.criteria.models import Criterion, Status, UncertaintySignal
 from winnow.criteria.primitives import PRIMITIVES
 
-S = 1.0  # the global margin multiplier; calibrating it on labels is a nice-to-have
+# The margin multiplier s until calibration tunes it on the Dev set's labels (`calibration`); a new
+# Rubric version starts here.
+UNCALIBRATED = 1.0
 STEEPNESS = 3.0
 
 
@@ -34,8 +36,8 @@ def p_of(m: float) -> float:
     return 1 / (1 + math.exp(-STEEPNESS * max(-100.0, min(100.0, m))))
 
 
-def effective_margin(criterion: Criterion) -> float:
-    return max(PRIMITIVES[criterion.primitive].noise_floor, criterion.margin) * S
+def effective_margin(criterion: Criterion, s: float = UNCALIBRATED) -> float:
+    return max(PRIMITIVES[criterion.primitive].noise_floor, criterion.margin) * s
 
 
 def _crisp_m(status: Status) -> float | None:
@@ -43,7 +45,7 @@ def _crisp_m(status: Status) -> float | None:
 
 
 def _read(
-    criterion: Criterion, measured: Measurement
+    criterion: Criterion, measured: Measurement, s: float
 ) -> tuple[Status, UncertaintySignal | None, float | None]:
     """(status, signal, m) before an inconclusive primitive's clamp; m None means no value."""
     if measured.uncertainty is not None:  # the measure knows why it is unsure
@@ -52,7 +54,7 @@ def _read(
         return "unsure", "source missing", None
     if measured.status is not None:  # decided whatever the threshold, e.g. no grasp
         return measured.status, None, _crisp_m(measured.status)
-    margin = effective_margin(criterion)
+    margin = effective_margin(criterion, s)
     distance = signed_distance(criterion, measured.value)
     passed = passes(criterion, measured.value)
     if margin > 0 and abs(distance) < margin:
@@ -62,8 +64,8 @@ def _read(
     return ("pass" if passed else "fail"), None, math.inf if passed else -math.inf
 
 
-def judge(criterion: Criterion, measured: Measurement) -> Judgement:
-    status, signal, m = _read(criterion, measured)
+def judge(criterion: Criterion, measured: Measurement, s: float = UNCALIBRATED) -> Judgement:
+    status, signal, m = _read(criterion, measured, s)
     from_m = 0.5 if m is None else p_of(m)
     # The measure may know p directly, e.g. Spark's agreement.
     p = from_m if measured.p is None else measured.p
