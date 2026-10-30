@@ -11,8 +11,9 @@ import { expect, type APIRequestContext, type Page } from "@playwright/test";
  * control to the left"); 2 is rejected after two failed grasp attempts, with no instruction and a
  * failing Dataset outcome. Unboxed, every Episode that isn't rejected needs review: placement has
  * no exterior track. Boxed in Exterior 2 with PLACED_TARGET drawn (`boxForPlacement`), Episodes
- * 0, 1, 3, 4, 6, 12, 15 and 16 have a healthy recorded track, so i % 3 == 0 is kept; the rest
- * have none to speak of, so their placement is unsure with "track lost". */
+ * 0, 1, 3, 4, 6, 12, 15, 16 and 18 have a healthy recorded track, so i % 3 == 0 is kept; the
+ * rest have none to speak of (17's is unchecked), so their placement is unsure with "track
+ * lost". */
 export const EPISODES = {
   workstation: [9, 10],
   referenceLabels: [2],
@@ -22,8 +23,9 @@ export const EPISODES = {
   sets: [6],
   triage: [1, 8, 0, 4],
   boxes: [11, 12, 13],
-  prepare: [14, 15],
+  prepare: [14, 17],
   review: [16],
+  audit: [15, 18],
 } as const;
 
 export function episodeId(index: number): string {
