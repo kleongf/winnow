@@ -24,6 +24,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Audit
+         * @description The latest Rubric version's Audit sample, each item's mark, and Keep precision. Mark an
+         *     item with `audit` labels: pass on every Phrase is Good, a fail on any is Bad.
+         */
+        get: operations["get_audit_api_audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/audit/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Audit Sample
+         * @description Draws the Audit sample from the Episodes with a Reference label outside the Test set:
+         *     once per Rubric version, so drawing again returns the stored one.
+         */
+        post: operations["post_audit_sample_api_audit_sample_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/boxes": {
         parameters: {
             query?: never;
@@ -973,6 +1015,41 @@ export interface components {
             /** Job Id */
             job_id: number | null;
         };
+        /** AuditDraw */
+        AuditDraw: {
+            /** Seed */
+            seed?: number | null;
+        };
+        /** AuditItem */
+        AuditItem: {
+            /** Episode Id */
+            episode_id: string;
+            /** Failed */
+            failed: string[];
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "keep" | "reject";
+            /** Mark */
+            mark: ("good" | "bad") | null;
+            /** Reason */
+            reason: string;
+        };
+        /** AuditSample */
+        AuditSample: {
+            /** Drawn At */
+            drawn_at: string | null;
+            /** Items */
+            items: components["schemas"]["AuditItem"][];
+            /** Phrases */
+            phrases: string[];
+            precision: components["schemas"]["KeepPrecision"];
+            /** Rubric Version */
+            rubric_version: number;
+            /** Seed */
+            seed: number | null;
+        };
         /** Box */
         Box: {
             /**
@@ -1654,6 +1731,14 @@ export interface components {
             status: "queued" | "running" | "done" | "failed";
             /** Step */
             step: string;
+        };
+        /** KeepPrecision */
+        KeepPrecision: {
+            good: components["schemas"]["Proportion"];
+            /** Lower Bound */
+            lower_bound: number | null;
+            /** Lower Bound Confidence */
+            lower_bound_confidence: number;
         };
         /**
          * Label
@@ -2557,6 +2642,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnchorPool"];
+                };
+            };
+        };
+    };
+    get_audit_api_audit_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditSample"];
+                };
+            };
+        };
+    };
+    post_audit_sample_api_audit_sample_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AuditDraw"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditSample"];
+                };
+            };
+            /** @description No auto-Keep to audit yet */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
