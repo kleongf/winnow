@@ -20,7 +20,7 @@ Context = Annotated[AppContext, Depends(get_context)]
 async def post_label(episode: RevealedEpisode, draw: LabelDraw, ctx: Context) -> StoredLabel:
     """Overrides one Phrase's result for this Episode; its Triage decision recomputes."""
     try:
-        return save_label(ctx, episode, draw)
+        return save_label(ctx, episode.id, draw)
     except UnknownPhraseError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 

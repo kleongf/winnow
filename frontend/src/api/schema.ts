@@ -324,6 +324,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/interview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Interview
+         * @description The interview on the Rubric draft: the answered cards and the question code asks next.
+         */
+        get: operations["get_interview_api_interview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/interview/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Answer
+         * @description Answer the question being asked. A threshold answer is also an interview label on the
+         *     anchor Episode's Phrase; the answer that settles a threshold changes the Criterion.
+         */
+        post: operations["post_answer_api_interview_answers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/interview/answers/{answer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Answer
+         * @description Undo an answer, and the later ones on the same question: the draft gets back what they
+         *     changed, and their labels are withdrawn.
+         */
+        delete: operations["delete_answer_api_interview_answers__answer_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/jobs/latest": {
         parameters: {
             query?: never;
@@ -803,6 +865,18 @@ export interface components {
             /** Value */
             value: number | null;
         };
+        /** AnswerDraw */
+        AnswerDraw: {
+            /**
+             * Answer
+             * @enum {string}
+             */
+            answer: "accept" | "context" | "pass" | "fail" | "skip";
+            /** Episode Id */
+            episode_id?: string | null;
+            /** Key */
+            key: string;
+        };
         /** Box */
         Box: {
             /**
@@ -875,6 +949,13 @@ export interface components {
             target: string | null;
             /** Task */
             task: string | null;
+        };
+        /** Clip */
+        Clip: {
+            /** End */
+            end: number;
+            /** Start */
+            start: number;
         };
         /** Comparison */
         Comparison: {
@@ -1308,6 +1389,55 @@ export interface components {
             /** Job Id */
             job_id: number;
         };
+        /** Interview */
+        Interview: {
+            /** Answered */
+            answered: components["schemas"]["InterviewAnswer"][];
+            /** Covered */
+            covered: boolean;
+            /** Phrases Left */
+            phrases_left: number;
+            /** Question */
+            question: (components["schemas"]["PhraseQuestion"] | components["schemas"]["ThresholdQuestion"]) | null;
+            /** Thresholds Left */
+            thresholds_left: number;
+        };
+        /**
+         * InterviewAnswer
+         * @description An answered card: collapsed to the answer and its effect.
+         */
+        InterviewAnswer: {
+            /**
+             * Answer
+             * @enum {string}
+             */
+            answer: "accept" | "context" | "pass" | "fail" | "skip";
+            /** Answered At */
+            answered_at: string;
+            /** Changed Criterion */
+            changed_criterion: string | null;
+            /** Effect */
+            effect: string;
+            /** Episode Id */
+            episode_id: string | null;
+            /** Id */
+            id: number;
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "phrase" | "words" | "threshold";
+            /** Label Id */
+            label_id: number | null;
+            /** Measurement */
+            measurement: string | null;
+            /** Resolution */
+            resolution: ("set" | "confirmed" | "unbracketed") | null;
+            /** Subject */
+            subject: string;
+        };
         /** Job */
         Job: {
             /** Created At */
@@ -1406,6 +1536,16 @@ export interface components {
             /** T */
             t: number;
         };
+        /** Option */
+        Option: {
+            /**
+             * Answer
+             * @enum {string}
+             */
+            answer: "accept" | "context" | "pass" | "fail" | "skip";
+            /** Label */
+            label: string;
+        };
         /** PhraseChip */
         PhraseChip: {
             /** Phrase */
@@ -1423,6 +1563,31 @@ export interface components {
             passed: boolean;
             /** Phrase */
             phrase: string;
+        };
+        /**
+         * PhraseQuestion
+         * @description An Unsupported Phrase (`phrase`), or meaningful words in no Phrase (`words`).
+         */
+        PhraseQuestion: {
+            /** End */
+            end: number;
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "phrase" | "words";
+            /** Options */
+            options: components["schemas"]["Option"][];
+            /** Prompt */
+            prompt: string;
+            /** Reason */
+            reason: string | null;
+            /** Start */
+            start: number;
+            /** Text */
+            text: string;
         };
         /** PhraseResult */
         PhraseResult: {
@@ -1638,6 +1803,8 @@ export interface components {
         StoredLabel: {
             /** Episode Id */
             episode_id: string;
+            /** Id */
+            id?: number | null;
             /** Labelled At */
             labelled_at: string;
             /** Phrase */
@@ -1654,6 +1821,8 @@ export interface components {
              * @enum {string}
              */
             value: "pass" | "fail";
+            /** Withdrawn At */
+            withdrawn_at?: string | null;
         };
         /** SystemRow */
         SystemRow: {
@@ -1738,6 +1907,45 @@ export interface components {
             t?: number | null;
             /** Text */
             text: string;
+        };
+        /**
+         * ThresholdQuestion
+         * @description Is this anchor Episode's measured value fine? One step of bisecting an assumed
+         *     threshold.
+         */
+        ThresholdQuestion: {
+            /** Asked */
+            asked: number;
+            /** Camera */
+            camera: string | null;
+            clip: components["schemas"]["Clip"];
+            /** Criterion Id */
+            criterion_id: string;
+            /** English */
+            english: string;
+            /** Episode Id */
+            episode_id: string;
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "threshold";
+            /** Max Questions */
+            max_questions: number;
+            /** Measurement */
+            measurement: string;
+            /** Near */
+            near: number;
+            /** Options */
+            options: components["schemas"]["Option"][];
+            /** Phrase */
+            phrase: string;
+            /** Prompt */
+            prompt: string;
+            /** Value */
+            value: number;
         };
         /** TimeWindow */
         TimeWindow: {
@@ -2406,6 +2614,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    get_interview_api_interview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Interview"];
+                };
+            };
+            /** @description No Description has been compiled yet, or no such answer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    post_answer_api_interview_answers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerDraw"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Interview"];
+                };
+            };
+            /** @description No Description has been compiled yet, or no such answer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the question being asked */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_answer_api_interview_answers__answer_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                answer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Interview"];
+                };
+            };
+            /** @description No Description has been compiled yet, or no such answer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

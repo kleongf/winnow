@@ -116,13 +116,19 @@ export function CriterionCard(props: {
   enabled: boolean;
   preview?: CriterionPreview | undefined;
   editor?: CardEditor | undefined; // none on a frozen Rubric version
+  highlighted?: boolean; // an interview answer just changed it
 }) {
   const { criterion, preview } = props;
   return (
     <article
       id={`criterion-${criterion.id}`}
       aria-label={props.english}
-      className={cn("rounded-lg border bg-card p-3", !props.enabled && "opacity-60")}
+      data-highlighted={props.highlighted ? "true" : undefined}
+      className={cn(
+        "rounded-lg border bg-card p-3 transition-shadow",
+        !props.enabled && "opacity-60",
+        props.highlighted && "ring-2 ring-sky-400 dark:ring-sky-600",
+      )}
     >
       <CardHeader criterion={criterion} enabled={props.enabled} editor={props.editor} />
       {/* The preview carries any threshold mid-drag, so its English is the one to read. */}

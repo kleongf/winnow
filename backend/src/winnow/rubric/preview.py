@@ -2,8 +2,11 @@
 
 Only anchor Episodes with a Reference label take part: the rest stay blind (the gate in
 `reference_labels.gate`), and no Test set Episode is ever in the anchor pool. Everything is the
-pure scoring function over stored facts, so a preview makes no model call.
+pure scoring function over stored facts and the labels in force (an interview answer overrides
+its Phrase like any label), so a preview makes no model call.
 """
+
+from collections.abc import Mapping, Sequence
 
 from winnow.core.context import AppContext
 from winnow.criteria.english import english
@@ -19,7 +22,7 @@ from winnow.rubric.models import (
     Rubric,
 )
 from winnow.triage.confidence import effective_margin
-from winnow.triage.models import CriterionResult, Triage
+from winnow.triage.models import CriterionResult, Label, Triage
 from winnow.triage.scoring import score
 from winnow.triage.service import episode_facts
 
@@ -28,6 +31,11 @@ def revealed_anchor_facts(ctx: AppContext) -> dict[str, EpisodeFacts]:
     """The facts of each anchor Episode whose outputs may be shown, by id."""
     revealed = revealed_ids(ctx)
     return {e.id: episode_facts(ctx, e) for e in anchor_episodes(ctx) if e.id in revealed}
+
+
+def anchor_labels(ctx: AppContext, ids: list[str]) -> dict[str, list[Label]]:
+    """The labels in force on each anchor Episode, by id."""
+    return {id_: list(ctx.labels.in_force(id_)) for id_ in ids}
 
 
 def _criterion(criterion: Criterion, results: dict[str, CriterionResult]) -> CriterionPreview:
@@ -53,11 +61,14 @@ def anchor_preview(
     rubric: Rubric,
     shown: list[Criterion],
     version: int | None,
+    labels: Mapping[str, Sequence[Label]],
 ) -> AnchorPreview:
-    """`rubric` decides each Episode; `shown` are the Criteria to histogram, a superset of the
-    Rubric's when some are switched off."""
+    """`rubric` decides each Episode, with its `labels`; `shown` are the Criteria to histogram,
+    a superset of the Rubric's when some are switched off."""
     everything = rubric.model_copy(update={"criteria": shown})
-    triages: dict[str, Triage] = {id_: score(rubric, f) for id_, f in facts.items()}
+    triages: dict[str, Triage] = {
+        id_: score(rubric, f, labels.get(id_, ())) for id_, f in facts.items()
+    }
     results = {
         id_: {r.criterion_id: r for r in score(everything, f).criteria} for id_, f in facts.items()
     }

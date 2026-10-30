@@ -10,6 +10,7 @@ from winnow.core.settings import Settings, get_settings
 from winnow.dataset.routes import router as dataset_router
 from winnow.episodes.routes import router as episodes_router
 from winnow.evaluation.routes import router as evaluation_router
+from winnow.interview.routes import router as interview_router
 from winnow.jobs.routes import router as jobs_router
 from winnow.labels.routes import router as labels_router
 from winnow.meta.transport import Transport
@@ -42,6 +43,7 @@ def create_app(settings: Settings | None = None, transport: Transport | None = N
         sets_router,
         tracking_router,
         rubric_router,
+        interview_router,
         triage_router,
         reference_labels_router,
         labels_router,

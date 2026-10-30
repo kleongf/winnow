@@ -10,6 +10,11 @@ export type Setting = components["schemas"]["Setting"];
 export type PhraseStatus = DraftPhrase["status"];
 
 export const draftKey = ["rubric", "draft"] as const;
+
+/** What is keyed under the draft (its preview, the interview), not the draft itself. */
+export function underDraft(query: { queryKey: readonly unknown[] }): boolean {
+  return query.queryKey.length > draftKey.length;
+}
 const anchorPoolKey = ["anchor-pool"] as const;
 
 /** The Rubric draft on the Describe page; null until a Description is compiled. */
@@ -40,8 +45,8 @@ export function useCompile() {
     },
     onSuccess: async (draft) => {
       queryClient.setQueryData(draftKey, draft);
-      // A new draft re-sorts the anchor pool: refetch its preview (keyed under the draft).
-      await queryClient.invalidateQueries({ queryKey: [...draftKey, "preview"] });
+      // A new draft re-sorts the anchor pool and starts a new interview: refetch both.
+      await queryClient.invalidateQueries({ queryKey: draftKey, predicate: underDraft });
     },
   });
 }
