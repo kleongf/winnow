@@ -1,7 +1,7 @@
 """Honest statistics from few labels: a count plus an interval, never "±"."""
 
 from collections.abc import Callable
-from math import comb, sqrt
+from math import exp, lgamma, log, log1p, sqrt
 
 from pydantic import BaseModel
 
@@ -31,8 +31,22 @@ def wilson(count: int, of: int, z: float = Z_95) -> Proportion:
 
 
 def _binomial_cdf(k: int, n: int, p: float) -> float:
-    """P(X <= k) for X ~ Binomial(n, p)."""
-    return sum(comb(n, i) * p**i * (1 - p) ** (n - i) for i in range(k + 1))
+    """P(X <= k) for X ~ Binomial(n, p). The terms are summed in log space, because C(n, i) alone
+    overflows a float once n passes about 1030."""
+    if k >= n:
+        return 1.0
+    if p <= 0.0:
+        return 1.0
+    if p >= 1.0:
+        return 0.0
+    log_p, log_q = log(p), log1p(-p)
+    log_c = lgamma(n + 1)
+    logs = [
+        log_c - lgamma(i + 1) - lgamma(n - i + 1) + i * log_p + (n - i) * log_q
+        for i in range(k + 1)
+    ]
+    top = max(logs)
+    return min(1.0, exp(top) * sum(exp(term - top) for term in logs))
 
 
 def _bisect(falling: Callable[[float], float], target: float, low: float, high: float) -> float:

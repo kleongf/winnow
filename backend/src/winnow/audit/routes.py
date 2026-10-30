@@ -22,7 +22,7 @@ async def get_audit(ctx: Context) -> AuditSample:
 @router.post("/audit/sample", responses={409: {"description": "No auto-Keep to audit yet"}})
 async def post_audit_sample(ctx: Context, body: AuditDraw | None = None) -> AuditSample:
     """Draws the Audit sample from the Episodes with a Reference label outside the Test set:
-    once per Rubric version, so drawing again returns the stored one."""
+    once per Rubric version and margin multiplier s, so drawing again returns the stored one."""
     try:
         return draw_sample(ctx, revealed_episodes(ctx), (body or AuditDraw()).seed)
     except NothingToAuditError as error:

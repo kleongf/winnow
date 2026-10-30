@@ -21,6 +21,7 @@ from winnow.rubric.models import (
     CriterionPreview,
     Rubric,
 )
+from winnow.rubric.sanity import Sanity, sanity
 from winnow.triage.confidence import UNCALIBRATED, effective_margin
 from winnow.triage.models import CriterionResult, Label, Triage
 from winnow.triage.scoring import score
@@ -39,7 +40,10 @@ def anchor_labels(ctx: AppContext, ids: list[str]) -> dict[str, list[Label]]:
 
 
 def _criterion(
-    criterion: Criterion, results: dict[str, CriterionResult], s: float
+    criterion: Criterion,
+    results: dict[str, CriterionResult],
+    s: float,
+    reading: Sanity | None,
 ) -> CriterionPreview:
     statuses = [r.status for r in results.values()]
     return CriterionPreview(
@@ -55,6 +59,9 @@ def _criterion(
             AnchorValue(episode_id=id_, value=r.value, status=r.status)
             for id_, r in results.items()
         ],
+        fail_rate=reading.fail_rate if reading else None,
+        warning=reading.warning if reading else None,
+        only_rejects=reading.only_rejects if reading else [],
     )
 
 
@@ -76,6 +83,8 @@ def anchor_preview(
         id_: {r.criterion_id: r for r in score(everything, f, (), s).criteria}
         for id_, f in facts.items()
     }
+    rejected = {id_: facts[id_] for id_, t in triages.items() if t.decision == "reject"}
+    readings = sanity(rubric, shown, rejected, results, labels, s)
     decisions = [t.decision for t in triages.values()]
     episodes = [
         AnchorEpisode(episode_id=id_, decision=t.decision, confidence=t.confidence)
@@ -88,6 +97,9 @@ def anchor_preview(
         needs_review=decisions.count("needs_review"),
         episodes=sorted(episodes, key=lambda e: e.confidence),
         criteria=[
-            _criterion(c, {id_: found[c.id] for id_, found in results.items()}, s) for c in shown
+            _criterion(
+                c, {id_: found[c.id] for id_, found in results.items()}, s, readings.get(c.id)
+            )
+            for c in shown
         ],
     )

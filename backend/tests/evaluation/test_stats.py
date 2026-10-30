@@ -42,6 +42,17 @@ def test_an_impossible_count_is_refused():
         clopper_pearson_lower(1, 2, 1.0)
 
 
+def test_a_large_sample_does_not_overflow():
+    # C(1100, i) alone is past a float's range; the bounds still sit near the normal approximation
+    # 0.5 +- 1.2816 * sqrt(0.25 / 1100) = 0.4807 / 0.5193.
+    upper = clopper_pearson_upper(550, 1100, 0.9)
+    lower = clopper_pearson_lower(550, 1100, 0.9)
+
+    assert upper == pytest.approx(0.5193, abs=2e-3)
+    assert lower == pytest.approx(0.4807, abs=2e-3)
+    assert lower == pytest.approx(1 - upper, abs=1e-6)  # symmetric at k = n / 2
+
+
 def test_below_50_percent_confidence_the_bounds_cross_to_the_other_side_of_the_rate():
     # At 30% the upper bound is where P(X <= 5) = 0.7, below the observed 0.5; the lower bound
     # mirrors it above.

@@ -11,6 +11,7 @@ import {
 
 import { navigate } from "../core/url";
 import { type RubricDraft, useAnchorPool } from "./useDraft";
+import { warningCount } from "./sanity";
 import { type AnchorPreview, useRun } from "./useDraftEdits";
 import { useVersions } from "./useRubric";
 
@@ -40,6 +41,16 @@ function AnchorSort(props: { preview?: AnchorPreview | undefined }) {
       Sorts it: <span className="text-emerald-700 dark:text-emerald-400">{keep} Keep</span> ·{" "}
       <span className="text-rose-700 dark:text-rose-400">{reject} Reject</span> ·{" "}
       <span className="text-amber-700 dark:text-amber-400">{review} Needs review</span>
+    </p>
+  );
+}
+
+function SanityCount(props: { preview?: AnchorPreview | undefined }) {
+  const warnings = warningCount(props.preview);
+  if (warnings === 0) return null;
+  return (
+    <p className="text-xs text-amber-700 dark:text-amber-400" data-testid="sanity-count">
+      {plural(warnings, "Rubric warning")}: see the Criteria marked below
     </p>
   );
 }
@@ -111,6 +122,7 @@ export function DescribeHeader(props: {
         <h1 className="text-xl font-semibold">Describe</h1>
         <AnchorPoolLine />
         <AnchorSort preview={props.preview} />
+        <SanityCount preview={props.preview} />
       </div>
       <VersionSelect version={props.version} />
       {props.version === null && <RunButton draft={props.draft} />}

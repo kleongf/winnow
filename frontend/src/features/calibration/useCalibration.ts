@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { auditKey } from "../audit/useAudit";
 import { navigate } from "../core/url";
 import { failure } from "../rubric/useDraftEdits";
+import { reviewKey } from "../review/useReview";
 import { rubricKey } from "../rubric/useRubric";
 import { triageKey } from "../triage/useTriage";
 
@@ -42,6 +44,8 @@ export function useRunCalibration() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: rubricKey }),
         queryClient.invalidateQueries({ queryKey: triageKey }),
+        queryClient.invalidateQueries({ queryKey: auditKey }),
+        queryClient.invalidateQueries({ queryKey: reviewKey }),
       ]);
     },
   });

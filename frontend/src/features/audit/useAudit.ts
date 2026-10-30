@@ -22,7 +22,8 @@ export function useAudit() {
   });
 }
 
-/** Draw the sample; once drawn for a Rubric version, drawing again returns the same one. */
+/** Draw the sample; once drawn for a Rubric version and margin multiplier s, drawing again
+ * returns the same one. */
 export function useDrawSample() {
   const queryClient = useQueryClient();
   return useMutation({

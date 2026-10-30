@@ -57,7 +57,7 @@ export interface paths {
         /**
          * Post Audit Sample
          * @description Draws the Audit sample from the Episodes with a Reference label outside the Test set:
-         *     once per Rubric version, so drawing again returns the stored one.
+         *     once per Rubric version and margin multiplier s, so drawing again returns the stored one.
          */
         post: operations["post_audit_sample_api_audit_sample_post"];
         delete?: never;
@@ -1361,17 +1361,24 @@ export interface components {
         };
         /**
          * CriterionPreview
-         * @description How one Criterion sorts the anchor pool: its histogram's values and the counts.
+         * @description How one Criterion sorts the anchor pool: its histogram's values and the counts, and for a
+         *     hard Criterion in the Rubric the sanity monitor's reading of them (`rubric/sanity.py`).
          */
         CriterionPreview: {
             /** Criterion Id */
             criterion_id: string;
             /** English */
             english: string;
+            fail_rate?: components["schemas"]["Proportion"] | null;
             /** Failing */
             failing: number;
             /** Margin */
             margin: number;
+            /**
+             * Only Rejects
+             * @default []
+             */
+            only_rejects: string[];
             /** Passing */
             passing: number;
             /** Threshold */
@@ -1382,6 +1389,8 @@ export interface components {
             unsure: number;
             /** Values */
             values: components["schemas"]["AnchorValue"][];
+            /** Warning */
+            warning?: ("too_rare" | "too_common") | null;
         };
         /** CriterionResult */
         CriterionResult: {

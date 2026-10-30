@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, computed_field, model_validator
 
 from winnow.criteria.english import english
 from winnow.criteria.models import Criterion, RubricSettings, Status
+from winnow.evaluation.stats import Proportion
 from winnow.rubric.phrases import TextRange, uncovered_words
 from winnow.triage.models import TriageDecision
 
@@ -137,8 +138,12 @@ class AnchorValue(BaseModel):
     status: Status
 
 
+SanityWarning = Literal["too_rare", "too_common"]
+
+
 class CriterionPreview(BaseModel):
-    """How one Criterion sorts the anchor pool: its histogram's values and the counts."""
+    """How one Criterion sorts the anchor pool: its histogram's values and the counts, and for a
+    hard Criterion in the Rubric the sanity monitor's reading of them (`rubric/sanity.py`)."""
 
     criterion_id: str
     english: str
@@ -149,6 +154,12 @@ class CriterionPreview(BaseModel):
     failing: int
     unsure: int
     values: list[AnchorValue]
+    # Sanity monitor: None and [] for a soft Criterion, or one switched off. The fail rate is
+    # over every Episode of the pool; the warning fires below 2% (too_rare) or above 95%
+    # (too_common). `only_rejects` are the Episodes Rejected only because of this Criterion.
+    fail_rate: Proportion | None = None
+    warning: SanityWarning | None = None
+    only_rejects: list[str] = []
 
 
 class AnchorEpisode(BaseModel):
