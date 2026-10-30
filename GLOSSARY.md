@@ -48,6 +48,14 @@ _Avoid_: Explanation, justification
 Why a Criterion result is unsure rather than pass or fail, e.g. a measurement near its threshold, Spark's samples disagreeing, or a lost track.
 _Avoid_: Flag, warning
 
+**Margin multiplier**:
+The one number, s, that widens or narrows every measured and tracked Criterion's margin: effective margin = max(noise floor, interview gap) × s. It is 1 until calibration tunes it on the Dev set's interview and review labels, per Rubric version (a new version starts at 1 again), and is shown as "s = 1.0 · tuned on N labels", never as a guarantee.
+_Avoid_: Scale, temperature, tolerance
+
+**Threshold suggestion**:
+A threshold Winnow proposes for a Criterion when two or more labels contradict its crisp result: midway between the closest labelled pass and fail values, their gap as its margin. Only accepting it, as a new Rubric version, moves the threshold; labels never do on their own.
+_Avoid_: Auto-tune, correction
+
 **Triage decision**:
 The per-Episode outcome after all Criterion results are combined: Keep, Reject, or Needs review.
 _Avoid_: Verdict, label, classification

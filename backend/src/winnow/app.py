@@ -5,6 +5,7 @@ from fastapi import FastAPI
 
 from winnow.audit.routes import router as audit_router
 from winnow.boxes.routes import router as boxes_router
+from winnow.calibration.routes import router as calibration_router
 from winnow.core.context import build_context
 from winnow.core.routes import router as core_router
 from winnow.core.settings import Settings, get_settings
@@ -51,6 +52,7 @@ def create_app(settings: Settings | None = None, transport: Transport | None = N
         labels_router,
         review_router,
         audit_router,
+        calibration_router,
         evaluation_router,
         visual_router,
         jobs_router,

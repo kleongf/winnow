@@ -1,5 +1,5 @@
-"""Gathers each Episode's facts and labels and scores it against the latest Rubric version, on
-every read."""
+"""Gathers each Episode's facts and labels and scores it against the latest Rubric version, with
+the margin multiplier s it was calibrated with (1 until then), on every read."""
 
 from winnow.core.context import AppContext
 from winnow.criteria.facts import EpisodeFacts
@@ -25,21 +25,24 @@ def episode_facts(ctx: AppContext, episode: Episode) -> EpisodeFacts:
     )
 
 
-def _triage(ctx: AppContext, version: RubricVersion, episode: Episode) -> EpisodeTriage:
-    triage = score(version.rubric, episode_facts(ctx, episode), ctx.labels.in_force(episode.id))
+def _triage(ctx: AppContext, version: RubricVersion, episode: Episode, s: float) -> EpisodeTriage:
+    facts = episode_facts(ctx, episode)
+    triage = score(version.rubric, facts, ctx.labels.in_force(episode.id), s)
     return EpisodeTriage(
         **triage.model_dump(), episode_id=episode.id, rubric_version=version.version
     )
 
 
 def episode_triage(ctx: AppContext, episode: Episode) -> EpisodeTriage:
-    return _triage(ctx, ctx.rubrics.latest(), episode)
+    version = ctx.rubrics.latest()
+    return _triage(ctx, version, episode, ctx.calibrations.s_for(version.version))
 
 
 def scored(ctx: AppContext, episodes: list[Episode]) -> tuple[RubricVersion, list[EpisodeTriage]]:
     """Every one of `episodes` scored against the latest Rubric version, with its labels."""
     version = ctx.rubrics.latest()
-    return version, [_triage(ctx, version, e) for e in episodes]
+    s = ctx.calibrations.s_for(version.version)
+    return version, [_triage(ctx, version, e, s) for e in episodes]
 
 
 def triage_list(ctx: AppContext, episodes: list[Episode]) -> TriageList:

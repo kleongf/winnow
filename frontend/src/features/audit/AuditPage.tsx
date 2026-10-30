@@ -1,9 +1,11 @@
 // Audit: a seeded sample of Winnow's own Keeps (and a few Rejects), drawn once per Rubric version
+// and margin multiplier s (calibrating the version changes its Keeps, so it is drawn afresh)
 // from the Episodes outside the Test set. The auditor marks each Good or Bad; the header states
 // Keep precision. The first unmarked item opens; `?episode=` picks another from the strip.
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
+import { sText } from "../calibration/calibrationText";
 import { navigate, useSearchParams } from "../core/url";
 import { useEpisodes, type Episode } from "../episodes/useEpisodes";
 import { Workstation } from "../episodes/Workstation";
@@ -65,8 +67,15 @@ function SampleStatus(props: { audit: ReturnType<typeof useAudit> }) {
       <p className="text-sm">
         Check a random sample of the Episodes Winnow decided on its own: up to 12 Keeps and 5
         Rejects with a Reference label, none from the Test set. It’s drawn once for Rubric v
-        {audit.data.rubric_version}, with its seed recorded.
+        {audit.data.rubric_version} at s = {sText(audit.data.s)}, with its seed recorded.
       </p>
+      {audit.data.earlier_s !== null && (
+        <p className="mt-2 text-sm text-amber-800 dark:text-amber-300" data-testid="audit-redraw">
+          Calibration changed s from {sText(audit.data.earlier_s)} to {sText(audit.data.s)} since
+          the last sample, and with it which Episodes Winnow keeps: draw a fresh sample. Episodes
+          drawn again keep their marks.
+        </p>
+      )}
       <Button
         size="sm"
         className="mt-3"
@@ -98,7 +107,7 @@ function AuditHeader(props: { sample: AuditSample | undefined; current: AuditIte
         <p className="text-sm text-muted-foreground tabular-nums">
           {sample?.seed == null
             ? "Keep precision, from a seeded sample"
-            : `${String(marked)} of ${String(items.length)} marked · Rubric v${String(sample.rubric_version)} · seed ${String(sample.seed)}`}
+            : `${String(marked)} of ${String(items.length)} marked · Rubric v${String(sample.rubric_version)} · seed ${String(sample.seed)} · drawn at s = ${sText(sample.s)}`}
         </p>
       </div>
       {sample?.seed != null && (

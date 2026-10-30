@@ -1,6 +1,6 @@
 """Bisecting an assumed threshold over anchor Episodes with known values."""
 
-from winnow.interview.bisection import Answered, Point, next_point, resolve
+from winnow.interview.bisection import Answered, Point, next_point, resolve, separated
 
 # Eight anchor Episodes, 0.5 apart.
 POINTS = [Point(f"droid_100:{i}", 0.5 * (i + 1)) for i in range(8)]
@@ -54,3 +54,19 @@ def test_with_nothing_past_a_fine_answer_the_threshold_stays_unbracketed():
 
 def test_equality_thresholds_are_never_bisected():
     assert next_point(POINTS, [], 1.0, "==") is None
+
+
+def test_overlapping_answers_are_not_separated():
+    # Review labels, unlike interview answers, can overlap: fine at 0.3 and 0.35 and not fine at
+    # 0.6 leave no "≥" threshold that sorts them all.
+    overlapping = [
+        Answered("a", 0.3, True),
+        Answered("b", 0.35, True),
+        Answered("c", 0.6, False),
+        Answered("d", 0.2, False),
+    ]
+    apart = [Answered("a", 0.3, True), Answered("d", 0.2, False)]
+
+    assert not separated(overlapping, ">=")
+    assert separated(apart, ">=")
+    assert separated([Answered("a", 0.3, True)], ">=")  # one side only: nothing overlaps

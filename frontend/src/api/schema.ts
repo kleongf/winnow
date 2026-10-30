@@ -83,6 +83,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/calibration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Calibration
+         * @description The latest Rubric version's margin multiplier s (1 until calibrated) and the thresholds
+         *     the anchor pool's interview and review labels suggest for it now.
+         */
+        get: operations["get_calibration_api_calibration_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calibration/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Calibration Run
+         * @description Scans s ∈ {2, 1.5, 1, 0.75, 0.5}, widest first, on the anchor pool's labelled
+         *     (Episode, Phrase) pairs, keeps the last whose errors' one-sided Clopper–Pearson upper bound
+         *     is at most 0.2 at 90%, checks whether dropping 2 labels moves it, and scores the latest
+         *     Rubric version with it from now on.
+         */
+        post: operations["post_calibration_run_api_calibration_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calibration/suggestions/{criterion_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Accept Suggestion
+         * @description Freezes the latest Rubric version with the suggested threshold and margin as the next
+         *     version, which starts at s = 1 until calibrated, and applies them to the draft too unless
+         *     the draft's Criterion now compares differently; the reply says which.
+         */
+        post: operations["post_accept_suggestion_api_calibration_suggestions__criterion_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dataset": {
         parameters: {
             query?: never;
@@ -936,6 +1002,17 @@ export interface components {
             of: number;
             right_reason: components["schemas"]["Proportion"] | null;
         };
+        /**
+         * AcceptedSuggestion
+         * @description The Rubric version accepting a suggestion froze, and what became of the draft.
+         */
+        AcceptedSuggestion: {
+            /** Draft Note */
+            draft_note: string;
+            /** Draft Updated */
+            draft_updated: boolean;
+            version: components["schemas"]["RubricVersion"];
+        };
         /** AnchorEpisode */
         AnchorEpisode: {
             /** Confidence */
@@ -1043,6 +1120,8 @@ export interface components {
         AuditSample: {
             /** Drawn At */
             drawn_at: string | null;
+            /** Earlier S */
+            earlier_s: number | null;
             /** Items */
             items: components["schemas"]["AuditItem"][];
             /** Phrases */
@@ -1050,6 +1129,8 @@ export interface components {
             precision: components["schemas"]["KeepPrecision"];
             /** Rubric Version */
             rubric_version: number;
+            /** S */
+            s: number;
             /** Seed */
             seed: number | null;
         };
@@ -1095,6 +1176,47 @@ export interface components {
             y1: number;
             /** Y2 */
             y2: number;
+        };
+        /**
+         * Calibration
+         * @description The latest Rubric version's s and the thresholds labels suggest for it now.
+         */
+        Calibration: {
+            /** Confidence */
+            confidence: number;
+            /** Grid */
+            grid: number[];
+            /** Labelled */
+            labelled: number;
+            /** Max Error Rate */
+            max_error_rate: number;
+            record: components["schemas"]["CalibrationRecord"] | null;
+            /** Rubric Version */
+            rubric_version: number;
+            /** S */
+            s: number;
+            /** Suggestions */
+            suggestions: components["schemas"]["ThresholdSuggestion"][];
+        };
+        /**
+         * CalibrationRecord
+         * @description One run of the scan on a Rubric version; the latest is the s it is scored with.
+         */
+        CalibrationRecord: {
+            /** Bound Met */
+            bound_met: boolean;
+            /** Created At */
+            created_at: string;
+            /** Errors */
+            errors: number;
+            /** N Labels */
+            n_labels: number;
+            /** Rubric Version */
+            rubric_version: number;
+            /** S */
+            s: number;
+            /** Unstable */
+            unstable: boolean;
         };
         /** Candidate */
         Candidate: {
@@ -2433,6 +2555,34 @@ export interface components {
             /** Value */
             value: number;
         };
+        /**
+         * ThresholdSuggestion
+         * @description Where labels put a Criterion's threshold, when two or more contradict its crisp result:
+         *     midway between the closest labelled pass and fail values, their gap as its margin. Only
+         *     accepting it, as a new Rubric version, moves the threshold.
+         */
+        ThresholdSuggestion: {
+            /** Contradicting */
+            contradicting: number;
+            /** Criterion Id */
+            criterion_id: string;
+            /** English */
+            english: string;
+            /** Labelled */
+            labelled: number;
+            /** Phrase */
+            phrase: string;
+            /** Suggested English */
+            suggested_english: string;
+            /** Suggested Margin */
+            suggested_margin: number;
+            /** Suggested Threshold */
+            suggested_threshold: number;
+            /** Threshold */
+            threshold: number;
+            /** Unit */
+            unit: string;
+        };
         /** TimeWindow */
         TimeWindow: {
             /** End */
@@ -2743,6 +2893,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Box"][];
+                };
+            };
+        };
+    };
+    get_calibration_api_calibration_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Calibration"];
+                };
+            };
+        };
+    };
+    post_calibration_run_api_calibration_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Calibration"];
+                };
+            };
+            /** @description No interview or review label on the anchor pool yet */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    post_accept_suggestion_api_calibration_suggestions__criterion_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                criterion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptedSuggestion"];
+                };
+            };
+            /** @description Labels suggest no threshold for this Criterion */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

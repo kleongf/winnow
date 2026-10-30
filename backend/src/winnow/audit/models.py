@@ -31,7 +31,11 @@ class KeepPrecision(BaseModel):
 
 class AuditSample(BaseModel):
     rubric_version: int
-    seed: int | None  # None: not drawn yet for this Rubric version
+    s: float  # the version's margin multiplier, which the sample is (or will be) drawn at
+    # Set when the version had a sample drawn at another s, before calibration changed it: that
+    # one no longer shows the version's Keeps, so draw again.
+    earlier_s: float | None
+    seed: int | None  # None: not drawn yet for this Rubric version at `s`
     drawn_at: str | None
     phrases: list[str]  # the Rubric version's Phrases, each a Good mark passes
     items: list[AuditItem]  # Keeps, then Rejects, each in the Dataset's order

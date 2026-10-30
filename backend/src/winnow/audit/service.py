@@ -1,6 +1,8 @@
-"""The Audit sample, scored like every other read. It is drawn once per Rubric version from
-Winnow's own decisions (no label decided them) outside the Test set, then stored. The auditor's
-marks are `audit` labels, which scoring never reads, so Keep precision measures Winnow alone."""
+"""The Audit sample, scored like every other read. It is drawn once per Rubric version and margin
+multiplier s from Winnow's own decisions (no label decided them) outside the Test set, then
+stored: calibrating the version changes s, and with it the Keeps, so the next draw is fresh. The
+auditor's marks are `audit` labels given against the version, which scoring never reads, so Keep
+precision measures Winnow alone, and an Episode drawn again at a new s keeps its mark."""
 
 import random
 from collections.abc import Sequence
@@ -62,24 +64,28 @@ def _pool(ctx: AppContext, episodes: list[Episode]) -> tuple[list[str], list[str
 
 
 def draw_sample(ctx: AppContext, episodes: list[Episode], seed: int | None) -> AuditSample:
-    """Draws the latest Rubric version's sample from `episodes` unless it has one already.
-    Raises NothingToAuditError when none is an auto-Keep outside the Test set."""
+    """Draws the latest Rubric version's sample at its s from `episodes` unless it has one
+    already. Raises NothingToAuditError when none is an auto-Keep outside the Test set."""
     version = ctx.rubrics.latest()
-    if ctx.audit.get(version.version) is None:
+    s = ctx.calibrations.s_for(version.version)
+    if ctx.audit.get(version.version, s) is None:
         keeps, rejects = _pool(ctx, episodes)
         if not keeps:
             raise NothingToAuditError("No auto-Keep outside the Test set to audit yet")
         chosen = random.SystemRandom().randrange(2**31) if seed is None else seed
-        ctx.audit.save(version.version, chosen, draw(keeps, rejects, chosen))
+        ctx.audit.save(version.version, s, chosen, draw(keeps, rejects, chosen))
     return audit_sample(ctx)
 
 
 def audit_sample(ctx: AppContext) -> AuditSample:
     version = ctx.rubrics.latest()
-    stored = ctx.audit.get(version.version)
+    s = ctx.calibrations.s_for(version.version)
+    stored = ctx.audit.get(version.version, s)
     items = [] if stored is None else _items(ctx, version, stored)
     return AuditSample(
         rubric_version=version.version,
+        s=s,
+        earlier_s=None if stored is not None else ctx.audit.latest_s(version.version),
         seed=None if stored is None else stored.seed,
         drawn_at=None if stored is None else stored.created_at,
         phrases=version.rubric.phrases,

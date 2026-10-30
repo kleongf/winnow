@@ -105,7 +105,8 @@ def edit_draft(ctx: AppContext, edit: DraftEdit) -> RubricDraft:
 
 
 def preview_draft(ctx: AppContext, edit: DraftEdit) -> AnchorPreview:
-    """The draft, with `edit` applied but not saved, scored on the anchor pool."""
+    """The draft, with `edit` applied but not saved, scored on the anchor pool at s = 1, as the
+    version Run freezes from it starts."""
     draft = apply_edit(current_draft(ctx), edit)
     facts = revealed_anchor_facts(ctx)
     labels = anchor_labels(ctx, list(facts))
@@ -113,10 +114,12 @@ def preview_draft(ctx: AppContext, edit: DraftEdit) -> AnchorPreview:
 
 
 def preview_version(ctx: AppContext, version: RubricVersion) -> AnchorPreview:
+    """The version scored on the anchor pool with the margin multiplier it is calibrated with."""
     rubric = version.rubric
     facts = revealed_anchor_facts(ctx)
     labels = anchor_labels(ctx, list(facts))
-    return anchor_preview(facts, rubric, rubric.criteria, version.version, labels)
+    s = ctx.calibrations.s_for(version.version)
+    return anchor_preview(facts, rubric, rubric.criteria, version.version, labels, s)
 
 
 def run_draft(ctx: AppContext) -> RubricVersion:

@@ -1,5 +1,6 @@
 // A Criterion's anchor-pool values as a histogram stacked by status, with its threshold, the
-// margin band around it, and (when editable) a slider to drag the threshold over it.
+// margin band around it, any threshold labels suggest (dashed), and (when editable) a slider to
+// drag the threshold over it.
 import { Slider } from "@/components/ui/slider";
 
 import { binValues, formatValue, sliderDomain } from "./histogram";
@@ -19,6 +20,7 @@ export function AnchorHistogram(props: {
   threshold: number; // shown, maybe mid-drag
   anchor: number; // the saved threshold, which fixes the range while dragging
   label: string;
+  suggested?: number | undefined; // a threshold the labels suggest
   onDrag?: ((threshold: number) => void) | undefined;
   onCommit?: ((threshold: number) => void) | undefined;
 }) {
@@ -70,6 +72,19 @@ export function AnchorHistogram(props: {
             ) : null;
           });
         })}
+        {props.suggested !== undefined && (
+          <line
+            x1={x(props.suggested)}
+            x2={x(props.suggested)}
+            y1={0}
+            y2={HEIGHT}
+            className="stroke-sky-600 dark:stroke-sky-400"
+            strokeWidth={1.5}
+            strokeDasharray="3 2"
+            vectorEffect="non-scaling-stroke"
+            data-testid="suggested-line"
+          />
+        )}
         <line
           x1={x(threshold)}
           x2={x(threshold)}

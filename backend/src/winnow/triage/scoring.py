@@ -1,4 +1,4 @@
-"""The one pure scoring function: (Rubric, Episode facts, labels) -> Triage.
+"""The one pure scoring function: (Rubric, Episode facts, labels, margin multiplier s) -> Triage.
 
 Every route, preview, queue and evaluation calls `score`; nothing downstream of the Meta cache
 is stored, so a changed threshold or a new label re-sorts every Episode with no model call.
@@ -15,7 +15,14 @@ from winnow.criteria.models import Criterion, Status, TextSpan, Window
 from winnow.criteria.primitives import PRIMITIVES
 from winnow.criteria.windows import resolve_window, window_name
 from winnow.rubric.models import Rubric
-from winnow.triage.confidence import confidence, effective_margin, judge, p_keep, phrase_p
+from winnow.triage.confidence import (
+    UNCALIBRATED,
+    confidence,
+    effective_margin,
+    judge,
+    p_keep,
+    phrase_p,
+)
 from winnow.triage.models import (
     CriterionResult,
     Label,
@@ -27,9 +34,12 @@ from winnow.triage.models import (
 from winnow.triage.reason import reason_for
 
 
-def score(rubric: Rubric, facts: EpisodeFacts, labels: Sequence[Label] = ()) -> Triage:
+def score(
+    rubric: Rubric, facts: EpisodeFacts, labels: Sequence[Label] = (), s: float = UNCALIBRATED
+) -> Triage:
+    """`s` scales every Criterion's effective margin: the Rubric version's calibrated one, or 1."""
     grasps = find_grasps(facts.signals, rubric.settings)
-    results = [criterion_result(c, facts, grasps) for c in rubric.criteria]
+    results = [criterion_result(c, facts, grasps, s) for c in rubric.criteria]
     by_phrase = {label.phrase: label for label in labels}
     phrases = [
         phrase_result(p, [r for r in results if r.phrase == p], by_phrase.get(p))
@@ -80,10 +90,12 @@ def _camera(criterion: Criterion, facts: EpisodeFacts, measured: Measurement) ->
     return None if track is None else track.camera
 
 
-def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) -> CriterionResult:
+def criterion_result(
+    criterion: Criterion, facts: EpisodeFacts, grasps: Grasps, s: float = UNCALIBRATED
+) -> CriterionResult:
     frames = resolve_window(criterion.window, grasps, facts.signals.fps)
     measured = _measure(criterion, facts, grasps, frames)
-    judged = judge(criterion, measured)
+    judged = judge(criterion, measured, s)
     return CriterionResult(
         criterion_id=criterion.id,
         phrase=criterion.phrase,
@@ -105,7 +117,7 @@ def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) 
         window_name=window_name(criterion.window),
         at_s=measured.at_s if judged.status == "fail" else None,
         uncertainty=judged.uncertainty,
-        margin=effective_margin(criterion),
+        margin=effective_margin(criterion, s),
         p_pass=judged.p_pass,
         camera=_camera(criterion, facts, measured),
         track_plot=measured.plot,
