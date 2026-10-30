@@ -175,3 +175,29 @@ def test_audit_labels_given_on_an_older_rubric_version_do_not_mark_the_new_sampl
     rubrics.add(Rubric.model_validate(rubrics.latest().rubric.model_dump()))
 
     assert [i["mark"] for i in draw(ingested)["items"]] == [None, None, None]
+
+
+def test_a_sample_is_drawn_at_the_versions_s_and_again_once_calibration_changes_it(
+    ingested: TestClient,
+):
+    first = draw(ingested, seed=7)
+    mark_good(ingested, KEEP)
+    assert (first["s"], first["earlier_s"]) == (1.0, None)
+
+    # Calibrated narrower, Episode 1's release height (0.0437 against ≤ 0.05) is no longer
+    # within its margin, so Winnow keeps it too: the old sample no longer shows its Keeps.
+    app_context(ingested).calibrations.add(1, 0.5, 12, 0, True, False)
+    stale = audit(ingested)
+    assert (stale["s"], stale["seed"], stale["items"], stale["earlier_s"]) == (0.5, None, [], 1.0)
+    assert decision(ingested, NEEDS_REVIEW) == "keep"
+
+    fresh = draw(ingested, seed=8)
+
+    assert (fresh["s"], fresh["seed"], fresh["earlier_s"]) == (0.5, 8, None)
+    assert [(i["episode_id"], i["kind"], i["mark"]) for i in fresh["items"]] == [
+        (KEEP, "keep", "good"),  # picked again: its mark, given on this version, carries over
+        (NEEDS_REVIEW, "keep", None),
+        (REJECT, "reject", None),
+        (NO_GRASP, "reject", None),
+    ]
+    assert fresh["precision"]["good"]["count"] == 1

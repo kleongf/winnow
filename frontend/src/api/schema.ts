@@ -1105,6 +1105,8 @@ export interface components {
         AuditSample: {
             /** Drawn At */
             drawn_at: string | null;
+            /** Earlier S */
+            earlier_s: number | null;
             /** Items */
             items: components["schemas"]["AuditItem"][];
             /** Phrases */
@@ -1112,6 +1114,8 @@ export interface components {
             precision: components["schemas"]["KeepPrecision"];
             /** Rubric Version */
             rubric_version: number;
+            /** S */
+            s: number;
             /** Seed */
             seed: number | null;
         };
