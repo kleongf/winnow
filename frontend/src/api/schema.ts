@@ -1023,7 +1023,7 @@ export interface components {
              * Primitive
              * @enum {string}
              */
-            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency";
+            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency" | "in_hand_lost_s" | "fall_after_release" | "final_overlap" | "object_displacement";
             /** Question */
             question?: string | null;
             /** Threshold */
@@ -1116,7 +1116,7 @@ export interface components {
              * Primitive
              * @enum {string}
              */
-            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency";
+            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency" | "in_hand_lost_s" | "fall_after_release" | "final_overlap" | "object_displacement";
             /**
              * Status
              * @enum {string}
@@ -1124,8 +1124,9 @@ export interface components {
             status: "pass" | "fail" | "unsure";
             /** Threshold */
             threshold: number;
+            track_plot: components["schemas"]["TrackPlot"] | null;
             /** Uncertainty */
-            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed") | null;
+            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed" | "track lost") | null;
             /** Unit */
             unit: string;
             /** Value */
@@ -1601,6 +1602,13 @@ export interface components {
             /** Status */
             status: ("pass" | "fail" | "unsure") | null;
         };
+        /** PlotPoint */
+        PlotPoint: {
+            /** T */
+            t: number;
+            /** Value */
+            value: number | null;
+        };
         /**
          * Proportion
          * @description `count` of `of`, with its 95% Wilson interval; no interval when `of` is 0.
@@ -2014,6 +2022,20 @@ export interface components {
             /** Missing Fraction */
             missing_fraction: number;
         };
+        /**
+         * TrackPlot
+         * @description The signal a tracked Criterion is decided on, per 5 fps frame of the stretch it reads.
+         */
+        TrackPlot: {
+            /** Label */
+            label: string;
+            /** Level */
+            level: number;
+            /** Points */
+            points: components["schemas"]["PlotPoint"][];
+            /** Unit */
+            unit: string;
+        };
         /** TriageList */
         TriageList: {
             /** Rows */
@@ -2037,7 +2059,7 @@ export interface components {
             /** Reason */
             reason: string;
             /** Uncertainty */
-            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed")[];
+            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed" | "track lost")[];
         };
         /** UnsurePhrase */
         UnsurePhrase: {

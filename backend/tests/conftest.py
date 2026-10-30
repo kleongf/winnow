@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.helpers import wait_for_job
+from tests.tracking.scripted_sam import ScriptedSam
 from winnow.app import create_app
 from winnow.core.settings import Settings
 from winnow.episodes.fixtures import write_fixture_source
@@ -42,4 +44,20 @@ def settings(tmp_path: Path, droid100_root: Path, droid101_root: Path) -> Settin
 @pytest.fixture
 def api(settings: Settings) -> Iterator[TestClient]:
     with TestClient(create_app(settings)) as client:
+        yield client
+
+
+@pytest.fixture
+def sam() -> ScriptedSam:
+    return ScriptedSam()
+
+
+@pytest.fixture
+def scripted_api(settings: Settings, sam: ScriptedSam) -> Iterator[TestClient]:
+    """The app with a scripted SAM and fixture Episodes 0-2 ingested."""
+    with TestClient(create_app(settings, transport=sam)) as client:
+        job = client.post(
+            "/api/episodes/ingest", json={"source": "droid_100", "indices": [0, 1, 2]}
+        )
+        wait_for_job(client, job.json()["job_id"])
         yield client

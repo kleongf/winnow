@@ -6,18 +6,21 @@ import { expect, type APIRequestContext, type Page } from "@playwright/test";
  * indices here; past the last one, raise `--episodes` in scripts/e2e-server.ts and E2E_EPISODES
  * in backend/tests/record_meta.py, and re-record.
  *
- * Fixture Episode i depends on i % 3: 0 is kept ("Put the marker in the pot"); 1 needs review,
- * releasing inside the release height's margin, less confidently when i % 6 == 4 ("Move the
- * black remote control to the left"); 2 is rejected after two failed grasp attempts, with no
- * instruction and a failing Dataset outcome. */
+ * Fixture Episode i depends on i % 3: 0 grasps cleanly ("Put the marker in the pot"); 1 releases
+ * inside the release height's margin, less confidently when i % 6 == 4 ("Move the black remote
+ * control to the left"); 2 is rejected after two failed grasp attempts, with no instruction and a
+ * failing Dataset outcome. Unboxed, every Episode that isn't rejected needs review: placement has
+ * no exterior track. Boxed in Exterior 2 with PLACED_TARGET drawn (`boxForPlacement`), Episodes
+ * 0, 1, 3, 4, 6, 12 and 15 have a healthy recorded track, so i % 3 == 0 is kept; the rest have
+ * none to speak of, so their placement is unsure with "track lost". */
 export const EPISODES = {
-  workstation: [0, 1],
+  workstation: [9, 10],
   referenceLabels: [2],
   targets: [3],
-  awaitingLabel: [4],
+  awaitingLabel: [7],
   testSetEvaluation: [5],
   sets: [6],
-  triage: [7, 8, 9, 10],
+  triage: [1, 8, 0, 4],
   boxes: [11, 12, 13],
   prepare: [14, 15],
   review: [16],
@@ -115,6 +118,19 @@ export async function dragBox(page: Page): Promise<void> {
   await page.mouse.down();
   await page.mouse.move(...at(x2, y2), { steps: 4 });
   await page.mouse.up();
+}
+
+/** A target box drawn around where the recorded Exterior 2 tracks end, so placement passes on
+ * Episodes whose track is healthy. */
+export const PLACED_TARGET = { x1: 100, y1: 0, x2: 230, y2: 180 };
+
+/** Box an Episode in Exterior 2 and draw PLACED_TARGET, so its tracked Criteria are scored. */
+export async function boxForPlacement(request: APIRequestContext, episodeId: string) {
+  await boxEpisode(request, episodeId, "exterior_image_2_left");
+  const drawn = await request.put(`/api/episodes/${encodeURIComponent(episodeId)}/target-box`, {
+    data: PLACED_TARGET,
+  });
+  expect(drawn.ok()).toBe(true);
 }
 
 /** Box an Episode's object through the API and wait for the work the box queues. */

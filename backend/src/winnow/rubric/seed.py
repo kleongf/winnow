@@ -1,13 +1,12 @@
-"""The Rubric version every Project starts from, seeded from the frozen Description by hand until
-compile exists: its measured Criteria. "never drops it" waits for the tracked primitives, and
-"places it ..." gets its conclusive Criteria (target-box overlap, a visual question) with them;
-until then its release height can only send an Episode to review."""
+"""The Rubric version every Project starts from, seeded from the frozen Description by hand: its
+measured and tracked Criteria, as #18 compiles it. "places it ..." gets its visual question with
+`ask_video`; until then target-box overlap checks it alone."""
 
 from winnow.baseline.prompts import FROZEN
-from winnow.criteria.models import Criterion, RubricSettings, Setting
+from winnow.criteria.models import Criterion, RubricSettings, Setting, Window
 from winnow.rubric.models import Rubric
 
-FIRST_TRY, _NEVER_DROPS, PLACES, NO_PAUSES = FROZEN.phrases
+FIRST_TRY, NEVER_DROPS, PLACES, NO_PAUSES = FROZEN.phrases
 
 SEEDED_SETTINGS = RubricSettings(
     gripper_closed_level=Setting(
@@ -38,8 +37,29 @@ SEEDED = Rubric(
             unit="attempts",
         ),
         Criterion(
+            id="in-hand-lost",
+            phrase=NEVER_DROPS,
+            primitive="in_hand_lost_s",
+            comparator="<",
+            threshold=0.4,
+            unit="s",
+            window=Window(kind="holding"),
+            assumptions=[
+                "A slip is the object out of the closed gripper's fingers for 0.4 s or more."
+            ],
+        ),
+        Criterion(
+            id="fall-after-release",
+            phrase=NEVER_DROPS,
+            primitive="fall_after_release",
+            comparator="<=",
+            threshold=0.5,
+            unit="box-heights",
+            assumptions=["Set down, not dropped: it falls under half its height after release."],
+        ),
+        Criterion(
             id="release-height",
-            phrase=PLACES,
+            phrase=NEVER_DROPS,
             primitive="release_height_m",
             comparator="<=",
             threshold=0.05,
@@ -48,6 +68,16 @@ SEEDED = Rubric(
                 "Placed, not dropped: released within 5 cm above where it was picked up. "
                 "Inconclusive, since placing on top of something is a high release."
             ],
+        ),
+        Criterion(
+            id="final-overlap",
+            phrase=PLACES,
+            primitive="final_overlap",
+            comparator=">=",
+            threshold=0.5,
+            unit="ratio",
+            window=Window(kind="last_n_s", seconds=1.0),
+            assumptions=["On the target: at least half its final box is inside the target box."],
         ),
         Criterion(
             id="longest-pause",

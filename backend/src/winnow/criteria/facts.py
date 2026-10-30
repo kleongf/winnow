@@ -1,7 +1,7 @@
 """An Episode's facts: everything the scoring function may read about one Episode.
 
-Robot data, and which sources are missing or failed their step. Tracks and their health, the
-target box and cached visual answers join here as their Criteria arrive.
+Robot data, SAM's object tracks and the target box, and which sources are missing or failed their
+step. Cached visual answers join here as their Criteria arrive.
 """
 
 from collections.abc import Mapping
@@ -12,6 +12,7 @@ from typing import Literal
 from winnow.criteria.primitives import Source
 from winnow.episodes.models import EpisodeSignals, FloatArray
 from winnow.episodes.speed import smoothed_speed
+from winnow.tracking.models import TargetBox, Track
 
 SourceProblem = Literal["source missing", "step failed"]
 
@@ -21,6 +22,13 @@ class EpisodeFacts:
     signals: EpisodeSignals
     # Sources a Criterion can't read for this Episode; each one's Criteria are unsure.
     unavailable: Mapping[Source, SourceProblem] = field(default_factory=dict[Source, SourceProblem])
+    wrist: Track | None = None  # the wrist object track, seeded from robot data
+    exterior: Track | None = None  # the exterior object track, seeded from the hand-drawn box
+    target: TargetBox | None = None  # where the object should end up, on the exterior track's view
+
+    def track_for(self, source: Source) -> Track | None:
+        """The track a tracked source reads; None for any other source or a missing track."""
+        return {"wrist track": self.wrist, "exterior track": self.exterior}.get(source)
 
     @cached_property
     def t(self) -> list[float]:

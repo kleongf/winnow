@@ -4,7 +4,14 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from winnow.criteria.models import Comparator, Moment, Status, TextSpan, UncertaintySignal
+from winnow.criteria.models import (
+    Comparator,
+    Moment,
+    Status,
+    TextSpan,
+    TrackPlot,
+    UncertaintySignal,
+)
 from winnow.criteria.primitives import Kind, Primitive
 
 TriageDecision = Literal["keep", "reject", "needs_review"]
@@ -46,6 +53,7 @@ class CriterionResult(BaseModel):
     margin: float  # the effective margin around the threshold, in `unit`
     p_pass: float  # how likely this Criterion passes, 0 to 1
     camera: str | None  # the view to show; None for robot data
+    track_plot: TrackPlot | None  # tracked Criteria: the signal they are decided on
 
 
 class PhraseResult(BaseModel):

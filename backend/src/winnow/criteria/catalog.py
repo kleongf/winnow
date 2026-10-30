@@ -7,11 +7,14 @@ The metadata (kind, unit, params, conclusive, noise floor, source) lives in
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from winnow.criteria.exterior_track import fall_after_release, object_displacement
 from winnow.criteria.facts import EpisodeFacts
 from winnow.criteria.grasps import Grasps, Interval
+from winnow.criteria.in_hand import in_hand_lost_s
 from winnow.criteria.measured import Measurement, grasp_attempts, release_height_m
 from winnow.criteria.models import Criterion
 from winnow.criteria.motion import active_duration_s, longest_still_s, path_efficiency
+from winnow.criteria.placement import final_overlap
 from winnow.criteria.primitives import Primitive
 
 Measure = Callable[[Criterion, EpisodeFacts, Grasps, Interval], Measurement]
@@ -34,4 +37,12 @@ CATALOG: dict[Primitive, Entry] = {
     ),
     "active_duration_s": Entry(active_duration_s, "Time the arm is moving"),
     "path_efficiency": Entry(path_efficiency, "Path efficiency (straight line over path)"),
+    "in_hand_lost_s": Entry(
+        in_hand_lost_s, "Time the object is out of the closed gripper (wrist view)"
+    ),
+    "fall_after_release": Entry(
+        fall_after_release, "How far the object falls within 1 s of release"
+    ),
+    "final_overlap": Entry(final_overlap, "Share of the object's final box inside the target box"),
+    "object_displacement": Entry(object_displacement, "How far the object moved, start to end,"),
 }

@@ -97,8 +97,17 @@ def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) 
         uncertainty=judged.uncertainty,
         margin=effective_margin(criterion),
         p_pass=judged.p_pass,
-        camera=criterion.views[0] if criterion.views else None,
+        camera=_camera(criterion, facts),
+        track_plot=measured.plot,
     )
+
+
+def _camera(criterion: Criterion, facts: EpisodeFacts) -> str | None:
+    """The view to show: the Criterion's own, else the view its track is on."""
+    if criterion.views:
+        return criterion.views[0]
+    track = facts.track_for(PRIMITIVES[criterion.primitive].source)
+    return None if track is None else track.camera
 
 
 def conclusive_fail(result: CriterionResult) -> bool:
