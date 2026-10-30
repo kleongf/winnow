@@ -1,6 +1,15 @@
 """The report as plain text for `winnow eval`: counts first, then 95% intervals, never "±"."""
 
-from winnow.evaluation.models import EvaluationReport, LengthRule, Proportion, SystemRow
+from winnow.evaluation.models import (
+    EvaluationReport,
+    LengthRule,
+    MatchedCoverage,
+    McNemar,
+    PhraseFailures,
+    Proportion,
+    RightReason,
+    SystemRow,
+)
 from winnow.sets.models import SET_LABELS
 
 COLUMNS = ("System", "Keeps", "Rejects", "Undecided", "Coverage", "False keeps", "False rejects")
@@ -34,6 +43,44 @@ def _cells(row: SystemRow) -> tuple[str, ...]:
     )
 
 
+def right_reason_text(right: RightReason) -> list[str]:
+    slack = right.slack
+    if slack.seconds is None:
+        return ["Right reason on correct Rejects: no slack yet (no Phrase failed in both passes)"]
+    scored = " · ".join(f"{r.label} {counted(r.at_slack)}" for r in right.rows if r.at_slack)
+    return [
+        f"Right reason on correct Rejects, at {slack.seconds:.2f} s slack (95th percentile of "
+        f"{slack.edges} interval edges over {slack.episodes} relabelled Episodes):",
+        f"  {scored}",
+    ]
+
+
+def matched_text(matched: MatchedCoverage) -> str:
+    rows = {row.system: row for row in matched.rows}
+    winnow, spark = rows["winnow"], rows["spark_alone"]
+    return (
+        f"Keep precision at matched coverage (Winnow decides {matched.target} of "
+        f"{matched.episodes}): Winnow {counted(winnow.keep_precision)} · "
+        f"Spark alone {counted(spark.keep_precision)}, covering {spark.covered}"
+    )
+
+
+def mcnemar_text(m: McNemar) -> str:
+    return (
+        f"McNemar, on {m.compared} Episodes both decided: only Winnow right "
+        f"{m.winnow_only_right} · only Spark alone right {m.spark_alone_only_right}"
+    )
+
+
+def phrase_text(p: PhraseFailures) -> str:
+    noun = "failure" if p.failures == 1 else "failures"
+    flag = " (too few to score)" if p.too_few else ""
+    return (
+        f"  {p.phrase}: {p.failures} {noun}, Winnow rejects {p.winnow_rejects}, "
+        f"Spark alone {p.spark_alone_rejects}{flag}"
+    )
+
+
 def report_text(report: EvaluationReport) -> str:
     header = (
         f"{SET_LABELS[report.set_name]} · Rubric v{report.rubric_version} · "
@@ -46,4 +93,12 @@ def report_text(report: EvaluationReport) -> str:
         "  ".join(cell.ljust(w) for cell, w in zip(line, widths, strict=True)) for line in table
     ]
     rule = length_rule_text(report.comparison.length_rule)
-    return "\n".join([header, "", *(line.rstrip() for line in lines), "", rule]) + "\n"
+    sections = [
+        *right_reason_text(report.right_reason),
+        matched_text(report.matched_coverage),
+        mcnemar_text(report.mcnemar),
+        "Failures per Phrase:",
+        *(phrase_text(p) for p in report.phrase_failures),
+    ]
+    table_lines = [line.rstrip() for line in lines]
+    return "\n".join([header, "", *table_lines, "", rule, "", *sections]) + "\n"

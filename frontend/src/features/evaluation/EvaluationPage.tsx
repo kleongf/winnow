@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useRubric } from "../rubric/useRubric";
 import { SET_LABELS, type SetName } from "../sets/useSets";
 import { ComparisonTable } from "./ComparisonTable";
+import { ReportBreakdown } from "./ReportBreakdown";
+import { ReportCurves } from "./ReportCurves";
 import { TestRunLog } from "./TestRunLog";
 import { useRunEvaluation, type EvaluationReport } from "./useEvaluation";
 
@@ -112,6 +114,8 @@ export function EvaluationPage() {
             {summary(shown.report)}
           </h2>
           <ComparisonTable report={shown.report} />
+          <ReportCurves report={shown.report} />
+          <ReportBreakdown report={shown.report} />
         </section>
       ) : (
         <p className="mt-6 text-sm text-muted-foreground">

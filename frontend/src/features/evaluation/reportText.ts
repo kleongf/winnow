@@ -1,5 +1,5 @@
 // The report's wording, shared with `winnow eval`: counts first, then 95% intervals, never "±".
-import type { LengthRule, Proportion } from "./useEvaluation";
+import type { LengthRule, Proportion, Slack } from "./useEvaluation";
 
 /** e.g. "1 of 4". */
 export function countOf(p: Proportion): string {
@@ -10,6 +10,24 @@ export function countOf(p: Proportion): string {
 export function interval(p: Proportion): string | null {
   if (p.low === null || p.high === null) return null;
   return `${p.low.toFixed(2)}–${p.high.toFixed(2)}`;
+}
+
+function plural(n: number, noun: string): string {
+  return `${String(n)} ${noun}${n === 1 ? "" : "s"}`;
+}
+
+export function slackText(slack: Slack): string {
+  if (slack.seconds === null) {
+    return "No slack yet: no Phrase has failed in both a first pass and its relabel.";
+  }
+  return (
+    `Slack ${slack.seconds.toFixed(2)} s: the 95th percentile of ` +
+    `${plural(slack.edges, "interval edge")} over ${plural(slack.episodes, "relabelled Episode")}.`
+  );
+}
+
+export function balancedAccuracyText(value: number | null): string {
+  return value === null ? "–" : value.toFixed(2);
 }
 
 export function lengthRuleText(rule: LengthRule | null): string {

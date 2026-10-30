@@ -11,27 +11,45 @@ from winnow.baseline.models import BaselineAnswer
 from winnow.baseline.prompts import FROZEN
 from winnow.cli import main
 from winnow.core.settings import Settings
+from winnow.evaluation.models import EvaluationReport, Proportion
 
 FIRST_TRY, NEVER_DROPS = FROZEN.phrases[0], FROZEN.phrases[1]
 # Winnow keeps fixture Episode 0, routes 1 to Needs review and rejects 2 (three grasp attempts).
 EPISODES = ["droid_100:0", "droid_100:1", "droid_100:2", "droid_100:4"]
 
 
-def reference_label(api: TestClient, episode_id: str, *fails: str) -> None:
+def reference_label(
+    api: TestClient,
+    episode_id: str,
+    *fails: str,
+    interval: tuple[float, float] = (0.5, 1.0),
+    relabel: bool = False,
+) -> None:
     phrases = [
         {
             "phrase": p,
             "passed": p not in fails,
-            "interval": {"start_s": 0.5, "end_s": 1.0} if p in fails else None,
+            "interval": {"start_s": interval[0], "end_s": interval[1]} if p in fails else None,
         }
         for p in FROZEN.phrases
     ]
-    body = {"phrases": phrases, "elapsed_s": 30, "instruction": "Put the block in the bowl"}
+    body = {
+        "phrases": phrases,
+        "elapsed_s": 30,
+        "instruction": "Put the block in the bowl",
+        "relabel": relabel,
+    }
     response = api.post(f"/api/episodes/{episode_id}/reference-labels", json=body)
     assert response.status_code == 201, response.text
 
 
-def spark_alone(api: TestClient, episode_id: str, *decisions: str | None) -> None:
+def spark_alone(
+    api: TestClient,
+    episode_id: str,
+    *decisions: str | None,
+    failure_type: str | None = None,
+    times: tuple[float, ...] = (),
+) -> None:
     store = app_context(api).baseline
     for sample, decision in enumerate(decisions):
         answer = (
@@ -39,8 +57,8 @@ def spark_alone(api: TestClient, episode_id: str, *decisions: str | None) -> Non
             if decision is None
             else BaselineAnswer(
                 decision=decision,  # type: ignore[arg-type]
-                failure_type=None,
-                time_s=None,
+                failure_type=failure_type,
+                time_s=times[sample] if times else None,
                 reason="",
                 confidence=0.9,
             )
@@ -57,10 +75,14 @@ def labelled(api: TestClient, set_name: str) -> TestClient:
     api.post(f"/api/sets/{set_name}/episodes", json={"episode_ids": EPISODES})
     reference_label(api, "droid_100:0")
     reference_label(api, "droid_100:1", NEVER_DROPS)  # a failure Winnow can't see yet
-    reference_label(api, "droid_100:2", FIRST_TRY)
+    reference_label(api, "droid_100:2", FIRST_TRY, interval=(0.0, 2.9))  # the whole Episode
     # droid_100:4 waits for its Reference label, so the report leaves it out.
     spark_alone(api, "droid_100:0", "keep", "keep", "reject")
-    spark_alone(api, "droid_100:1", "reject", "reject", "reject")
+    # Spark alone says it drops the object, at a median of 0.2 s: 0.3 s before the interval.
+    times = (0.0, 0.2, 2.5)
+    spark_alone(
+        api, "droid_100:1", "reject", "reject", "reject", failure_type=NEVER_DROPS, times=times
+    )
     spark_alone(api, "droid_100:2", "keep", "keep", None)
     return api
 
@@ -112,6 +134,64 @@ def test_the_report_scores_only_labelled_episodes_against_their_reference_labels
     assert spark["false_rejects"] == interval(0, 1, 0.0, 0.7935)
 
 
+def typed(report: dict[str, object]) -> EvaluationReport:
+    return EvaluationReport.model_validate(report)
+
+
+def counts(p: Proportion | None) -> tuple[int, int] | None:
+    return None if p is None else (p.count, p.of)
+
+
+def test_right_reason_is_scored_at_the_slack_measured_from_the_relabel_pass(
+    test_set: TestClient,
+):
+    # The relabel moves droid_100:1's interval end from 1.0 s to 2.0 s: edges differ by 0 and 1.
+    reference_label(test_set, "droid_100:1", NEVER_DROPS, interval=(0.5, 2.0), relabel=True)
+
+    right = typed(run(test_set, "test")).right_reason
+
+    assert right.slack.seconds == pytest.approx(0.95)
+    assert (right.slack.edges, right.slack.episodes) == (2, 1)
+    rows = {row.system: row for row in right.rows}
+    # Winnow rejects droid_100:2 for its grasp attempts, inside the labelled interval.
+    assert counts(rows["winnow"].at_slack) == (1, 1)
+    spark = rows["spark_alone"]
+    assert counts(spark.at_slack) == (1, 1)
+    curve = {p.slack_s: p.right for p in spark.curve}
+    assert (curve[0.0], curve[0.25], curve[0.5]) == (0, 0, 1)  # 0.3 s early
+
+
+def test_risk_coverage_ranks_spark_alone_by_sample_agreement(test_set: TestClient):
+    curves = {c.system: c for c in typed(run(test_set, "test")).risk_coverage}
+
+    # P_keep = (keeps + 1) / (answers + 2): droid_100:1 0.2, droid_100:2 0.75, droid_100:0 0.6.
+    spark = [(p.confidence, p.covered, p.errors) for p in curves["spark_alone"].points]
+    assert spark == [(pytest.approx(0.8), 1, 0), (0.75, 2, 1), (0.6, 3, 1)]
+    assert curves["winnow"].episodes == 3
+    assert curves["winnow"].points[-1].covered == 3
+
+
+def test_the_report_compares_keep_precision_at_winnows_coverage(test_set: TestClient):
+    report = typed(run(test_set, "test"))
+
+    matched = report.matched_coverage
+    assert matched.target == 2
+    rows = {row.system: row for row in matched.rows}
+    assert counts(rows["winnow"].keep_precision) == (1, 1)
+    spark = rows["spark_alone"]  # its two most confident: it keeps droid_100:2, a failure
+    assert (spark.covered, counts(spark.keep_precision)) == (2, (0, 1))
+    m = report.mcnemar
+    assert (m.compared, m.winnow_only_right, m.spark_alone_only_right) == (2, 1, 0)
+
+    # (failures, Winnow rejects, Spark alone rejects, too few to score)
+    failures = {
+        p.phrase: (p.failures, p.winnow_rejects, p.spark_alone_rejects, p.too_few)
+        for p in report.phrase_failures
+    }
+    assert failures[FIRST_TRY] == (1, 1, 0, True)
+    assert failures[NEVER_DROPS] == (1, 0, 1, True)
+
+
 def test_the_cli_returns_the_same_report_as_the_route(
     test_set: TestClient, settings: Settings, capsys: pytest.CaptureFixture[str]
 ):
@@ -130,6 +210,24 @@ def test_the_cli_prints_the_comparison_table(
     assert "Test set · Rubric v1 · 3 of 4 Episodes labelled · 2 description failures" in out
     assert "Spark alone" in out and "1 of 2 (0.09–0.91)" in out
     assert "±" not in out
+
+
+def test_the_cli_prints_right_reason_matched_coverage_and_failures_per_phrase(
+    test_set: TestClient, settings: Settings, capsys: pytest.CaptureFixture[str]
+):
+    reference_label(test_set, "droid_100:1", NEVER_DROPS, interval=(0.5, 2.0), relabel=True)
+
+    assert main(["eval", "test"], settings=settings) == 0
+
+    out = capsys.readouterr().out
+    assert "Right reason on correct Rejects, at 0.95 s slack" in out
+    assert "Winnow 1 of 1 (0.21–1.00) · Spark alone 1 of 1 (0.21–1.00)" in out
+    assert "Keep precision at matched coverage (Winnow decides 2 of 3)" in out
+    assert "Spark alone 0 of 1 (0.00–0.79), covering 2" in out
+    assert (
+        "McNemar, on 2 Episodes both decided: only Winnow right 1 · only Spark alone right 0" in out
+    )
+    assert f"{FIRST_TRY}: 1 failure, Winnow rejects 1, Spark alone 0 (too few to score)" in out
 
 
 def test_each_test_set_run_appends_one_dated_log_entry(test_set: TestClient, settings: Settings):

@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { countOf, interval, lengthRuleText } from "./reportText";
+import { balancedAccuracyText, countOf, interval, lengthRuleText } from "./reportText";
 import type { EvaluationReport, Proportion } from "./useEvaluation";
 
 function Rate(props: { p: Proportion }) {
@@ -36,6 +36,7 @@ export function ComparisonTable(props: { report: EvaluationReport }) {
             <TableHead>False keeps</TableHead>
             <TableHead>False rejects</TableHead>
             <TableHead>Coverage</TableHead>
+            <TableHead className="text-right">Balanced accuracy</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -54,6 +55,9 @@ export function ComparisonTable(props: { report: EvaluationReport }) {
               <TableCell>
                 <Rate p={row.coverage} />
               </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {balancedAccuracyText(row.balanced_accuracy)}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -61,8 +65,10 @@ export function ComparisonTable(props: { report: EvaluationReport }) {
       <p className="mt-3 text-xs text-muted-foreground">
         False keeps count description failures kept, of all description failures; false rejects
         count Episodes meeting the Description that were rejected; coverage counts Episodes decided
-        without a person. Ranges are 95% Wilson intervals. Undecided is Winnow&apos;s Needs review,
-        or Spark alone with no majority answer. {lengthRuleText(comparison.length_rule)}
+        without a person; balanced accuracy averages failures rejected and Episodes meeting the
+        Description kept, over the Episodes each system decided. Ranges are 95% Wilson intervals.
+        Undecided is Winnow&apos;s Needs review, or Spark alone with no majority answer.{" "}
+        {lengthRuleText(comparison.length_rule)}
       </p>
     </>
   );
