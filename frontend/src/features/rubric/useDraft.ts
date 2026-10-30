@@ -31,7 +31,7 @@ export function useDraft() {
 }
 
 /** Compile a Description into the draft: one Spark call, so it takes a while. An edit of the
- * draft's Description compiles only the changed Phrases. */
+ * draft's Description compiles only the changed Phrases, and the interview goes on. */
 export function useCompile() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -48,7 +48,8 @@ export function useCompile() {
     },
     onSuccess: async (draft) => {
       queryClient.setQueryData(draftKey, draft);
-      // A new draft re-sorts the anchor pool and starts a new interview: refetch both.
+      // A new draft re-sorts the anchor pool and changes the interview: a compile afresh starts a
+      // new one, a recompile carries over the answers about text it left alone. Refetch both.
       await queryClient.invalidateQueries({ queryKey: draftKey, predicate: underDraft });
     },
   });

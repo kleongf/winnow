@@ -3,6 +3,7 @@ anchor pool, and frozen by Run."""
 
 from winnow.core.context import AppContext
 from winnow.criteria.models import RubricSettings
+from winnow.interview.carry import carried
 from winnow.meta.client import MetaClient
 from winnow.rubric.anchor_pool import anchor_episodes
 from winnow.rubric.compile import Compiled, compile_rubric
@@ -38,7 +39,8 @@ async def compile_draft(ctx: AppContext, description: str, fresh: bool = False) 
 
     A recompile applies Spark's answer to the draft as it is once Spark answers, so direct edits
     and interview answers made meanwhile survive; it raises DraftChangedError, saving nothing,
-    when the Description was changed meanwhile."""
+    when the Description was changed meanwhile. The interview goes on: its answers about text
+    the edit left alone carry over to the recompiled draft. A compile afresh starts a new one."""
     draft = ctx.drafts.get()
     if fresh or draft is None or draft.description == description:
         return ctx.drafts.save(await _compile_afresh(ctx, description))
@@ -49,21 +51,25 @@ async def compile_draft(ctx: AppContext, description: str, fresh: bool = False) 
     if diff.stretches:
         manifest = _manifest(ctx, draft.settings)
         compiled = await ask_changes(_meta(ctx), description, manifest, diff)
-    return ctx.drafts.save(_recompiled(ctx, draft.description, description, diff, compiled))
+    return _save_recompiled(ctx, draft.description, description, diff, compiled)
 
 
-def _recompiled(
+def _save_recompiled(
     ctx: AppContext, old: str, description: str, diff: DescriptionDiff, compiled: Compiled
 ) -> RubricDraft:
-    """Spark's answer applied to the draft as it is now. `diff` is what Spark was asked about,
-    from `old`; diffing the draft afresh must find the same, or the answer no longer fits it."""
+    """Spark's answer applied to the draft as it is now, saved with the interview answers that
+    still hold. `diff` is what Spark was asked about, from `old`; diffing the draft afresh must
+    find the same, or the answer no longer fits it."""
     now = current_draft(ctx)
     redo = diff_description(now.description, now.phrases, description)
     if now.description != old or _spans(redo) != _spans(diff):
         raise DraftChangedError(
             "The Description changed while Spark was reading the edit: recompile the changes"
         )
-    return recompile_rubric(now, description, redo, compiled)
+    draft = ctx.drafts.save(recompile_rubric(now, description, redo, compiled))
+    for answer in carried(ctx.interview.answers(now.compiled_at), redo, draft):
+        ctx.interview.add(draft.compiled_at, answer)
+    return draft
 
 
 def _spans(diff: DescriptionDiff) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
