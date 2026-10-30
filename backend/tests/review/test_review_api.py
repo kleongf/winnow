@@ -7,11 +7,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import OPEN_GRIPPER_EPISODE
-from tests.helpers import app_context, reference_label, wait_for_job
+from tests.helpers import app_context, reference_label, track_cleanly, wait_for_job
 from winnow.baseline.prompts import FROZEN
 from winnow.rubric.models import Rubric
 
-_, _, PLACES, _ = FROZEN.phrases
+_, NEVER_DROPS, _, _ = FROZEN.phrases
 INDICES = [0, 1, 2, OPEN_GRIPPER_EPISODE]
 
 
@@ -20,6 +20,7 @@ def ingested(api: TestClient) -> TestClient:
     job = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": INDICES})
     wait_for_job(api, job.json()["job_id"])
     for index in INDICES:
+        track_cleanly(api, f"droid_100:{index}")  # tracked Criteria pass; release height decides
         reference_label(api, f"droid_100:{index}")
     return api
 
@@ -38,7 +39,7 @@ def test_the_queue_holds_needs_review_episodes_with_only_their_unsure_phrases(
     assert item["episode_id"] == "droid_100:1"
     assert 0.5 < item["confidence"] < 0.95
     assert item["unsure"] == [
-        {"phrase": PLACES, "signals": ["near threshold (4.4 cm against ≤ 5 cm)"]}
+        {"phrase": NEVER_DROPS, "signals": ["near threshold (4.4 cm against ≤ 5 cm)"]}
     ]
     assert listed["reviewed"] == 0
 
@@ -46,7 +47,7 @@ def test_the_queue_holds_needs_review_episodes_with_only_their_unsure_phrases(
 def test_an_answered_episode_that_is_decided_leaves_the_queue(ingested: TestClient):
     ingested.post(
         "/api/episodes/droid_100:1/labels",
-        json={"phrase": PLACES, "value": "pass", "source": "review"},
+        json={"phrase": NEVER_DROPS, "value": "pass", "source": "review"},
     )
 
     listed = queue(ingested)

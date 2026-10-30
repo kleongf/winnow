@@ -2,12 +2,13 @@ import { expect, test } from "@playwright/test";
 
 import { EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
 
-// It releases inside the release height's margin, so it needs review on that Phrase alone. Other
+// It releases inside the release height's margin, and it's unboxed, so it needs review on "never
+// drops it" (release height near threshold, no tracks) and on placement (no exterior track). Other
 // specs' revealed Episodes share the queue, so this asserts on its own Episode only (the queue's
-// order is covered by the backend's review tests). It needs no Meta replies: measured Criteria
-// read only robot data.
+// order is covered by the backend's review tests). It needs no Meta replies: it is never boxed.
 const [UNSURE] = EPISODES.review;
 const ID = episodeId(UNSURE);
+const NEVER_DROPS = "never drops it";
 const PLACES = "places it in or on the target named in the instruction";
 
 test.beforeEach(async ({ request }) => {
@@ -24,15 +25,18 @@ test("answering an Episode's unsure Phrase takes it out of the queue", async ({ 
   const current = page.getByTestId("review-current");
   await expect(current).toContainText(ID);
   const yourCall = page.getByRole("region", { name: "Your call" });
-  await expect(yourCall.getByRole("group")).toHaveText([new RegExp(`${PLACES}.*near threshold`)]);
-  await page.keyboard.press("2"); // Fail, on the focused (only) unsure Phrase
+  await expect(yourCall.getByRole("group")).toHaveText([
+    new RegExp(`${NEVER_DROPS}.*near threshold`),
+    new RegExp(PLACES),
+  ]);
+  await page.keyboard.press("2"); // Fail, on the focused (first) unsure Phrase: a hard fail decides
 
   await expect(current.filter({ hasText: ID })).toHaveCount(0);
   const upNext = page.getByRole("region", { name: "Up next" });
   await expect(upNext.getByRole("button", { name: new RegExp(ID) })).toHaveCount(0);
   await page.goto(`/?page=episodes&episode=${encodeURIComponent(ID)}`);
   await expect(page.getByTestId("reason")).toHaveText(
-    `Rejected: "${PLACES}" was marked fail in review.`,
+    `Rejected: "${NEVER_DROPS}" was marked fail in review.`,
   );
   expect(errors).toEqual([]);
 });
