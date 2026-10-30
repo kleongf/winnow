@@ -15,11 +15,11 @@ import type { AnchorPreview } from "./useDraftEdits";
 import { type RubricVersion, useRubric } from "./useRubric";
 
 /** Each suggestion's Accept, by Criterion id; none unless `calibration` is this version's. */
-function useSuggestions(
+function suggestionsFor(
   version: number,
   calibration: Calibration | undefined,
+  accept: ReturnType<typeof useAcceptSuggestion>,
 ): (criterion: Criterion) => SuggestionAction | undefined {
-  const accept = useAcceptSuggestion();
   return (criterion) => {
     if (calibration?.rubric_version !== version) return undefined;
     const suggestion = calibration.suggestions.find((s) => s.criterion_id === criterion.id);
@@ -57,7 +57,9 @@ export function VersionPanel(props: {
   const { rubric, origin, created_at: createdAt, version } = props.version;
   const inUse = useRubric().data?.version === version;
   const calibration = useCalibration(inUse).data;
-  const suggestionFor = useSuggestions(version, calibration);
+  const accept = useAcceptSuggestion();
+  const suggestionFor = suggestionsFor(version, calibration, accept);
+  const accepted = accept.data?.version.version === version ? accept.data : undefined;
   return (
     <div>
       <p className="mb-3 text-xs text-muted-foreground">
@@ -71,6 +73,12 @@ export function VersionPanel(props: {
         <p className="text-[15px] leading-7">{rubric.description}</p>
       </div>
       <Settings rubric={rubric} />
+      {accepted && (
+        <p className="mt-3 text-xs text-muted-foreground" data-testid="accept-note">
+          v{version} froze the suggested threshold. {accepted.draft_note}
+        </p>
+      )}
+      {accept.error && <p className="mt-3 text-xs text-destructive">{accept.error.message}</p>}
       {inUse && calibration?.rubric_version === version && (
         <CalibrationControl calibration={calibration} />
       )}

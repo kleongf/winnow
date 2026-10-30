@@ -139,7 +139,8 @@ export interface paths {
         /**
          * Post Accept Suggestion
          * @description Freezes the latest Rubric version with the suggested threshold and margin as the next
-         *     version, which starts at s = 1 until calibrated, and applies them to the draft too.
+         *     version, which starts at s = 1 until calibrated, and applies them to the draft too unless
+         *     the draft's Criterion now compares differently; the reply says which.
          */
         post: operations["post_accept_suggestion_api_calibration_suggestions__criterion_id__accept_post"];
         delete?: never;
@@ -997,6 +998,17 @@ export interface components {
             /** Of */
             of: number;
             right_reason: components["schemas"]["Proportion"] | null;
+        };
+        /**
+         * AcceptedSuggestion
+         * @description The Rubric version accepting a suggestion froze, and what became of the draft.
+         */
+        AcceptedSuggestion: {
+            /** Draft Note */
+            draft_note: string;
+            /** Draft Updated */
+            draft_updated: boolean;
+            version: components["schemas"]["RubricVersion"];
         };
         /** AnchorEpisode */
         AnchorEpisode: {
@@ -2928,7 +2940,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RubricVersion"];
+                    "application/json": components["schemas"]["AcceptedSuggestion"];
                 };
             };
             /** @description Labels suggest no threshold for this Criterion */

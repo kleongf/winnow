@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from winnow.calibration.models import Calibration
+from winnow.calibration.models import AcceptedSuggestion, Calibration
 from winnow.calibration.service import (
     NoLabelsError,
     NoSuggestionError,
@@ -11,7 +11,6 @@ from winnow.calibration.service import (
     calibration,
 )
 from winnow.core.context import AppContext, get_context
-from winnow.rubric.models import RubricVersion
 
 router = APIRouter(tags=["calibration"])
 
@@ -45,9 +44,10 @@ async def post_calibration_run(ctx: Context) -> Calibration:
     status_code=status.HTTP_201_CREATED,
     responses={404: {"description": "Labels suggest no threshold for this Criterion"}},
 )
-async def post_accept_suggestion(criterion_id: str, ctx: Context) -> RubricVersion:
+async def post_accept_suggestion(criterion_id: str, ctx: Context) -> AcceptedSuggestion:
     """Freezes the latest Rubric version with the suggested threshold and margin as the next
-    version, which starts at s = 1 until calibrated, and applies them to the draft too."""
+    version, which starts at s = 1 until calibrated, and applies them to the draft too unless
+    the draft's Criterion now compares differently; the reply says which."""
     try:
         return accept_suggestion(ctx, criterion_id)
     except NoSuggestionError as error:

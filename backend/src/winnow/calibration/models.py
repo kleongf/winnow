@@ -3,6 +3,8 @@ interview and review labels, and the thresholds those labels suggest."""
 
 from pydantic import BaseModel
 
+from winnow.rubric.models import RubricVersion
+
 
 class CalibrationRecord(BaseModel):
     """One run of the scan on a Rubric version; the latest is the s it is scored with."""
@@ -44,3 +46,11 @@ class Calibration(BaseModel):
     max_error_rate: float  # the bound the scan keeps: errors' upper bound at most this
     confidence: float  # of that one-sided upper bound
     suggestions: list[ThresholdSuggestion]
+
+
+class AcceptedSuggestion(BaseModel):
+    """The Rubric version accepting a suggestion froze, and what became of the draft."""
+
+    version: RubricVersion  # starts at s = 1 until calibrated
+    draft_updated: bool  # False: no draft, or its Criterion now checks something else
+    draft_note: str  # what happened to the draft, to show

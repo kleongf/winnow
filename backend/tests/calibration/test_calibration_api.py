@@ -148,22 +148,23 @@ def test_accepting_a_suggestion_freezes_a_new_version_which_starts_at_s_1(anchor
     accepted = accept(anchored)
 
     assert accepted.status_code == 201, accepted.text
-    version = accepted.json()
+    reply = accepted.json()
+    version = reply["version"]
     path = next(c for c in version["rubric"]["criteria"] if c["id"] == PATH.id)
     assert version["version"] == 3
     assert (path["threshold"], path["margin"], path["assumptions"]) == (0.344, 0.012, [])
     assert [c for c in version["rubric"]["criteria"] if c["id"] != PATH.id] == [
         c.model_dump(mode="json") for c in RUBRIC.criteria if c.id != PATH.id
     ]
+    assert reply["draft_updated"] is False
+    assert reply["draft_note"] == "There's no Rubric draft to update."
     found = calibration(anchored)
     assert (found["rubric_version"], found["s"], found["record"]) == (3, 1.0, None)
     # The suggested margin is under the noise floor, so the effective margin is 0.05 again.
     assert path_margin(anchored, DEV[0]) == 0.05
 
 
-def test_accepting_carries_the_new_threshold_into_the_draft(anchored: TestClient):
-    contradict_the_path(anchored)
-    ctx = app_context(anchored)
+def save_draft(api: TestClient, criteria: list[Criterion]) -> None:
     phrases = [
         DraftPhrase(
             text=p,
@@ -174,21 +175,63 @@ def test_accepting_carries_the_new_threshold_into_the_draft(anchored: TestClient
         )
         for p in RUBRIC.phrases
     ]
-    ctx.drafts.save(
+    app_context(api).drafts.save(
         RubricDraft(
             description=RUBRIC.description,
             phrases=phrases,
             settings=RUBRIC.settings,
-            criteria=RUBRIC.criteria,
+            criteria=criteria,
             compiled_at="2026-10-30T00:00:00+00:00",
         )
     )
 
-    assert accept(anchored).status_code == 201
 
-    draft = anchored.get("/api/rubric/draft").json()
-    path = next(c for c in draft["criteria"] if c["id"] == PATH.id)
-    assert (path["threshold"], path["margin"]) == (0.344, 0.012)
+def draft_path(api: TestClient) -> Any:
+    return next(c for c in api.get("/api/rubric/draft").json()["criteria"] if c["id"] == PATH.id)
+
+
+def test_accepting_carries_the_new_threshold_into_the_draft(anchored: TestClient):
+    contradict_the_path(anchored)
+    save_draft(anchored, RUBRIC.criteria)
+
+    reply = accept(anchored).json()
+
+    assert reply["draft_updated"] is True
+    assert reply["draft_note"] == "The draft's Criterion path-efficiency moved too."
+    assert (draft_path(anchored)["threshold"], draft_path(anchored)["margin"]) == (0.344, 0.012)
+
+
+def test_a_draft_criterion_changed_since_is_left_alone(anchored: TestClient):
+    contradict_the_path(anchored)
+    turned = PATH.model_copy(update={"comparator": "<="})
+    save_draft(anchored, [c for c in RUBRIC.criteria if c.id != PATH.id] + [turned])
+
+    accepted = accept(anchored)
+
+    assert accepted.status_code == 201
+    assert accepted.json()["draft_updated"] is False
+    assert accepted.json()["draft_note"] == (
+        "The draft's Criterion path-efficiency now compares differently "
+        "(comparator, primitive or unit changed), so it was left as it is."
+    )
+    assert (draft_path(anchored)["comparator"], draft_path(anchored)["threshold"]) == ("<=", 0.5)
+
+
+def test_a_failed_draft_write_freezes_no_version(
+    anchored: TestClient, monkeypatch: pytest.MonkeyPatch
+):
+    contradict_the_path(anchored)
+    save_draft(anchored, RUBRIC.criteria)
+
+    def broken(_: RubricDraft) -> RubricDraft:
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(app_context(anchored).drafts, "save", broken)
+    with pytest.raises(RuntimeError):
+        accept(anchored)
+
+    assert len(anchored.get("/api/rubric/versions").json()) == 2
+    assert draft_path(anchored)["threshold"] == 0.5
 
 
 def test_accepting_what_labels_dont_suggest_is_refused(anchored: TestClient):

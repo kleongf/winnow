@@ -10,6 +10,7 @@ import { triageKey } from "../triage/useTriage";
 export type Calibration = components["schemas"]["Calibration"];
 export type CalibrationRecord = components["schemas"]["CalibrationRecord"];
 export type ThresholdSuggestion = components["schemas"]["ThresholdSuggestion"];
+export type AcceptedSuggestion = components["schemas"]["AcceptedSuggestion"];
 
 export const calibrationKey = ["calibration"] as const;
 
@@ -46,7 +47,8 @@ export function useRunCalibration() {
   });
 }
 
-/** Freeze the suggested threshold as the next Rubric version, and show that version. */
+/** Freeze the suggested threshold as the next Rubric version, and show that version. The reply
+ * says whether the draft's Criterion moved too. */
 export function useAcceptSuggestion() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -58,13 +60,13 @@ export function useAcceptSuggestion() {
       if (!response.ok || !data) throw failure(error, "The suggestion couldn't be accepted");
       return data;
     },
-    onSuccess: async (version) => {
+    onSuccess: async (accepted) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: rubricKey }),
         queryClient.invalidateQueries({ queryKey: triageKey }),
         queryClient.invalidateQueries({ queryKey: calibrationKey }),
       ]);
-      navigate({ version: String(version.version) });
+      navigate({ version: String(accepted.version.version) });
     },
   });
 }

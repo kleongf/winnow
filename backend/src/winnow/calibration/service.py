@@ -8,11 +8,11 @@ scoring function over stored facts, so calibrating makes no model call.
 """
 
 from winnow.calibration.labelled import LabelledEpisode, patterns, suggestions
-from winnow.calibration.models import Calibration
+from winnow.calibration.models import AcceptedSuggestion, Calibration
 from winnow.calibration.scan import CONFIDENCE, GRID, MAX_ERROR_RATE, scan, unstable
 from winnow.core.context import AppContext
 from winnow.criteria.models import Criterion
-from winnow.rubric.models import RubricVersion
+from winnow.rubric.models import RubricDraft, RubricVersion
 from winnow.rubric.preview import anchor_labels, revealed_anchor_facts
 
 
@@ -73,11 +73,37 @@ def _settled(
     return [c.model_copy(update=changes) if c.id == criterion_id else c for c in criteria]
 
 
-def accept_suggestion(ctx: AppContext, criterion_id: str) -> RubricVersion:
+def _same_check(a: Criterion, b: Criterion) -> bool:
+    """Whether a threshold set on one means the same on the other."""
+    return (a.comparator, a.primitive, a.unit) == (b.comparator, b.primitive, b.unit)
+
+
+def _draft_change(
+    draft: RubricDraft | None, frozen: Criterion, changes: dict[str, object]
+) -> tuple[RubricDraft | None, str]:
+    """The draft with the accepted threshold, or None to leave it, and what happened to it."""
+    if draft is None:
+        return None, "There's no Rubric draft to update."
+    mine = next((c for c in draft.criteria if c.id == frozen.id), None)
+    if mine is None:
+        return None, f"The draft has no Criterion {frozen.id}, so it was left as it is."
+    if not _same_check(mine, frozen):
+        return None, (
+            f"The draft's Criterion {frozen.id} now compares differently "
+            "(comparator, primitive or unit changed), so it was left as it is."
+        )
+    criteria = _settled(draft.criteria, frozen.id, changes)
+    return draft.model_copy(update={"criteria": criteria}), (
+        f"The draft's Criterion {frozen.id} moved too."
+    )
+
+
+def accept_suggestion(ctx: AppContext, criterion_id: str) -> AcceptedSuggestion:
     """Freezes the latest Rubric version with the threshold and margin labels suggest for
     `criterion_id` as the next version, which starts at s = 1, and carries them into the draft
-    so the next Run keeps them. The suggested value is no longer an assumption. Raises
-    NoSuggestionError when labels suggest nothing for it now."""
+    so the next Run keeps them, unless the draft's Criterion now checks something else. The
+    suggested value is no longer an assumption. Both writes happen together or not at all.
+    Raises NoSuggestionError when labels suggest nothing for it now."""
     version = ctx.rubrics.latest()
     found = next((x for x in calibration(ctx).suggestions if x.criterion_id == criterion_id), None)
     if found is None:
@@ -89,10 +115,13 @@ def accept_suggestion(ctx: AppContext, criterion_id: str) -> RubricVersion:
         "margin": found.suggested_margin,
         "assumptions": [],
     }
-    draft = ctx.drafts.get()
-    if draft is not None and any(c.id == criterion_id for c in draft.criteria):
-        criteria = _settled(draft.criteria, criterion_id, changes)
-        ctx.drafts.save(draft.model_copy(update={"criteria": criteria}))
+    frozen = next(c for c in version.rubric.criteria if c.id == criterion_id)
+    draft, note = _draft_change(ctx.drafts.get(), frozen, changes)
     rubric = version.rubric
     criteria = _settled(rubric.criteria, criterion_id, changes)
-    return ctx.rubrics.add(rubric.model_copy(update={"criteria": criteria}))
+    with ctx.db:
+        ctx.db.execute("BEGIN IMMEDIATE")
+        added = ctx.rubrics.add(rubric.model_copy(update={"criteria": criteria}))
+        if draft is not None:
+            ctx.drafts.save(draft)
+    return AcceptedSuggestion(version=added, draft_updated=draft is not None, draft_note=note)
