@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { type SuggestionAction, SuggestionNote } from "../calibration/SuggestionNote";
 import { AnchorHistogram } from "./AnchorHistogram";
 import { ASSUMED } from "./phraseTones";
+import { SanityNote } from "./SanityNote";
 import type { Criterion } from "./useDraft";
 import type { CriterionPreview, DraftEdit } from "./useDraftEdits";
 
@@ -109,6 +110,7 @@ function AnchorSortOf(props: {
         onCommit={editor?.onCommit}
       />
       <AnchorCounts preview={preview} />
+      <SanityNote preview={preview} />
     </>
   );
 }
