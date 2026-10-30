@@ -2,7 +2,7 @@
 
 winnow ingest droid_100 3 16 42
 winnow select droid_1.0.1 [--size 300] [--seed 0]
-winnow sets add dev droid_100:3 droid_100:16 | remove dev droid_100:3 | freeze dev | show
+winnow sets add dev droid_100:3 droid_100:16 | remove dev droid_100:3 | freeze dev [--yes] | show
 winnow fixtures <dir> [--episodes N]
 winnow eval test [--rubric-version N] [--json]
 winnow ask [droid_100:42 ...]  (the latest Rubric's visual Criteria; default every Episode)
@@ -25,7 +25,13 @@ from winnow.jobs.models import WorkItem
 from winnow.meta.transport import Transport
 from winnow.selection.service import sample_indices, selection_items
 from winnow.sets.models import SET_LABELS, SET_NAMES
-from winnow.sets.service import SetError, add_episodes, freeze, remove_episode
+from winnow.sets.service import (
+    FreezeWarningsError,
+    SetError,
+    add_episodes,
+    freeze,
+    remove_episode,
+)
 from winnow.visual.steps import visual_items
 
 
@@ -45,9 +51,9 @@ def _parser() -> argparse.ArgumentParser:
         change = actions.add_parser(action, help=f"{action} Episodes, e.g. droid_100:42")
         change.add_argument("name", choices=SET_NAMES)
         change.add_argument("episode_ids", nargs="+")
-    actions.add_parser("freeze", help="make a set's membership immutable").add_argument(
-        "name", choices=SET_NAMES
-    )
+    freeze_set = actions.add_parser("freeze", help="make a set's membership immutable")
+    freeze_set.add_argument("name", choices=SET_NAMES)
+    freeze_set.add_argument("--yes", action="store_true", help="freeze despite protocol warnings")
     actions.add_parser("show", help="each set's size, frozen state and Episodes")
     fixtures = commands.add_parser("fixtures", help="write synthetic droid_100-layout Episodes")
     fixtures.add_argument("root", type=Path)
@@ -73,6 +79,25 @@ async def _run(ctx: AppContext, kind: str, items: list[WorkItem]) -> int:
     return 1 if job.failed else 0
 
 
+def _confirmed(warnings: list[str]) -> bool:
+    for warning in warnings:
+        sys.stderr.write(f"warning: {warning}\n")
+    sys.stderr.write("Frozen is permanent. Freeze anyway? [y/N] ")
+    sys.stderr.flush()
+    return sys.stdin.readline().strip().lower() in ("y", "yes")
+
+
+def _freeze(ctx: AppContext, args: argparse.Namespace) -> bool:
+    """False when the user declined the protocol warnings."""
+    try:
+        freeze(ctx.sets, args.name, force=args.yes)
+    except FreezeWarningsError as warned:
+        if not _confirmed(warned.warnings):
+            return False
+        freeze(ctx.sets, args.name, force=True)
+    return True
+
+
 def _sets(ctx: AppContext, args: argparse.Namespace) -> int:
     try:
         if args.action == "add":
@@ -80,8 +105,9 @@ def _sets(ctx: AppContext, args: argparse.Namespace) -> int:
         elif args.action == "remove":
             for episode_id in args.episode_ids:
                 remove_episode(ctx.sets, args.name, episode_id)
-        elif args.action == "freeze":
-            freeze(ctx.sets, args.name)
+        elif args.action == "freeze" and not _freeze(ctx, args):
+            sys.stderr.write("not frozen\n")
+            return 1
     except SetError as error:
         sys.stderr.write(f"{error}\n")
         return 1
