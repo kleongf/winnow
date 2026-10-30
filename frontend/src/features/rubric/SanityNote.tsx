@@ -6,7 +6,7 @@ import { AlertTriangle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { navigate } from "../core/url";
-import { failRateLine, WARNING_CHIPS, WARNING_EXPLAINED } from "./sanity";
+import { failRateLine, WARNING_CHIPS, warningNote } from "./sanity";
 import type { CriterionPreview } from "./useDraftEdits";
 
 function openWorkstation(episodeId: string) {
@@ -53,24 +53,24 @@ function OnlyRejects(props: { episodeIds: string[] }) {
 export function SanityNote(props: { preview: CriterionPreview }) {
   const { fail_rate: rate, warning, only_rejects: only } = props.preview;
   if (!rate) return null; // soft, or switched off: it never rejects, so nothing to check
+  const hasNote = Boolean(warning) || only.length > 0;
   return (
     <div className="mt-1 text-xs" data-testid="sanity">
       <p className="text-muted-foreground tabular-nums" data-testid="fail-rate">
         {failRateLine(rate)}
       </p>
-      {(warning ?? only.length > 0) && (
+      {hasNote && (
         <div className="mt-1 flex flex-wrap items-center gap-2">
           {warning && (
             <span
               className="inline-flex items-center gap-1 rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
-              title={WARNING_EXPLAINED[warning]}
               data-testid="sanity-warning"
             >
               <AlertTriangle className="size-3" />
               {WARNING_CHIPS[warning]}
             </span>
           )}
-          {warning && <span className="text-muted-foreground">{WARNING_EXPLAINED[warning]}</span>}
+          {warning && <span className="text-muted-foreground">{warningNote(warning, rate)}</span>}
           {only.length > 0 && <OnlyRejects episodeIds={only} />}
         </div>
       )}

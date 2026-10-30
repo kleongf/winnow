@@ -66,7 +66,9 @@ def sanity(
 ) -> dict[str, Sanity]:
     """The reading of each `shown` hard Criterion that `rubric` scores, by id. `rejected` are
     the facts of the Episodes the Rubric Rejects, `results` the shown Criteria's results per
-    Episode."""
+    Episode. Only an Episode a Criterion fails can be rejected by it alone, which keeps a label's
+    Reject from being listed under a Criterion that passes: removing that Criterion would lift
+    the label's Reject too (a Phrase with no hard Criterion ignores its label)."""
     in_rubric = {c.id for c in rubric.criteria}
     readings: dict[str, Sanity] = {}
     for criterion in shown:
@@ -74,7 +76,10 @@ def sanity(
             continue
         fails = [found[criterion.id].status for found in results.values()].count("fail")
         rate = wilson(fails, len(results))
+        failed = {
+            id_: f for id_, f in rejected.items() if results[id_][criterion.id].status == "fail"
+        }
         readings[criterion.id] = Sanity(
-            rate, warning_for(rate), only_rejects(rubric, criterion, rejected, labels, s)
+            rate, warning_for(rate), only_rejects(rubric, criterion, failed, labels, s)
         )
     return readings

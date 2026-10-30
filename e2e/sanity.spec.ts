@@ -12,8 +12,9 @@ const FROZEN =
 const GRASP = "Grasp attempts, up to and including the grasp, ≤ 1";
 
 // The sanity monitor reads the anchor pool, which is the Dev set: one Episode, the sets spec's,
-// that grasps first time. It only reads, so it claims no Episode of its own; the draft and the
-// Dev set are what describe-edits and calibration share, and nothing here changes either.
+// that grasps first time. It claims no Episode of its own: the Dev set is only read. Compiling
+// restarts the draft that describe-edits and the other Describe specs share (clickCompile
+// confirms starting afresh), which is safe because `workers: 1` runs the specs one at a time.
 test("a Criterion that fails nothing warns, and the Episode only a Criterion rejects opens", async ({
   page,
   request,
@@ -29,6 +30,7 @@ test("a Criterion that fails nothing warns, and the Episode only a Criterion rej
   const card = page.getByRole("article", { name: GRASP });
   await expect(card.getByTestId("fail-rate")).toHaveText(/^0 of 1 fail · 0% \(95% interval 0%–/);
   await expect(card.getByTestId("sanity-warning")).toHaveText("Rarely fails");
+  await expect(card.getByTestId("sanity")).toContainText("Only 1 anchor Episode: too few to tell.");
   await expect(card.getByTestId("only-rejects")).toHaveCount(0);
   await expect(page.getByTestId("sanity-count")).toContainText("Rubric warning");
 

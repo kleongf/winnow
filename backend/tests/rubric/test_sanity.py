@@ -138,6 +138,20 @@ def test_a_label_that_passes_the_phrase_means_the_criterion_rejects_nothing():
     assert (count(shown), shown.only_rejects) == (1, [])
 
 
+def test_a_label_that_fails_the_phrase_of_a_passing_criterion_is_not_that_criterion_rejecting():
+    # The label Rejects e0, which passes `still`. Removing `still` leaves its Phrase with no hard
+    # Criterion, so the label would be ignored and e0 would stop being Rejected: but `still`
+    # isn't what rejects it.
+    labels = {"e0": [Label(phrase=still().phrase, value="fail", source="review")]}
+
+    preview = preview_of(pool(clean()), [first_try(), still()], labels)
+
+    assert preview.reject == 1
+    shown = found(preview, "still")
+    assert (count(shown), shown.only_rejects) == (0, [])
+    assert found(preview, "grasp-attempts").only_rejects == []
+
+
 def test_soft_criteria_get_no_warning_rate_or_only_rejects():
     soft = first_try(hard=False)
 
