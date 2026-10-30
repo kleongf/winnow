@@ -26,6 +26,10 @@ class EpisodeFacts:
     exterior: Track | None = None  # the exterior object track, seeded from the hand-drawn box
     target: TargetBox | None = None  # where the object should end up, on the exterior track's view
 
+    def track_for(self, source: Source) -> Track | None:
+        """The track a tracked source reads; None for any other source or a missing track."""
+        return {"wrist track": self.wrist, "exterior track": self.exterior}.get(source)
+
     @cached_property
     def t(self) -> list[float]:
         """s from the Episode's start, per frame."""

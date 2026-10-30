@@ -4,24 +4,21 @@ from winnow.core.context import AppContext
 from winnow.criteria.facts import EpisodeFacts
 from winnow.episodes.models import Episode
 from winnow.rubric.models import RubricVersion
+from winnow.tracking.exterior import current_exterior_track
 from winnow.tracking.target import chosen_target_box
 from winnow.triage.models import EpisodeTriage, PhraseChip, TriageList, TriageRow
 from winnow.triage.scoring import score
 
 
 def episode_facts(ctx: AppContext, episode: Episode) -> EpisodeFacts:
-    """Robot data, SAM's tracks so far, and the target box. The exterior track and target box
-    count only on the view the object is boxed in now: a redrawn box makes them stale until the
-    work it queued replaces them."""
-    tracks = {t.kind: t for t in ctx.tracks.for_episode(episode.id)}
+    """Robot data, SAM's tracks so far, and the target box, as they stand for the object's box
+    now."""
+    tracks = ctx.tracks.for_episode(episode.id)
     box = ctx.boxes.get(episode.id)
-    exterior = tracks.get("exterior")
-    if box is None or (exterior is not None and exterior.camera != box.camera):
-        exterior = None
     return EpisodeFacts(
         ctx.episodes.load_signals(episode),
-        wrist=tracks.get("wrist"),
-        exterior=exterior,
+        wrist=next((t for t in tracks if t.kind == "wrist"), None),
+        exterior=current_exterior_track(tracks, box),
         target=None if box is None else chosen_target_box(ctx.targets, box),
     )
 

@@ -65,6 +65,15 @@ async def track_exterior(
     return None if found else "SAM found nothing to track"
 
 
+def current_exterior_track(tracks: list[Track], box: Box | None) -> Track | None:
+    """The exterior track, if it follows the box as drawn now: a box redrawn on another view
+    leaves the old track stale until the work it queued replaces it."""
+    exterior = next((t for t in tracks if t.kind == "exterior"), None)
+    if box is None or exterior is None or exterior.camera != box.camera:
+        return None
+    return exterior
+
+
 def boxed_episode(
     episodes: EpisodeStore, boxes: BoxStore, args: Mapping[str, object]
 ) -> tuple[Episode, Box]:

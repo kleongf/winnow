@@ -213,6 +213,20 @@ def test_tracked_p_is_the_same_logistic_in_effective_margins_as_measured_p():
     assert result.p_pass == pytest.approx(0.8176, abs=1e-4)
 
 
+def test_a_free_fall_is_a_fall_not_a_lost_track_but_a_sideways_leap_is():
+    # Released at 2.0 s, the object drops 90 px (three box-heights) in one 5 fps frame: far over
+    # a box-width, but straight down, as a fall goes. A leap sideways is SAM jumping elsewhere.
+    dropped, leapt = placed(), placed()
+    dropped[11:] = [box_at(f, (160, 190), 30) for f in range(11, FRAMES)]
+    leapt[11:] = [box_at(f, (250, 100), 30) for f in range(11, FRAMES)]
+
+    [fell] = score_one(fall(), with_tracks(clean(), exterior=track("exterior", dropped)))
+    [jumped] = score_one(fall(), with_tracks(clean(), exterior=track("exterior", leapt)))
+
+    assert (fell.value, fell.status, fell.uncertainty) == (pytest.approx(3.0), "fail", None)
+    assert (jumped.status, jumped.uncertainty) == ("unsure", "track lost")
+
+
 def test_with_no_wrist_track_in_hand_is_unsure():
     [result] = score_one(in_hand(), clean())
 

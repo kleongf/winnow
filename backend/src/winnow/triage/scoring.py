@@ -106,9 +106,7 @@ def _camera(criterion: Criterion, facts: EpisodeFacts) -> str | None:
     """The view to show: the Criterion's own, else the view its track is on."""
     if criterion.views:
         return criterion.views[0]
-    track = {"wrist track": facts.wrist, "exterior track": facts.exterior}.get(
-        PRIMITIVES[criterion.primitive].source
-    )
+    track = facts.track_for(PRIMITIVES[criterion.primitive].source)
     return None if track is None else track.camera
 
 

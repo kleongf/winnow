@@ -5,12 +5,12 @@ tell "in" from "in front of", so placement also gets a visual question. Unsure w
 box (SAM found none and none was drawn) or without an exterior track (no hand-drawn box).
 """
 
-from winnow.criteria.exterior_track import checked, no_box, no_exterior_track
+from winnow.criteria.exterior_track import no_exterior_track
 from winnow.criteria.facts import EpisodeFacts
 from winnow.criteria.grasps import Grasps, Interval
 from winnow.criteria.measured import Measurement, at_times
-from winnow.criteria.models import Criterion, Moment, TextSpan, TrackPlot
-from winnow.criteria.track_frames import by_frame, frame_time, points, track_frames
+from winnow.criteria.models import Criterion, Moment, TextSpan
+from winnow.criteria.track_frames import Stretch
 from winnow.tracking.models import FrameBox, TargetBox, Track, TrackBox
 
 
@@ -53,24 +53,18 @@ def final_overlap(
     if facts.target is None or facts.target.box is None:
         return _no_target(facts.target)
     target = _target_in_clip(facts.target.box, facts.target, track)
-    frames = track_frames(track, facts, window.start, window.end)
-    boxes = by_frame(track)
-    seen = [f for f in frames if f in boxes]
+    stretch = Stretch.read(track, facts, window.start, window.end)
+    seen = stretch.seen
     if not seen:
-        return no_box(track, frames, "in this window")
-    shares = {f: _inside(boxes[f], target) for f in seen}
-    final, final_s = shares[seen[-1]], frame_time(track, seen[-1])
+        return stretch.no_box("in this window")
+    shares = {f: _inside(stretch.boxes[f], target) for f in seen}
+    final, final_s = shares[seen[-1]], stretch.time(seen[-1])
     evidence = [
         TextSpan(text=f"{final:.0%} of the object's final box is inside the target box, at "),
         *at_times([final_s]),
         TextSpan(text="."),
     ]
-    plot = TrackPlot(
-        label="Share inside the target box",
-        unit="ratio",
-        level=criterion.threshold,
-        points=points(track, {f: shares.get(f) for f in frames}),
-    )
+    plot = stretch.plot("Share inside the target box", "ratio", criterion.threshold, shares)
     moments = [Moment(t=final_s, label="Final box")]
     measured = Measurement(final, f"{final:.2f}", evidence, moments, final_s)
-    return checked(measured, track, frames, plot)
+    return stretch.judged(measured, plot)
