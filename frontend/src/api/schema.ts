@@ -1358,17 +1358,24 @@ export interface components {
         };
         /**
          * CriterionPreview
-         * @description How one Criterion sorts the anchor pool: its histogram's values and the counts.
+         * @description How one Criterion sorts the anchor pool: its histogram's values and the counts, and for a
+         *     hard Criterion in the Rubric the sanity monitor's reading of them (`rubric/sanity.py`).
          */
         CriterionPreview: {
             /** Criterion Id */
             criterion_id: string;
             /** English */
             english: string;
+            fail_rate?: components["schemas"]["Proportion"] | null;
             /** Failing */
             failing: number;
             /** Margin */
             margin: number;
+            /**
+             * Only Rejects
+             * @default []
+             */
+            only_rejects: string[];
             /** Passing */
             passing: number;
             /** Threshold */
@@ -1379,6 +1386,8 @@ export interface components {
             unsure: number;
             /** Values */
             values: components["schemas"]["AnchorValue"][];
+            /** Warning */
+            warning?: ("too_rare" | "too_common") | null;
         };
         /** CriterionResult */
         CriterionResult: {
