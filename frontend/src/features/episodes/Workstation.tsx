@@ -8,6 +8,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 
+import { Tabs } from "../core/Tabs";
 import { AwaitingLabelNote } from "../referenceLabels/AwaitingLabel";
 import { useSignalLevels } from "../rubric/useRubric";
 import { SET_LABELS, setsByEpisode, useSets } from "../sets/useSets";
@@ -70,25 +71,7 @@ export function Workstation(props: {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_340px] gap-4">
       <section className="min-w-0">
-        <div className="mb-1.5 flex items-center gap-1" role="tablist" aria-label="Camera">
-          {episode.cameras.map((c) => (
-            <Button
-              key={c}
-              size="sm"
-              role="tab"
-              aria-selected={c === camera}
-              variant={c === camera ? "secondary" : "ghost"}
-              onClick={() => {
-                setCamera(c);
-              }}
-            >
-              {CAMERA_LABELS[c] ?? c}
-            </Button>
-          ))}
-          <span className="ml-auto text-xs text-muted-foreground">
-            {episode.source} · Episode {episode.index} · {episode.duration_s.toFixed(1)} s
-          </span>
-        </div>
+        <CameraBar episode={episode} camera={camera} onCamera={setCamera} />
         {camera ? (
           <div className="relative">
             <EpisodeVideo key={camera} src={clipUrl(episode.id, camera)} playhead={playhead} />
@@ -172,6 +155,27 @@ function EpisodeDetails(props: { episode: Episode; tracks: Track[]; blind: boole
         <TargetStatus episodeId={episode.id} hidden={props.blind} />
       </dl>
     </>
+  );
+}
+
+function CameraBar(props: {
+  episode: Episode;
+  camera: string | null;
+  onCamera: (camera: string) => void;
+}) {
+  const { episode } = props;
+  return (
+    <div className="mb-2 flex items-center gap-2">
+      <Tabs
+        label="Camera"
+        items={episode.cameras.map((c) => ({ value: c, label: CAMERA_LABELS[c] ?? c }))}
+        value={props.camera ?? ""}
+        onChange={props.onCamera}
+      />
+      <span className="ml-auto text-xs text-muted-foreground">
+        {episode.source} · Episode {episode.index} · {episode.duration_s.toFixed(1)} s
+      </span>
+    </div>
   );
 }
 
