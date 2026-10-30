@@ -78,12 +78,15 @@ def cut_cropped(
     out.parent.mkdir(parents=True, exist_ok=True)
     partial = out.with_suffix(f".{uuid.uuid4().hex[:8]}.partial.mp4")
     filters = ["-vf", "crop={2}:{3}:{0}:{1}".format(*crop)] if crop else []
-    _ffmpeg(
-        "-ss", f"{start_s:.4f}", "-i", str(source), "-t", f"{end_s - start_s:.4f}", *filters,
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an",
-        str(partial),
-    )  # fmt: skip
-    partial.replace(out)
+    try:
+        _ffmpeg(
+            "-ss", f"{start_s:.4f}", "-i", str(source), "-t", f"{end_s - start_s:.4f}", *filters,
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an",
+            str(partial),
+        )  # fmt: skip
+        partial.replace(out)
+    finally:
+        partial.unlink(missing_ok=True)  # named for this cut alone, so nothing else removes it
 
 
 def tile_frames(source: str, start_s: float, duration_s: float, count: int, out: Path) -> None:
