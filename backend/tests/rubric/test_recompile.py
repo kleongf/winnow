@@ -106,6 +106,30 @@ def test_unchanged_criteria_keep_their_ids_and_edits(drafted: TestClient, spark:
     assert draft["disabled"] == [lowered]
 
 
+def test_a_clause_inserted_between_two_phrases_keeps_both_with_their_edits(
+    drafted: TestClient, spark: ScriptedCompile
+):
+    before = ids_by_phrase(drafted.get("/api/rubric/draft").json())
+    [grasps], [lowered] = before[ONE_GRASP], before[LOWERED]
+    edit = {"criteria": {grasps: {"threshold": 2}, lowered: {"hard": False, "threshold": 0.2}}}
+    assert drafted.patch("/api/rubric/draft", json=edit).status_code == 200
+    inserted = DESCRIPTION.replace(f"{ONE_GRASP}, ", f"{ONE_GRASP}, never dropped, ")
+
+    draft = compile_description(
+        drafted,
+        spark,
+        inserted,
+        {"phrases": [phrase("never dropped", "context", reason="Said elsewhere.")]},
+    )
+
+    assert spark.prompts[1][0].endswith('- "never dropped"')  # the only text it answers for
+    assert [r["text"] for r in draft["recompiled"]] == ["never dropped"]
+    assert ids_by_phrase(draft) == before
+    by_id = {c["id"]: c for c in draft["criteria"]}
+    assert by_id[grasps]["threshold"] == 2
+    assert (by_id[lowered]["hard"], by_id[lowered]["threshold"]) == (False, 0.2)
+
+
 def test_a_recompiled_criterion_gets_an_id_no_earlier_criterion_had(
     drafted: TestClient, spark: ScriptedCompile
 ):

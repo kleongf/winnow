@@ -57,10 +57,10 @@ def test_words_added_at_a_phrase_edge_change_that_phrase():
 def test_a_new_sentence_is_asked_about_and_moves_the_phrases_after_it():
     new = "Careful. Tidy pick: one grasp only, never drops it, and no long pauses."
 
-    kept, asked = kept_and_asked(new)
-
-    assert asked == ["Careful. Tidy pick"]  # a new first word touches the first Phrase
-    assert kept == ["one grasp only", "never drops it", "no long pauses"]
+    assert kept_and_asked(new) == (
+        ["Tidy pick", "one grasp only", "never drops it", "no long pauses"],
+        ["Careful"],  # a sentence of its own, so it leaves the Phrase after it alone
+    )
 
 
 def test_a_deleted_phrase_asks_about_nothing():
@@ -94,3 +94,58 @@ def test_changed_spacing_inside_a_phrase_changes_it():
 
     assert asked == ["one grasp  only"]
     assert "one grasp only" not in kept
+
+
+def kept_and_asked_from(old: str, texts: tuple[str, ...], new: str) -> tuple[list[str], list[str]]:
+    diff = diff_description(old, phrases(old, *texts), new)
+    for phrase in diff.kept:
+        assert new[phrase.start : phrase.end] == phrase.text
+    return [p.text for p in diff.kept], [s.text for s in diff.stretches]
+
+
+def test_a_sentence_inserted_between_two_phrases_touches_neither():
+    old = "Grasp once. No pauses."
+
+    assert kept_and_asked_from(
+        old, ("Grasp once", "No pauses"), "Grasp once. Move slowly. No pauses."
+    ) == (["Grasp once", "No pauses"], ["Move slowly"])
+
+
+def test_a_clause_appended_after_a_phrase_leaves_that_phrase_alone():
+    new = "Tidy pick: one grasp only, never drops it, pauses are fine, and no long pauses."
+
+    assert kept_and_asked(new) == (
+        ["Tidy pick", "one grasp only", "never drops it", "no long pauses"],
+        ["pauses are fine"],
+    )
+
+
+def test_a_clause_appended_to_a_phrase_at_the_end_leaves_it_alone():
+    old = "Grasp once and never drops it"
+
+    assert kept_and_asked_from(
+        old, ("Grasp once", "never drops it"), "Grasp once and never drops it, pauses are fine"
+    ) == (["Grasp once", "never drops it"], ["pauses are fine"])
+
+
+def test_a_sentence_appended_to_a_description_with_no_final_period_is_asked_about_alone():
+    old = "Grasp once. No pauses"
+
+    assert kept_and_asked_from(
+        old, ("Grasp once", "No pauses"), "Grasp once. No pauses. Move slowly."
+    ) == (["Grasp once", "No pauses"], ["Move slowly"])
+
+
+def test_a_word_added_right_after_a_phrase_changes_it():
+    old = "No pauses."
+
+    assert kept_and_asked_from(old, ("No pauses",), "No pauses ever.") == ([], ["No pauses ever"])
+
+
+def test_a_word_added_inside_a_phrase_changes_it():
+    old = "Tidy: No long pauses."
+
+    assert kept_and_asked_from(old, ("Tidy", "No long pauses"), "Tidy: No very long pauses.") == (
+        ["Tidy"],
+        ["No very long pauses"],
+    )
