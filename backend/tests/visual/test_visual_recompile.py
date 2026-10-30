@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.helpers import ask_visual, reference_label, wait_for_job
+from tests.meta.fakes import NoTranscribe
 from tests.rubric.scripted import ScriptedCompile, criterion, phrase
 from tests.visual.answers import PARAPHRASES, QUESTION
 from tests.visual.scripted import ScriptedVisual
@@ -25,7 +26,7 @@ EPISODE = "droid_100:0"
 
 
 @dataclass
-class CompileAndAsk:
+class CompileAndAsk(NoTranscribe):
     """Scripted compile answers, and scripted visual answers to whatever is asked."""
 
     compile: ScriptedCompile

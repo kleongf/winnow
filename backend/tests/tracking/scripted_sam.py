@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from tests.baseline.scripted import ScriptedSpark
+from tests.meta.fakes import NoTranscribe
 from winnow.meta.models import MetaContent
 from winnow.meta.pricing import SAM
 from winnow.meta.transport import Reply
@@ -23,7 +24,7 @@ class SamCallMade:
 
 
 @dataclass
-class ScriptedSam:
+class ScriptedSam(NoTranscribe):
     visible: set[str] = field(default_factory=lambda: {"pot"})
     calls: list[SamCallMade] = field(default_factory=list[SamCallMade])
     spark: ScriptedSpark = field(default_factory=ScriptedSpark)

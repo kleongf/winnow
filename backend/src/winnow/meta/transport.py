@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from winnow.meta.models import MetaContent
+from winnow.meta.models import MetaContent, Transcript
 
 
 @dataclass(frozen=True)
@@ -30,3 +30,7 @@ class Transport(Protocol):
     async def respond(
         self, model: str, content: MetaContent, options: dict[str, object]
     ) -> Reply: ...
+
+    async def transcribe(
+        self, model: str, audio: Path, options: dict[str, object]
+    ) -> Transcript: ...

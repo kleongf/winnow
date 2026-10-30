@@ -6,7 +6,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
-from winnow.meta.pricing import SAM, SPARK_CONTRIBUTOR, SPARK_STANDARD
+from winnow.meta.pricing import SAM, SPARK_CONTRIBUTOR, SPARK_STANDARD, VOICE_TRANSCRIBE
 
 Clock = Callable[[], float]
 Sleep = Callable[[float], Awaitable[None]]
@@ -22,6 +22,8 @@ DEFAULT_LIMITS = {
     SPARK_CONTRIBUTOR: Limit(in_flight=50, per_minute=150),
     SPARK_STANDARD: Limit(in_flight=50, per_minute=3000),
     SAM: Limit(in_flight=8),
+    # 256 concurrent streams and 16,000 an hour, batch or streamed
+    VOICE_TRANSCRIBE: Limit(in_flight=256, per_minute=16_000 / 60),
 }
 
 

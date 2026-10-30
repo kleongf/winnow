@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.helpers import ask_visual, reference_label, wait_for_job
+from tests.meta.fakes import NoTranscribe
 from tests.record_meta import E2E_EPISODES, RECORDINGS
 from tests.record_visual import VISUAL_ANSWERS
 from winnow.app import create_app
@@ -22,7 +23,7 @@ SPLIT = 10  # the Episode `tests.record_visual` scripts to split 2-1
 
 
 @dataclass
-class CountingReplay:
+class CountingReplay(NoTranscribe):
     replay: ReplayTransport
     responses: int = 0
 

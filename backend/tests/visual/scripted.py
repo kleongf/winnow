@@ -5,6 +5,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from tests.meta.fakes import NoTranscribe
 from tests.tracking.scripted_sam import ScriptedSam
 from winnow.meta.models import MetaContent
 from winnow.meta.transport import Reply
@@ -20,7 +21,7 @@ class VisualCall:
 
 
 @dataclass
-class ScriptedVisual:
+class ScriptedVisual(NoTranscribe):
     # Per Episode folder (e.g. "000001"), one answer per sample; "pass" from every sample else.
     answers: dict[str, tuple[AnswerValue, ...]] = field(
         default_factory=dict[str, tuple[AnswerValue, ...]]
