@@ -394,6 +394,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/episodes/{episode_id}/voice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Voice
+         * @description One push-to-talk turn on the Review page, `t` the playhead at its onset: transcribed, then
+         *     mapped by one Spark call onto the Episode's unsure hard Phrases as pass or fail. Saves
+         *     nothing: each chip the reviewer confirms is posted as a `review` label.
+         */
+        post: operations["post_voice_api_episodes__episode_id__voice_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/evaluation/disagreements": {
         parameters: {
             query?: never;
@@ -1133,6 +1155,13 @@ export interface components {
             s: number;
             /** Seed */
             seed: number | null;
+        };
+        /** Body_post_voice_api_episodes__episode_id__voice_post */
+        Body_post_voice_api_episodes__episode_id__voice_post: {
+            /** Audio */
+            audio: string;
+            /** T */
+            t: number;
         };
         /** Box */
         Box: {
@@ -2783,6 +2812,30 @@ export interface components {
             reply: components["schemas"]["VisualReply"] | null;
         };
         /**
+         * VoiceChip
+         * @description One unsure Phrase the reviewer's words decide, to confirm or discard.
+         */
+        VoiceChip: {
+            /** Phrase */
+            phrase: string;
+            /** Quote */
+            quote: string;
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "pass" | "fail";
+        };
+        /** VoiceTurn */
+        VoiceTurn: {
+            /** Chips */
+            chips: components["schemas"]["VoiceChip"][];
+            /** T */
+            t: number;
+            /** Transcript */
+            transcript: string;
+        };
+        /**
          * Window
          * @description The stretch of the Episode a Criterion looks at. Grasp-relative windows are empty in an
          *     Episode with no grasp (and `after_release` when the grasp never opens).
@@ -3449,6 +3502,60 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    post_voice_api_episodes__episode_id__voice_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_post_voice_api_episodes__episode_id__voice_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceTurn"];
+                };
+            };
+            /** @description The Episode has no Reference label yet */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The audio isn't mono 16-bit PCM WAV at 16 or 24 kHz */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Voice Transcribe or Spark failed, or Spark's answer couldn't be read */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Meta API isn't configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -24,11 +24,12 @@ def review_queue(ctx: AppContext, episodes: list[Episode]) -> ReviewQueue:
         rubric_version=version.version,
         reviewed=len(reviewed),
         # sorted() is stable: equally confident Episodes keep the Dataset's order.
-        items=[_item(t) for t in sorted(waiting, key=lambda t: t.confidence)],
+        items=[review_item(t) for t in sorted(waiting, key=lambda t: t.confidence)],
     )
 
 
-def _item(triage: EpisodeTriage) -> ReviewItem:
+def review_item(triage: EpisodeTriage) -> ReviewItem:
+    """What a reviewer is asked about one Episode: its hard Phrases Winnow couldn't decide."""
     return ReviewItem(
         episode_id=triage.episode_id,
         confidence=triage.confidence,
