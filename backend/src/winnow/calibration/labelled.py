@@ -4,7 +4,8 @@ suggest. Pure: the service gathers the Episodes' facts and labels.
 
 A threshold is suggested where two or more labels contradict a hard Criterion's crisp result,
 by the interview's bracketing: midway between the closest labelled pass and fail values, with
-their gap as its margin. A fail label that another Criterion of the Phrase already explains (it
+their gap as its margin. Labels that overlap (a pass beyond a fail) suggest nothing, since no
+threshold sorts them. A fail label that another Criterion of the Phrase already explains (it
 fails the Phrase conclusively) says nothing about this one, so it is left out.
 """
 
@@ -16,7 +17,7 @@ from winnow.calibration.scan import GRID, Pattern
 from winnow.criteria.english import english
 from winnow.criteria.facts import EpisodeFacts
 from winnow.criteria.models import Criterion
-from winnow.interview.bisection import Answered, resolve
+from winnow.interview.bisection import Answered, resolve, separated
 from winnow.rubric.models import Rubric
 from winnow.triage.models import CriterionResult, Label, PhraseResult, Triage
 from winnow.triage.scoring import score
@@ -98,6 +99,8 @@ def _suggestion(criterion: Criterion, points: list[_Point]) -> ThresholdSuggesti
     if contradicting < MIN_CONTRADICTING:
         return None
     asked = [Answered("", p.value, p.fine) for p in points]
+    if not separated(asked, criterion.comparator):
+        return None  # the labels overlap: no threshold sorts them, so none is suggested
     resolution = resolve(asked, criterion.threshold, criterion.comparator)
     if resolution.outcome != "set" or resolution.margin is None:
         return None  # labelled on one side only: nothing shows where the line is

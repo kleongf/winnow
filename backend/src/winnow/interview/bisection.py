@@ -99,6 +99,14 @@ def _sorted_right(asked: Sequence[Answered], threshold: float, comparator: str) 
     return all(_passes(a.value, threshold, comparator) == a.fine for a in asked)
 
 
+def separated(asked: Sequence[Answered], comparator: str) -> bool:
+    """Whether some threshold passes every fine answer and fails every other one: the closest
+    fine answer lies strictly on the passing side of the closest not-fine one. Bisection only
+    asks inside the bracket, so its answers always are; labels given elsewhere can overlap."""
+    bracket = _bracket(asked, _sign(comparator))
+    return bracket.fine is None or bracket.not_fine is None or bracket.fine < bracket.not_fine
+
+
 def resolve(asked: Sequence[Answered], threshold: float, comparator: str) -> Resolution:
     sign = _sign(comparator)
     bracket = _bracket(asked, sign)

@@ -129,3 +129,12 @@ def test_soft_criteria_get_no_suggestion():
     soft = efficient(0.7, hard=False)
 
     assert suggestions(rubric(soft), labelled(a="pass", b="pass", c="fail"), 1.0) == []
+
+
+def test_overlapping_labels_suggest_nothing():
+    # 0.617 and 0.518 fail ≥ 0.7 but are labelled pass, and 0.757 passes but is labelled fail:
+    # no threshold on path efficiency puts the passes on one side and the fails on the other.
+    # Bracketing alone would say ≥ 0.64, which fails both passes and passes the fail.
+    labels = labelled(a="pass", b="pass", e="fail", c="fail")
+
+    assert suggestions(rubric(efficient(0.7)), labels, 1.0) == []
