@@ -25,8 +25,7 @@ def episode_facts(ctx: AppContext, episode: Episode) -> EpisodeFacts:
     )
 
 
-def _triage(ctx: AppContext, version: RubricVersion, episode: Episode) -> EpisodeTriage:
-    s = ctx.calibrations.s_for(version.version)
+def _triage(ctx: AppContext, version: RubricVersion, episode: Episode, s: float) -> EpisodeTriage:
     facts = episode_facts(ctx, episode)
     triage = score(version.rubric, facts, ctx.labels.in_force(episode.id), s)
     return EpisodeTriage(
@@ -35,13 +34,15 @@ def _triage(ctx: AppContext, version: RubricVersion, episode: Episode) -> Episod
 
 
 def episode_triage(ctx: AppContext, episode: Episode) -> EpisodeTriage:
-    return _triage(ctx, ctx.rubrics.latest(), episode)
+    version = ctx.rubrics.latest()
+    return _triage(ctx, version, episode, ctx.calibrations.s_for(version.version))
 
 
 def scored(ctx: AppContext, episodes: list[Episode]) -> tuple[RubricVersion, list[EpisodeTriage]]:
     """Every one of `episodes` scored against the latest Rubric version, with its labels."""
     version = ctx.rubrics.latest()
-    return version, [_triage(ctx, version, e) for e in episodes]
+    s = ctx.calibrations.s_for(version.version)
+    return version, [_triage(ctx, version, e, s) for e in episodes]
 
 
 def triage_list(ctx: AppContext, episodes: list[Episode]) -> TriageList:
