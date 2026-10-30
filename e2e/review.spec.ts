@@ -2,10 +2,10 @@ import { expect, test } from "@playwright/test";
 
 import { EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
 
-// It releases inside the release height's margin, and it's unboxed, so it needs review on "never
-// drops it" (release height near threshold, no tracks) and on placement (no exterior track). Other
-// specs' revealed Episodes share the queue, so this asserts on its own Episode only (the queue's
-// order is covered by the backend's review tests). It needs no Meta replies: it is never boxed.
+// It releases inside the release height's margin, and it's never boxed, so it needs review on
+// "never drops it" (release height near threshold, no exterior track; its wrist track is healthy)
+// and on placement (no exterior track). Other specs' revealed Episodes share the queue, so this
+// asserts on its own Episode only (the queue's order is covered by the backend's review tests).
 const [UNSURE] = EPISODES.review;
 const ID = episodeId(UNSURE);
 const NEVER_DROPS = "never drops it";
