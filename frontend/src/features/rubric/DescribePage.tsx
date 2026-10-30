@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useSearchParams } from "../core/url";
 import { InterviewTimeline } from "../interview/InterviewTimeline";
+import { ConfirmAfresh } from "./ConfirmAfresh";
 import { DescribeHeader } from "./DescribeHeader";
 import { recompileNote } from "./recompileNote";
 import { RubricPanel } from "./RubricPanel";
@@ -52,16 +53,23 @@ function DescriptionForm() {
   const latest = useRubric().data;
   const compile = useCompile();
   const [edited, setEdited] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   // Starts from the draft, or else the Rubric in use.
   const text = edited ?? draft?.description ?? latest?.rubric.description ?? "";
   const editing = draft ? text.trim() !== draft.description : false;
+  const run = () => {
+    compile.mutate(text.trim());
+  };
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        compile.mutate(text.trim());
+        // The draft's own Description compiles afresh, losing its edits: confirm that first.
+        if (draft && !editing) setConfirming(true);
+        else run();
       }}
     >
+      <ConfirmAfresh open={confirming} onOpenChange={setConfirming} onConfirm={run} />
       <label htmlFor="description" className="text-sm font-medium">
         Description
       </label>

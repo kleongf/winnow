@@ -68,6 +68,24 @@ export async function referenceLabel(
   }
 }
 
+/** Click Compile on the Describe page, its Description box holding `description`. When the draft
+ * already has that Description (another spec may have left it), compiling starts the draft
+ * afresh, which asks first: confirm it. */
+export async function clickCompile(
+  page: Page,
+  request: APIRequestContext,
+  description: string,
+): Promise<void> {
+  const draft = (await (await request.get("/api/rubric/draft")).json()) as {
+    description: string;
+  } | null;
+  await page.getByRole("button", { name: "Compile" }).click();
+  if (draft?.description === description) {
+    const afresh = page.getByRole("alertdialog", { name: "Start the draft afresh?" });
+    await afresh.getByRole("button", { name: "Start afresh" }).click();
+  }
+}
+
 /** Ingest fixture Episodes through the API and wait for the job to finish. */
 export async function ingest(
   request: APIRequestContext,

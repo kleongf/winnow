@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { freezeDevSet } from "./helpers.ts";
+import { clickCompile, freezeDevSet } from "./helpers.ts";
 
 // The frozen Description, whose compile against the Dev set is recorded: every Phrase is covered,
 // and Spark assumed its thresholds, the pause one among them.
@@ -29,7 +29,7 @@ test("with every Phrase covered, a bisection card confirms the pause threshold",
   const fresh = page.waitForResponse(
     (r) => compiled && r.url().endsWith("/api/interview") && r.request().method() === "GET",
   );
-  await page.getByRole("button", { name: "Compile" }).click();
+  await clickCompile(page, request, FROZEN);
   await compiling;
   await fresh;
 

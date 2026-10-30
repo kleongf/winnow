@@ -76,6 +76,47 @@ test("editing a sentence recompiles only its Phrase, keeps the rest, and re-sort
   await expect(sort).toHaveText("Sorts it: 0 Keep · 0 Reject · 1 Needs review");
   await expect(pauses).toContainText("soft · never rejects"); // a kept Criterion keeps its edit
   await expect(hard).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Compile", exact: true })).toBeEnabled();
+  // The Description is the draft's own again: compiling it would start afresh, so it asks first.
+  await page.getByRole("button", { name: "Compile", exact: true }).click();
+  const confirm = page.getByRole("alertdialog", { name: "Start the draft afresh?" });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Keep the draft" }).click();
+  await expect(confirm).toBeHidden();
+  await expect(page.getByTestId("recompile-note")).toBeVisible(); // nothing compiled
+  expect(errors).toEqual([]);
+});
+
+test("compiling the unchanged Description starts afresh only once confirmed", async ({
+  page,
+  request,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+  await freezeDevSet(request);
+  await compileFrozen(request);
+  const grasps = async () => {
+    const draft = (await (await request.get("/api/rubric/draft")).json()) as {
+      criteria: { id: string; primitive: string; threshold: number }[];
+    };
+    return draft.criteria.find((c) => c.primitive === "grasp_attempts");
+  };
+  const id = (await grasps())?.id ?? "";
+  const edit = { criteria: { [id]: { threshold: 0 } } };
+  expect((await request.patch("/api/rubric/draft", { data: edit })).ok()).toBe(true);
+
+  await page.goto("/?page=describe");
+  const compile = page.getByRole("button", { name: "Compile", exact: true });
+  const confirm = page.getByRole("alertdialog", { name: "Start the draft afresh?" });
+  await compile.click();
+  await expect(confirm).toContainText("loses the edits on its Criterion cards");
+  await confirm.getByRole("button", { name: "Keep the draft" }).click();
+  expect((await grasps())?.threshold).toBe(0); // kept
+
+  await compile.click();
+  await confirm.getByRole("button", { name: "Start afresh" }).click();
+
+  await expect(confirm).toBeHidden();
+  await expect.poll(async () => (await grasps())?.threshold).not.toBe(0); // compiled afresh
+  await expect(compile).toBeEnabled();
   expect(errors).toEqual([]);
 });
