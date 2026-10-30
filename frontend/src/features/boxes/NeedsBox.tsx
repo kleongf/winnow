@@ -51,7 +51,7 @@ export function NeedsBox(props: { episodes: Episode[] }) {
               src={frame0Url(episode.id, "exterior_image_1_left")}
               alt=""
               loading="lazy"
-              className="aspect-video w-full rounded border bg-muted object-cover group-hover:ring-2 group-hover:ring-sky-400"
+              className="aspect-video w-full rounded border bg-muted object-cover group-hover:ring-2 group-hover:ring-primary"
             />
             <div className="mt-1 text-xs font-medium">Episode {episode.index}</div>
             <div className="truncate text-xs text-muted-foreground">

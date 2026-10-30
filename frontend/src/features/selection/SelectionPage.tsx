@@ -107,7 +107,7 @@ function CandidateList(props: {
             }}
             className={cn(
               "w-full rounded border p-1.5 text-left text-xs",
-              c.episode_id === props.focusId ? "ring-2 ring-sky-400" : "hover:bg-muted",
+              c.episode_id === props.focusId ? "ring-2 ring-primary" : "hover:bg-muted",
             )}
           >
             <img src={sheetUrl(c.episode_id)} alt="" loading="lazy" className="w-full rounded" />

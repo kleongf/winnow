@@ -204,7 +204,7 @@ function Transport(props: { playhead: Playhead; duration: number; canPlay: boole
         onChange={(event) => {
           playhead.seek(Number(event.target.value));
         }}
-        className="flex-1 accent-foreground"
+        className="flex-1 accent-primary"
       />
       <span className="w-24 text-right text-xs text-muted-foreground tabular-nums">
         {playhead.t.toFixed(1)} / {props.duration.toFixed(1)} s
