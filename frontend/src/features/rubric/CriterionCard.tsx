@@ -6,6 +6,7 @@ import { AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
+import { type SuggestionAction, SuggestionNote } from "../calibration/SuggestionNote";
 import { AnchorHistogram } from "./AnchorHistogram";
 import { ASSUMED } from "./phraseTones";
 import type { Criterion } from "./useDraft";
@@ -93,6 +94,7 @@ function AnchorSortOf(props: {
   label: string;
   preview: CriterionPreview;
   editor?: CardEditor | undefined;
+  suggested?: number | undefined;
 }) {
   const { preview, editor } = props;
   return (
@@ -102,6 +104,7 @@ function AnchorSortOf(props: {
         threshold={editor?.threshold ?? preview.threshold}
         anchor={props.criterion.threshold}
         label={props.label}
+        suggested={props.suggested}
         onDrag={editor?.onDrag}
         onCommit={editor?.onCommit}
       />
@@ -117,6 +120,7 @@ export function CriterionCard(props: {
   preview?: CriterionPreview | undefined;
   editor?: CardEditor | undefined; // none on a frozen Rubric version
   highlighted?: boolean; // an interview answer just changed it
+  suggestion?: SuggestionAction | undefined; // a threshold labels suggest, on the version in use
 }) {
   const { criterion, preview } = props;
   return (
@@ -141,8 +145,10 @@ export function CriterionCard(props: {
           label={`Threshold: ${props.english}`}
           preview={preview}
           editor={props.editor}
+          suggested={props.suggestion?.suggestion.suggested_threshold}
         />
       )}
+      {props.suggestion && <SuggestionNote action={props.suggestion} />}
       {criterion.assumptions.map((assumption) => (
         <p
           key={assumption}
