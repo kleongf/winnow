@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
-import { Page, PageHeader } from "../core/PageHeader";
+import { Page, PageHeader, SectionHeading } from "../core/PageHeader";
 import { Tabs } from "../core/Tabs";
 import { useRubric } from "../rubric/useRubric";
 import { SET_LABELS, type SetName } from "../sets/useSets";
@@ -101,12 +101,6 @@ export function EvaluationPage() {
           {run.isPending ? "Scoring…" : `Run on the ${SET_LABELS[setName]}`}
         </Button>
       </PageHeader>
-      {setName === "test" && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Every Test set run is logged with its date and Rubric version; the numbers reported are
-          the last run before the freeze.
-        </p>
-      )}
       {run.error && <p className="mt-3 text-sm text-destructive">{run.error.message}</p>}
       {shown ? (
         <section className="mt-6">
@@ -137,7 +131,10 @@ export function EvaluationPage() {
         <DisagreementList />
       </section>
       <section className="mt-10">
-        <h2 className="text-sm font-medium">Test run log</h2>
+        <SectionHeading
+          title="Test run log"
+          info="Every Test set run is logged with its date and Rubric version; the numbers reported are the last run before the freeze."
+        />
         <TestRunLog
           shownId={shown?.runId ?? null}
           onShow={(r) => {
