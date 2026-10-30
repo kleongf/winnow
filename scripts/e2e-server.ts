@@ -2,7 +2,7 @@
 // droid_100 Episodes, so e2e runs never touch real data or a dev server already running. Meta
 // calls are served from replies recorded on those Episodes (backend/tests/record_meta.py).
 import { execFileSync } from "node:child_process";
-import { rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { PORT_OFFSET, serveUntilInterrupted, startServers } from "./servers.ts";
@@ -11,6 +11,17 @@ const E2E_FRONTEND_PORT = 5174 + PORT_OFFSET;
 const root = resolve("artifacts", "e2e-data");
 
 rmSync(root, { recursive: true, force: true });
+// Spark's recorded replies, plus the scripted answers to visual Criteria (written free by
+// backend/tests/record_visual.py: answers about test patterns would mean nothing).
+const recordings = resolve("backend", "tests", "recordings");
+const replay = resolve(root, "replay.jsonl");
+mkdirSync(root, { recursive: true });
+writeFileSync(
+  replay,
+  ["fixture_episodes.jsonl", "visual_answers.jsonl"]
+    .map((name) => readFileSync(resolve(recordings, name), "utf8"))
+    .join(""),
+);
 const fixtures = ["run", "--project", "backend", "winnow", "fixtures", resolve(root, "droid_100")];
 execFileSync("uv", [...fixtures, "--episodes", "17"], { stdio: "inherit" });
 
@@ -22,7 +33,7 @@ const servers = await startServers({
     DATA_DIR: resolve(root, "data"),
     DROID100_ROOT: resolve(root, "droid_100"),
     MODEL_API_KEY: "",
-    META_REPLAY: resolve("backend", "tests", "recordings", "fixture_episodes.jsonl"),
+    META_REPLAY: replay,
   },
 });
 await serveUntilInterrupted(servers);

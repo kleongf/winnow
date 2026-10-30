@@ -10,7 +10,7 @@ from typing import cast, get_args
 
 from pydantic import BaseModel, ValidationError
 
-from winnow.criteria.models import Comparator, Criterion, WindowKind
+from winnow.criteria.models import Comparator, Criterion, CropKind, WindowKind
 from winnow.criteria.primitives import PRIMITIVES
 from winnow.rubric.models import DraftPhrase, PhraseStatus
 from winnow.rubric.phrases import locate
@@ -63,6 +63,7 @@ def answer_schema() -> dict[str, object]:
             "views": _strings(),
             "question": _nullable("string"),
             "paraphrases": _strings(),
+            "crop": {"type": ["string", "null"], "enum": [*get_args(CropKind), None]},
             "hard": {"type": "boolean"},
             "assumptions": _strings(),
         }

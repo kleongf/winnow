@@ -58,5 +58,6 @@ def preview_version(ctx: AppContext, version: RubricVersion) -> AnchorPreview:
 
 def run_draft(ctx: AppContext) -> RubricVersion:
     """Freezes the draft into the next Rubric version, which every Episode is then scored
-    against. Never waits for unconfirmed assumptions."""
+    against. Never waits for unconfirmed assumptions, and never asks Spark: visual Criteria are
+    asked only on request (`POST /api/visual/ask`, `winnow ask`)."""
     return ctx.rubrics.add(current_draft(ctx).rubric())

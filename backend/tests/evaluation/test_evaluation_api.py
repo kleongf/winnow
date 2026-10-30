@@ -6,7 +6,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.helpers import app_context, track_cleanly, wait_for_job
+from tests.helpers import app_context, ask_visual, track_cleanly, wait_for_job
 from winnow.baseline.models import BaselineAnswer
 from winnow.baseline.prompts import FROZEN
 from winnow.cli import main
@@ -72,6 +72,7 @@ def labelled(api: TestClient, set_name: str) -> TestClient:
     job = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": [0, 1, 2, 4]})
     wait_for_job(api, job.json()["job_id"])
     track_cleanly(api, "droid_100:0")  # kept only once its tracked Criteria can pass
+    ask_visual(api)  # Spark sees each object placed on its target
     api.post(f"/api/sets/{set_name}/episodes", json={"episode_ids": EPISODES})
     reference_label(api, "droid_100:0")
     reference_label(api, "droid_100:1", NEVER_DROPS)  # a failure Winnow can't see yet
@@ -88,8 +89,8 @@ def labelled(api: TestClient, set_name: str) -> TestClient:
 
 
 @pytest.fixture
-def test_set(api: TestClient) -> TestClient:
-    return labelled(api, "test")
+def test_set(asked_api: TestClient) -> TestClient:
+    return labelled(asked_api, "test")
 
 
 def run(api: TestClient, set_name: str, **body: object) -> dict[str, object]:
@@ -243,8 +244,8 @@ def test_each_test_set_run_appends_one_dated_log_entry(test_set: TestClient, set
     assert log[0]["run_at"] >= log[1]["run_at"]
 
 
-def test_dev_set_runs_are_not_logged(api: TestClient):
-    labelled(api, "dev")
+def test_dev_set_runs_are_not_logged(asked_api: TestClient):
+    api = labelled(asked_api, "dev")
 
     run(api, "dev")
 
@@ -276,8 +277,8 @@ def test_interview_and_review_labels_never_touch_test_set_episodes(test_set: Tes
     assert rows(before)["winnow"]["keeps"] == 1
 
 
-def test_interview_and_review_labels_apply_to_dev_set_episodes(api: TestClient):
-    dev = labelled(api, "dev")
+def test_interview_and_review_labels_apply_to_dev_set_episodes(asked_api: TestClient):
+    dev = labelled(asked_api, "dev")
     fail_first_try(dev)
 
     winnow = rows(run(dev, "dev"))["winnow"]

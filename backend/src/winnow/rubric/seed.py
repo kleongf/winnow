@@ -1,6 +1,6 @@
 """The Rubric version every Project starts from, seeded from the frozen Description by hand: its
-measured and tracked Criteria, as #18 compiles it. "places it ..." gets its visual question with
-`ask_video`; until then target-box overlap checks it alone."""
+measured and tracked Criteria, as #18 compiles it, and the placement question Spark answers from a
+cropped clip."""
 
 from winnow.baseline.prompts import FROZEN
 from winnow.criteria.models import Criterion, RubricSettings, Setting, Window
@@ -78,6 +78,24 @@ SEEDED = Rubric(
             unit="ratio",
             window=Window(kind="last_n_s", seconds=1.0),
             assumptions=["On the target: at least half its final box is inside the target box."],
+        ),
+        Criterion(
+            id="placed-on-target",
+            phrase=PLACES,
+            primitive="ask_video",
+            comparator=">=",
+            threshold=3,
+            unit="samples",
+            window=Window(kind="after_release"),
+            views=["exterior_image_1_left"],
+            question="Is the object resting in or on the target named in the task when the clip "
+            "ends?",
+            paraphrases=[
+                "Once the gripper lets go, does the object end up in or on the task's target?",
+                "At the end, has the object been placed in or on the target rather than dropped "
+                "beside it or left somewhere else?",
+            ],
+            crop="placement",
         ),
         Criterion(
             id="longest-pause",

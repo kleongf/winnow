@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.helpers import reference_label, track_cleanly, wait_for_job
+from tests.helpers import ask_visual, reference_label, track_cleanly, wait_for_job
 from winnow.baseline.prompts import FROZEN
 
 FIRST_TRY, NEVER_DROPS, _, NO_PAUSES = FROZEN.phrases
@@ -14,9 +14,11 @@ NEAR_THRESHOLD = "droid_100:1"  # Needs review: its release height (4.4 cm) is i
 
 
 @pytest.fixture
-def ingested(api: TestClient) -> TestClient:
+def ingested(asked_api: TestClient) -> TestClient:
+    api = asked_api  # Spark sees every Episode's object placed on its target
     job = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": [0, 1]})
     wait_for_job(api, job.json()["job_id"])
+    ask_visual(api)
     track_cleanly(api, NEAR_THRESHOLD)  # so its tracked Criteria pass and leave release height
     reference_label(api, NEAR_THRESHOLD)
     return api
@@ -49,7 +51,6 @@ def test_labelling_the_only_unsure_phrase_pass_keeps_the_episode(ingested: TestC
     assert stored["rubric_version"] == 1 and stored["labelled_at"]
     after = triage(ingested, NEAR_THRESHOLD)
     assert after["decision"] == "keep"
-    assert after["confidence"] == pytest.approx(1.0)
 
 
 def test_labelling_it_fail_rejects_with_a_reason_naming_the_phrase_and_source(

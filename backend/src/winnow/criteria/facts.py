@@ -1,7 +1,7 @@
 """An Episode's facts: everything the scoring function may read about one Episode.
 
-Robot data, SAM's object tracks and the target box, and which sources are missing or failed their
-step. Cached visual answers join here as their Criteria arrive.
+Robot data, SAM's object tracks and the target box, Spark's stored answers to visual Criteria,
+and which sources are missing or failed their step.
 """
 
 from collections.abc import Mapping
@@ -13,6 +13,7 @@ from winnow.criteria.primitives import Source
 from winnow.episodes.models import EpisodeSignals, FloatArray
 from winnow.episodes.speed import smoothed_speed
 from winnow.tracking.models import TargetBox, Track
+from winnow.visual.models import VisualAnswers
 
 SourceProblem = Literal["source missing", "step failed"]
 
@@ -29,6 +30,9 @@ class EpisodeFacts:
     def track_for(self, source: Source) -> Track | None:
         """The track a tracked source reads; None for any other source or a missing track."""
         return {"wrist track": self.wrist, "exterior track": self.exterior}.get(source)
+
+    # Spark's answers to each visual Criterion asked of this Episode, by `visual.keys.ask_key`.
+    visual: Mapping[str, VisualAnswers] = field(default_factory=dict[str, VisualAnswers])
 
     @cached_property
     def t(self) -> list[float]:

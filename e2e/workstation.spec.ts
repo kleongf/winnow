@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-import { EPISODES, episodeId, ingest } from "./helpers.ts";
+import { askVisual, EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
 
 // Adjacent in the table, so J and K step between them: FIRST grasps cleanly, SECOND is a
-// "Move the black remote control" Episode (index % 3 == 1).
+// "Move the black remote control" Episode (index % 3 == 1) whose scripted visual samples split.
 const [FIRST, SECOND] = EPISODES.workstation;
 const open = (index: number, t?: number) =>
   `/?page=episodes&episode=${encodeURIComponent(episodeId(index))}` +
@@ -54,6 +54,32 @@ test("the wrist view shows SAM's box following the playhead", async ({ page }) =
   await page.getByLabel("Playhead").fill("2.4");
   await expect.poll(left).toBeGreaterThan(before + 10);
   await expect(page.getByTestId("track-status-wrist")).toHaveText("box on 15 of 15 frames");
+});
+
+test("a visual Criterion shows each of Spark's samples and the clip it watched", async ({
+  page,
+  request,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+  await referenceLabel(request, [episodeId(SECOND)]); // its outputs show once labelled
+  await askVisual(request, [SECOND]); // scripted to split 2-1
+
+  await page.goto(open(SECOND));
+  const result = page.getByTestId("criterion-placed-on-target");
+  await expect(result).toContainText("samples split");
+  await result.getByRole("button", { name: /Is the object resting in or on the target/ }).click();
+
+  const evidence = result.getByTestId("visual-evidence");
+  const samples = evidence.getByRole("list", { name: "Spark's samples" }).getByRole("listitem");
+  await expect(samples).toHaveCount(3);
+  await expect(samples.filter({ hasText: "fail · confidence" })).toHaveCount(1);
+  await expect(evidence.getByLabel("Clip Spark watched")).toHaveAttribute(
+    "src",
+    new RegExp(`/api/episodes/droid_100%3A${String(SECOND)}/visual-clips/[0-9a-f]{16}\\.mp4$`),
+  );
+  await expect(evidence).toContainText("exterior_image_1_left");
+  expect(errors).toEqual([]);
 });
 
 test("J and K step through Episodes and Esc goes back to the table", async ({ page }) => {

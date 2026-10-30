@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { EPISODES, episodeId, freezeDevSet, referenceLabel } from "./helpers.ts";
+import { askVisual, EPISODES, episodeId, freezeDevSet, referenceLabel } from "./helpers.ts";
 
 const [INDEX] = EPISODES.sets;
 const EPISODE = episodeId(INDEX);
@@ -13,6 +13,7 @@ test("Prepare shows each set's size and frozen state; Episodes show their set", 
   // Only freezeDevSet touches the Dev set.
   await freezeDevSet(request);
   await referenceLabel(request, [EPISODE]); // so its Triage decision shows
+  await askVisual(request, [INDEX]); // Spark sees its object placed on its target
 
   await page.goto("/?page=prepare");
 

@@ -35,6 +35,7 @@ export function TriagePanel(props: {
       {triage.criteria.map((r) => (
         <CriterionResultRow
           key={r.criterion_id}
+          episodeId={triage.episode_id}
           result={r}
           open={openId === r.criterion_id}
           onToggle={() => {

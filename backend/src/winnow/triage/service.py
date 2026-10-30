@@ -12,8 +12,8 @@ from winnow.triage.scoring import score
 
 
 def episode_facts(ctx: AppContext, episode: Episode) -> EpisodeFacts:
-    """Robot data, SAM's tracks so far, and the target box, as they stand for the object's box
-    now."""
+    """Robot data, SAM's tracks so far, the target box, as they stand for the object's box now,
+    and Spark's stored answers to visual Criteria."""
     tracks = ctx.tracks.for_episode(episode.id)
     box = ctx.boxes.get(episode.id)
     return EpisodeFacts(
@@ -21,6 +21,7 @@ def episode_facts(ctx: AppContext, episode: Episode) -> EpisodeFacts:
         wrist=next((t for t in tracks if t.kind == "wrist"), None),
         exterior=current_exterior_track(tracks, box),
         target=None if box is None else chosen_target_box(ctx.targets, box),
+        visual=ctx.visual.for_episode(episode.id),
     )
 
 

@@ -266,6 +266,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/episodes/{episode_id}/visual-clips/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Visual Clip
+         * @description The clip a visual Criterion asked Spark about.
+         */
+        get: operations["get_visual_clip_api_episodes__episode_id__visual_clips__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/evaluation/runs": {
         parameters: {
             query?: never;
@@ -801,6 +821,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/visual/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Ask
+         * @description Ask Spark the latest Rubric version's visual Criteria about each Episode, in the
+         *     background: crop one clip per Criterion and Episode, then 3 samples about it. Asking again
+         *     pays only for cache misses.
+         */
+        post: operations["post_ask_api_visual_ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -876,6 +918,16 @@ export interface components {
             episode_id?: string | null;
             /** Key */
             key: string;
+        };
+        /** AskRequest */
+        AskRequest: {
+            /** Episode Ids */
+            episode_ids?: string[] | null;
+        };
+        /** AskStarted */
+        AskStarted: {
+            /** Job Id */
+            job_id: number | null;
         };
         /** Box */
         Box: {
@@ -988,6 +1040,8 @@ export interface components {
              * @enum {string}
              */
             comparator: "<" | "<=" | ">=" | ">" | "==";
+            /** Crop */
+            crop?: ("view" | "placement") | null;
             /**
              * Hard
              * @default true
@@ -1023,7 +1077,7 @@ export interface components {
              * Primitive
              * @enum {string}
              */
-            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency" | "in_hand_lost_s" | "fall_after_release" | "final_overlap" | "object_displacement";
+            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency" | "in_hand_lost_s" | "fall_after_release" | "final_overlap" | "object_displacement" | "ask_video";
             /** Question */
             question?: string | null;
             /** Threshold */
@@ -1116,7 +1170,7 @@ export interface components {
              * Primitive
              * @enum {string}
              */
-            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency" | "in_hand_lost_s" | "fall_after_release" | "final_overlap" | "object_displacement";
+            primitive: "grasp_attempts" | "longest_still_s" | "release_height_m" | "active_duration_s" | "path_efficiency" | "in_hand_lost_s" | "fall_after_release" | "final_overlap" | "object_displacement" | "ask_video";
             /**
              * Status
              * @enum {string}
@@ -1126,11 +1180,12 @@ export interface components {
             threshold: number;
             track_plot: components["schemas"]["TrackPlot"] | null;
             /** Uncertainty */
-            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed" | "track lost") | null;
+            uncertainty: ("near threshold" | "near threshold (count)" | "samples split" | "Spark said unsure" | "unconfirmed fail" | "window empty" | "source missing" | "step failed" | "track lost") | null;
             /** Unit */
             unit: string;
             /** Value */
             value: number | null;
+            visual?: components["schemas"]["VisualAnswers"] | null;
             window: components["schemas"]["TimeWindow"] | null;
             /** Window Name */
             window_name: string;
@@ -2190,7 +2245,7 @@ export interface components {
             /** Reason */
             reason: string;
             /** Uncertainty */
-            uncertainty: ("near threshold" | "near threshold (count)" | "unconfirmed fail" | "window empty" | "source missing" | "step failed" | "track lost")[];
+            uncertainty: ("near threshold" | "near threshold (count)" | "samples split" | "Spark said unsure" | "unconfirmed fail" | "window empty" | "source missing" | "step failed" | "track lost")[];
         };
         /** UnsurePhrase */
         UnsurePhrase: {
@@ -2211,6 +2266,52 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VisualAnswers */
+        VisualAnswers: {
+            clip: components["schemas"]["VisualClip"] | null;
+            /** Error */
+            error: string | null;
+            /** Samples */
+            samples: components["schemas"]["VisualSample"][];
+        };
+        /**
+         * VisualClip
+         * @description The short clip the crop step cut for one Criterion on one Episode.
+         */
+        VisualClip: {
+            box: components["schemas"]["FrameBox"] | null;
+            /** Camera */
+            camera: string;
+            /** End */
+            end: number;
+            /** Name */
+            name: string;
+            /** Start */
+            start: number;
+        };
+        /**
+         * VisualReply
+         * @description One sample's structured answer: pass means the question's answer is yes.
+         */
+        VisualReply: {
+            /**
+             * Answer
+             * @enum {string}
+             */
+            answer: "pass" | "fail" | "unsure";
+            /** Confidence */
+            confidence: number;
+            /** Observation */
+            observation: string;
+        };
+        /** VisualSample */
+        VisualSample: {
+            /** Error */
+            error: string | null;
+            /** Prompt */
+            prompt: string;
+            reply: components["schemas"]["VisualReply"] | null;
         };
         /**
          * Window
@@ -2682,6 +2783,45 @@ export interface operations {
             };
             /** @description The Episode has no Reference label yet */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_visual_clip_api_episodes__episode_id__visual_clips__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                episode_id: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "video/mp4": unknown;
+                };
+            };
+            /** @description No such clip */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3521,6 +3661,46 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TriageList"];
                 };
+            };
+        };
+    };
+    post_ask_api_visual_ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The Meta API isn't configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

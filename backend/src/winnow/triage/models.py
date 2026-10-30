@@ -13,6 +13,7 @@ from winnow.criteria.models import (
     UncertaintySignal,
 )
 from winnow.criteria.primitives import Kind, Primitive
+from winnow.visual.models import VisualAnswers
 
 TriageDecision = Literal["keep", "reject", "needs_review"]
 LabelSource = Literal["interview", "review", "audit"]
@@ -54,6 +55,7 @@ class CriterionResult(BaseModel):
     p_pass: float  # how likely this Criterion passes, 0 to 1
     camera: str | None  # the view to show; None for robot data
     track_plot: TrackPlot | None  # tracked Criteria: the signal they are decided on
+    visual: VisualAnswers | None = None  # a visual Criterion's samples and clip
 
 
 class PhraseResult(BaseModel):

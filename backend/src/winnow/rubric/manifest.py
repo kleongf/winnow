@@ -39,13 +39,16 @@ def _ranges(
 ) -> dict[Primitive, list[float]]:
     """Each primitive's value on each anchor Episode, at its default params, whole Episode."""
     values: dict[Primitive, list[float]] = {p: [] for p in PRIMITIVES}
+    free: list[Primitive] = [
+        p for p in values if PRIMITIVES[p].kind != "visual"
+    ]  # visual values cost a call
     for episode in episodes:
         facts = episode_facts(ctx, episode)
         grasps = find_grasps(facts.signals, settings)
-        for primitive, found in values.items():
+        for primitive in free:
             value = criterion_result(_probe(primitive), facts, grasps).value
             if value is not None:
-                found.append(value)
+                values[primitive].append(value)
     return values
 
 
@@ -66,6 +69,16 @@ def _primitive(primitive: Primitive, values: list[float], of: int) -> str:
         f"{info.source}; {fail}; noise floor {format_value(info.noise_floor, info.unit)}; "
         f"{_range(values, info.unit, of)}."
     )
+
+
+VISUAL = (
+    "ask_video asks Spark about one short clip that code cuts to the window from one view (the "
+    'first of "views") and crops: "crop" is "view" for the whole frame, or "placement" for the '
+    "object's final box joined with the target box, enlarged (the view the object was boxed in). "
+    'Use it only for what robot data and tracks can\'t decide. Give a yes/no "question" whose '
+    "yes means the Phrase is met, and 2 paraphrases of it, asked one per sample; all 3 must "
+    'answer pass for a pass. Compare with ">=" 3.'
+)
 
 
 def _frame_size(ctx: AppContext, episodes: list[Episode]) -> str:
@@ -123,6 +136,7 @@ def capabilities_manifest(
             *_sources(ctx, episodes),
             "Primitives (each Criterion uses one; params with their defaults):",
             *primitives,
+            VISUAL,
             f"Windows: {windows}.",
             f"Comparators: {', '.join(COMPARATORS)}.",
             _settings(settings),

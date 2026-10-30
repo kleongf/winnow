@@ -18,12 +18,15 @@ Primitive = Literal[
     "fall_after_release",
     "final_overlap",
     "object_displacement",
+    "ask_video",
 ]
 Kind = Literal["measured", "tracked", "visual"]
-# What a primitive reads. Video joins with its primitives; when a source is missing or its step
-# failed, every Criterion reading it is unsure. `final_overlap` reads the target box as well as
-# the exterior track, and is unsure without it.
-Source = Literal["robot data", "wrist track", "exterior track"]
+# What a primitive reads; when a source is missing or its step failed, every Criterion reading it
+# is unsure. `final_overlap` reads the target box as well as the exterior track, and is unsure
+# without it.
+Source = Literal["robot data", "wrist track", "exterior track", "video"]
+# A visual Criterion asks its frozen question and this many paraphrases, one sample each.
+PARAPHRASES = 2
 
 
 @dataclass(frozen=True)
@@ -62,5 +65,9 @@ PRIMITIVES: dict[Primitive, PrimitiveInfo] = {
     ),
     "object_displacement": PrimitiveInfo(
         "tracked", "box-widths", {}, conclusive=True, noise_floor=0.25, source="exterior track"
+    ),
+    # Its value is how many samples answered pass; only a unanimous answer is conclusive.
+    "ask_video": PrimitiveInfo(
+        "visual", "samples", {}, conclusive=True, noise_floor=0, source="video"
     ),
 }

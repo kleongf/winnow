@@ -8,16 +8,20 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, Field, computed_field, model_validator
 
-from winnow.criteria.primitives import PRIMITIVES, Kind, Primitive
+from winnow.criteria.primitives import PARAPHRASES, PRIMITIVES, Kind, Primitive
 
 Comparator = Literal["<", "<=", ">=", ">", "=="]
 WindowKind = Literal["whole", "before_grasp", "holding", "after_release", "last_n_s"]
+# What a visual Criterion's clip shows: the whole view, or the object's final box joined with the
+# target box, enlarged.
+CropKind = Literal["view", "placement"]
 Status = Literal["pass", "fail", "unsure"]
 # Why a result is unsure (or, for "unconfirmed fail", why its fail can't reject on its own).
-# Samples split and Spark said unsure join with the visual primitive.
 UncertaintySignal = Literal[
     "near threshold",
     "near threshold (count)",
+    "samples split",
+    "Spark said unsure",
     "unconfirmed fail",
     "window empty",
     "source missing",
@@ -53,6 +57,7 @@ class Criterion(BaseModel):
     views: list[str] = []  # cameras, for tracked and visual Criteria
     question: str | None = None  # visual Criteria: frozen at compile
     paraphrases: list[str] = []
+    crop: CropKind | None = None  # visual Criteria: None means the whole view
     hard: bool = True
     assumptions: list[str] = []  # values Spark (or the seed) had to guess
 
@@ -61,6 +66,12 @@ class Criterion(BaseModel):
         expected = set(PRIMITIVES[self.primitive].params)
         if set(self.params) != expected:
             raise ValueError(f"{self.primitive} takes params {sorted(expected)}")
+        return self
+
+    @model_validator(mode="after")
+    def _visual_criteria_ask_a_frozen_question(self) -> Self:
+        if self.kind == "visual" and not (self.question and len(self.paraphrases) == PARAPHRASES):
+            raise ValueError(f"a visual Criterion needs a question and {PARAPHRASES} paraphrases")
         return self
 
     @computed_field

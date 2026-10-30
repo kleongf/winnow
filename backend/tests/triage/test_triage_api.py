@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import OPEN_GRIPPER_EPISODE
-from tests.helpers import app_context, reference_label, track_cleanly, wait_for_job
+from tests.helpers import app_context, ask_visual, reference_label, track_cleanly, wait_for_job
 from winnow.baseline.prompts import FROZEN
 from winnow.rubric.models import Rubric
 from winnow.rubric.store import RubricStore
@@ -18,10 +18,12 @@ REGRASP_EPISODE = 2  # the fixture's failures (i % 3 == 2) are Episode 42-shaped
 
 
 @pytest.fixture
-def ingested(api: TestClient) -> TestClient:
+def ingested(asked_api: TestClient) -> TestClient:
+    api = asked_api  # Spark sees every Episode's object placed on its target
     indices = [0, HIGH_RELEASE_EPISODE, REGRASP_EPISODE, OPEN_GRIPPER_EPISODE]
     job = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": indices})
     wait_for_job(api, job.json()["job_id"])
+    ask_visual(api)
     for index in indices:  # their outputs show only once labelled
         reference_label(api, f"droid_100:{index}")
     for index in (0, HIGH_RELEASE_EPISODE, REGRASP_EPISODE):
@@ -43,6 +45,7 @@ def test_the_rubric_is_seeded_from_the_frozen_description(api: TestClient):
         ("fall_after_release", NEVER_DROPS, "tracked"),
         ("release_height_m", NEVER_DROPS, "measured"),
         ("final_overlap", PLACES, "tracked"),
+        ("ask_video", PLACES, "visual"),
         ("longest_still_s", NO_PAUSES, "measured"),
     }
     attempts = criteria["grasp-attempts"]
@@ -50,7 +53,16 @@ def test_the_rubric_is_seeded_from_the_frozen_description(api: TestClient):
     assert criteria["release-height"]["threshold"] == 0.05
     assert criteria["longest-pause"]["params"] == {"speed_below_m_s": 0.01}
     assert criteria["final-overlap"]["window"] == {"kind": "last_n_s", "seconds": 1.0}
-    guessed = [c for id_, c in criteria.items() if id_ != "grasp-attempts"]
+    placed = criteria["placed-on-target"]
+    assert (placed["window"]["kind"], placed["crop"], placed["hard"]) == (
+        "after_release",
+        "placement",
+        True,
+    )
+    assert placed["question"] and len(placed["paraphrases"]) == 2  # frozen
+    guessed = [
+        c for id_, c in criteria.items() if id_ not in ("grasp-attempts", "placed-on-target")
+    ]
     assert all(c["assumptions"] for c in guessed)  # guesses until the interview
     settings = rubric["settings"]
     assert settings["gripper_closed_level"]["value"] == 0.2

@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import OPEN_GRIPPER_EPISODE
-from tests.helpers import app_context, reference_label, track_cleanly, wait_for_job
+from tests.helpers import app_context, ask_visual, reference_label, track_cleanly, wait_for_job
 from winnow.baseline.prompts import FROZEN
 from winnow.rubric.models import Rubric
 
@@ -16,9 +16,11 @@ INDICES = [0, 1, 2, OPEN_GRIPPER_EPISODE]
 
 
 @pytest.fixture
-def ingested(api: TestClient) -> TestClient:
+def ingested(asked_api: TestClient) -> TestClient:
+    api = asked_api  # Spark sees every Episode's object placed on its target
     job = api.post("/api/episodes/ingest", json={"source": "droid_100", "indices": INDICES})
     wait_for_job(api, job.json()["job_id"])
+    ask_visual(api)
     for index in INDICES:
         track_cleanly(api, f"droid_100:{index}")  # tracked Criteria pass; release height decides
         reference_label(api, f"droid_100:{index}")

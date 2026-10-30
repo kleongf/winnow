@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { VisualEvidence } from "../visual/VisualEvidence";
 import { SeekableText } from "./SeekableText";
 import { STATUS_TEXT } from "./TriageBadge";
 import type { CriterionResult } from "./useTriage";
@@ -15,6 +16,7 @@ function windowText(r: CriterionResult): string {
 }
 
 export function CriterionResultRow(props: {
+  episodeId: string;
   result: CriterionResult;
   open: boolean;
   onToggle: () => void;
@@ -57,6 +59,7 @@ export function CriterionResultRow(props: {
             <SeekableText spans={r.evidence} onSeek={props.onSeek} />
           </p>
           <div className="text-xs text-muted-foreground">Window: {windowText(r)}</div>
+          {r.visual && <VisualEvidence episodeId={props.episodeId} visual={r.visual} />}
           {r.moments.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {r.moments.map((m) => (

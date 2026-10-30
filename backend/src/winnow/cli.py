@@ -5,6 +5,7 @@ winnow select droid_1.0.1 [--size 300] [--seed 0]
 winnow sets add dev droid_100:3 droid_100:16 | remove dev droid_100:3 | freeze dev | show
 winnow fixtures <dir> [--episodes N]
 winnow eval test [--rubric-version N] [--json]
+winnow ask [droid_100:42 ...]  (the latest Rubric's visual Criteria; default every Episode)
 """
 
 import argparse
@@ -25,6 +26,7 @@ from winnow.meta.transport import Transport
 from winnow.selection.service import sample_indices, selection_items
 from winnow.sets.models import SET_LABELS, SET_NAMES
 from winnow.sets.service import SetError, add_episodes, freeze, remove_episode
+from winnow.visual.steps import visual_items
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -54,6 +56,8 @@ def _parser() -> argparse.ArgumentParser:
     evaluate.add_argument("set_name", choices=SET_NAMES)
     evaluate.add_argument("--rubric-version", type=int, help="default: the latest")
     evaluate.add_argument("--json", action="store_true", help="the report the route returns")
+    ask = commands.add_parser("ask", help="ask Spark the latest Rubric's visual Criteria")
+    ask.add_argument("episode_ids", nargs="*", help="default: every ingested Episode")
     return parser
 
 
@@ -105,6 +109,9 @@ def _eval(ctx: AppContext, args: argparse.Namespace) -> int:
 def _items(ctx: AppContext, args: argparse.Namespace) -> list[WorkItem]:
     if args.command == "ingest":
         return ingest_items(args.source, args.indices, with_meta=ctx.meta is not None)
+    if args.command == "ask":
+        ids = args.episode_ids or [e.id for e in ctx.episodes.list()]
+        return visual_items(ctx.rubrics.latest(), ids)
     source = ctx.sources[args.source]
     assert isinstance(source, Droid101)
     sample = sample_indices([*source.index.values()], args.size, args.seed)
@@ -127,8 +134,8 @@ def main(
             return _sets(ctx, args)
         if args.command == "eval":
             return _eval(ctx, args)
-        if args.command == "select" and ctx.meta is None:
-            sys.stderr.write("The selection pass calls Spark: set MODEL_API_KEY in .env\n")
+        if args.command in ("select", "ask") and ctx.meta is None:
+            sys.stderr.write(f"`winnow {args.command}` calls Spark: set MODEL_API_KEY in .env\n")
             return 2
         return asyncio.run(_run(ctx, args.command, _items(ctx, args)))
     finally:

@@ -16,6 +16,7 @@ from winnow.criteria.models import Criterion
 from winnow.criteria.motion import active_duration_s, longest_still_s, path_efficiency
 from winnow.criteria.placement import final_overlap
 from winnow.criteria.primitives import Primitive
+from winnow.visual.measure import ask_video
 
 Measure = Callable[[Criterion, EpisodeFacts, Grasps, Interval], Measurement]
 
@@ -45,4 +46,6 @@ CATALOG: dict[Primitive, Entry] = {
     ),
     "final_overlap": Entry(final_overlap, "Share of the object's final box inside the target box"),
     "object_displacement": Entry(object_displacement, "How far the object moved, start to end,"),
+    # A visual Criterion reads as its question (`criteria.english`), not a comparison.
+    "ask_video": Entry(ask_video, "Spark's samples answering pass"),
 }

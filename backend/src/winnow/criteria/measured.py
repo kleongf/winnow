@@ -15,6 +15,7 @@ from winnow.criteria.models import (
     TrackPlot,
     UncertaintySignal,
 )
+from winnow.visual.models import VisualAnswers
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,8 @@ class Measurement:
     # better than its value does (a count near the grasp rule).
     m: float | None = None
     plot: TrackPlot | None = None  # tracked primitives: the signal the value is read from
+    p: float | None = None  # p_pass, when the measure knows it directly (Spark's agreement)
+    visual: VisualAnswers | None = None  # Spark's samples and the clip, for a visual Criterion
 
 
 def seconds(t: float) -> str:

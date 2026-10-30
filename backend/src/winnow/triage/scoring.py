@@ -70,6 +70,16 @@ def _measure(
     return CATALOG[criterion.primitive].measure(criterion, facts, grasps, frames)
 
 
+def _camera(criterion: Criterion, facts: EpisodeFacts, measured: Measurement) -> str | None:
+    """The view to show: the one Spark watched, else the Criterion's own, else its track's."""
+    if measured.visual is not None and measured.visual.clip is not None:
+        return measured.visual.clip.camera
+    if criterion.views:
+        return criterion.views[0]
+    track = facts.track_for(PRIMITIVES[criterion.primitive].source)
+    return None if track is None else track.camera
+
+
 def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) -> CriterionResult:
     frames = resolve_window(criterion.window, grasps, facts.signals.fps)
     measured = _measure(criterion, facts, grasps, frames)
@@ -97,17 +107,10 @@ def criterion_result(criterion: Criterion, facts: EpisodeFacts, grasps: Grasps) 
         uncertainty=judged.uncertainty,
         margin=effective_margin(criterion),
         p_pass=judged.p_pass,
-        camera=_camera(criterion, facts),
+        camera=_camera(criterion, facts, measured),
         track_plot=measured.plot,
+        visual=measured.visual,
     )
-
-
-def _camera(criterion: Criterion, facts: EpisodeFacts) -> str | None:
-    """The view to show: the Criterion's own, else the view its track is on."""
-    if criterion.views:
-        return criterion.views[0]
-    track = facts.track_for(PRIMITIVES[criterion.primitive].source)
-    return None if track is None else track.camera
 
 
 def conclusive_fail(result: CriterionResult) -> bool:

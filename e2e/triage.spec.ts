@@ -1,6 +1,13 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
-import { boxForPlacement, EPISODES, episodeId, ingest, referenceLabel } from "./helpers.ts";
+import {
+  askVisual,
+  boxForPlacement,
+  EPISODES,
+  episodeId,
+  ingest,
+  referenceLabel,
+} from "./helpers.ts";
 
 // Two Episodes that release inside the release height's margin (LESS_SURE nearer its fail
 // side), one that fails its grasp twice first, and one kept. All four are boxed in Exterior 2:
@@ -17,11 +24,31 @@ const ownRows = (page: Page) => async () =>
     .map(Number)
     .filter((index) => OWN.includes(index));
 
+/** Whether Spark has answered the Episode's placement question; unasked, it's "source missing". */
+async function placementAnswered(request: APIRequestContext, index: number): Promise<boolean> {
+  const response = await request.get(
+    `/api/episodes/${encodeURIComponent(episodeId(index))}/triage`,
+  );
+  const triage = (await response.json()) as {
+    criteria: { criterion_id: string; uncertainty: string | null }[];
+  };
+  const placed = triage.criteria.find((c) => c.criterion_id === "placed-on-target");
+  return placed !== undefined && placed.uncertainty !== "source missing";
+}
+
 test.beforeEach(async ({ request }) => {
   await ingest(request, EPISODES.triage);
-  for (const index of EPISODES.triage) await boxForPlacement(request, episodeId(index));
   // Their Triage decisions show only once labelled.
   await referenceLabel(request, EPISODES.triage.map(episodeId));
+  // Spark sees each object placed on its target. Asked once, before boxing, on the whole view its
+  // scripted answers were recorded for; answers don't depend on the box, so they still apply.
+  // Asking again once boxed would cut a placement clip with no recorded answer.
+  const unasked = [];
+  for (const index of EPISODES.triage) {
+    if (!(await placementAnswered(request, index))) unasked.push(index);
+  }
+  if (unasked.length > 0) await askVisual(request, unasked);
+  for (const index of EPISODES.triage) await boxForPlacement(request, episodeId(index));
 });
 
 test("the table sorts Episodes into Triage tabs with their Reasons", async ({ page }) => {
