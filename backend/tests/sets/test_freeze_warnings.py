@@ -29,7 +29,7 @@ def frozen_at(api: TestClient, name: str) -> str | None:
 
 
 def episode_set(name: SetName, size: int, ids: tuple[str, ...] = ()) -> EpisodeSet:
-    members = list(ids) or [f"droid_100:{i}" for i in range(size)]
+    members = list(ids) or [f"droid_100:{1000 + i}" for i in range(size)]  # none of them seen
     return EpisodeSet(name=name, size=len(members), frozen_at=None, episode_ids=members)
 
 
@@ -38,6 +38,23 @@ def test_the_test_set_must_hold_exactly_100_episodes():
     for size in (TEST_SET_SIZE - 1, TEST_SET_SIZE + 1):
         (warning,) = freeze_warnings(episode_set("test", size))
         assert "Test set" in warning and "exactly 100" in warning and str(size) in warning
+
+
+def test_the_test_set_must_hold_none_of_the_episodes_already_seen():
+    unseen = ("droid_100:1000", "droid_100:1001")
+    assert freeze_warnings(episode_set("test", 0, unseen)) != []  # only the size is wrong
+    assert all("seen" not in w for w in freeze_warnings(episode_set("test", 0, unseen)))
+
+    members = (*unseen, SEEN_EPISODES[0], SEEN_EPISODES[6])
+    warnings = freeze_warnings(episode_set("test", 0, members))
+
+    (seen,) = [w for w in warnings if "seen" in w]
+    assert "Test set" in seen and SEEN_EPISODES[0] in seen and SEEN_EPISODES[6] in seen
+    assert SEEN_EPISODES[1] not in seen and "droid_100:1000" not in seen
+
+    full = tuple(f"droid_100:{1000 + i}" for i in range(TEST_SET_SIZE - 1))
+    (only,) = freeze_warnings(episode_set("test", 0, (*full, SEEN_EPISODES[0])))
+    assert "seen" in only  # right size, so the seen Episode is the only warning
 
 
 def test_the_dev_set_must_hold_every_episode_already_seen():

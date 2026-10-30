@@ -25,14 +25,19 @@ SEEN_EPISODES: tuple[str, ...] = (
 def freeze_warnings(current: EpisodeSet) -> list[str]:
     """What freezing this set would break in the protocol; empty when it breaks nothing."""
     label = SET_LABELS[current.name]
-    if current.name == "test" and current.size != TEST_SET_SIZE:
-        return [
-            f"The {label} should hold exactly {TEST_SET_SIZE} Episodes; it holds {current.size}"
-        ]
+    warnings: list[str] = []
+    if current.name == "test":
+        if current.size != TEST_SET_SIZE:
+            warnings.append(
+                f"The {label} should hold exactly {TEST_SET_SIZE} Episodes; it holds {current.size}"
+            )
+        seen = [i for i in SEEN_EPISODES if i in current.episode_ids]
+        if seen:
+            warnings.append(f"The {label} holds Episodes already seen: {', '.join(seen)}")
     if current.name == "dev":
         missing = [i for i in SEEN_EPISODES if i not in current.episode_ids]
         if missing:
-            return [
+            warnings.append(
                 f"The {label} should hold every Episode already seen; missing {', '.join(missing)}"
-            ]
-    return []
+            )
+    return warnings
