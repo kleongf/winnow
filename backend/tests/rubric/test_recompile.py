@@ -7,10 +7,12 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.helpers import reference_label, wait_for_job
+from tests.helpers import app_context, reference_label, wait_for_job
 from tests.rubric.scripted import ScriptedCompile, criterion, phrase
 from winnow.app import create_app
 from winnow.core.settings import Settings
+from winnow.rubric.models import CriterionEdit, DraftEdit
+from winnow.rubric.service import edit_draft
 
 DESCRIPTION = "Tidy pick: one grasp only, gently lowered, and no long pauses."
 ONE_GRASP = "one grasp only"
@@ -211,3 +213,40 @@ def test_a_fresh_compile_ignores_the_draft(drafted: TestClient, spark: ScriptedC
     assert MARKER not in spark.prompts[1][0]
     assert draft["recompiled"] is None
     assert len(draft["phrases"]) == 4
+
+
+def test_an_edit_made_while_spark_reads_the_change_survives_it(
+    drafted: TestClient, spark: ScriptedCompile
+):
+    ctx = app_context(drafted)
+    [grasps] = ids_by_phrase(drafted.get("/api/rubric/draft").json())[ONE_GRASP]
+    softened = {grasps: CriterionEdit(threshold=3, hard=False)}
+    spark.while_reading = lambda: edit_draft(ctx, DraftEdit(criteria=softened))
+
+    draft = compile_description(drafted, spark, EDITED, PAUSES_ARE_FINE)
+
+    grasp = next(c for c in draft["criteria"] if c["id"] == grasps)
+    assert (grasp["threshold"], grasp["hard"]) == (3, False)
+    assert [p["text"] for p in draft["phrases"]][-1] == PAUSES_FINE
+    assert drafted.get("/api/rubric/draft").json()["criteria"] == draft["criteria"]
+
+
+def test_a_description_compiled_while_spark_reads_the_change_is_never_overwritten(
+    drafted: TestClient, spark: ScriptedCompile
+):
+    ctx = app_context(drafted)
+    other = f"{DESCRIPTION} Quickly."
+
+    def compiled_meanwhile() -> None:
+        draft = ctx.drafts.get()
+        assert draft is not None
+        ctx.drafts.save(draft.model_copy(update={"description": other}))
+
+    spark.while_reading = compiled_meanwhile
+    spark.answers.append(PAUSES_ARE_FINE)
+
+    response = drafted.post("/api/rubric/draft/compile", json={"description": EDITED})
+
+    assert response.status_code == 409, response.text
+    assert "changed while" in response.json()["detail"]
+    assert drafted.get("/api/rubric/draft").json()["description"] == other

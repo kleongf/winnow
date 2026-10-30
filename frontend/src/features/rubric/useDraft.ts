@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -16,6 +16,7 @@ export function underDraft(query: { queryKey: readonly unknown[] }): boolean {
   return query.queryKey.length > draftKey.length;
 }
 const anchorPoolKey = ["anchor-pool"] as const;
+const compileKey = ["compile"] as const;
 
 /** The Rubric draft on the Describe page; null until a Description is compiled. */
 export function useDraft() {
@@ -34,6 +35,7 @@ export function useDraft() {
 export function useCompile() {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: compileKey,
     mutationFn: async (description: string) => {
       const { data, error, response } = await api.POST("/api/rubric/draft/compile", {
         body: { description, fresh: false },
@@ -50,6 +52,11 @@ export function useCompile() {
       await queryClient.invalidateQueries({ queryKey: draftKey, predicate: underDraft });
     },
   });
+}
+
+/** Whether a compile is under way, wherever on the page it was started. */
+export function useCompiling(): boolean {
+  return useIsMutating({ mutationKey: compileKey }) > 0;
 }
 
 /** The Episodes the Rubric is written against: the Dev set, never the Test set. */

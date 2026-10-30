@@ -12,7 +12,7 @@ import { InterviewTimeline } from "../interview/InterviewTimeline";
 import { DescribeHeader } from "./DescribeHeader";
 import { recompileNote } from "./recompileNote";
 import { RubricPanel } from "./RubricPanel";
-import { type RubricDraft, useCompile, useDraft } from "./useDraft";
+import { type RubricDraft, useCompile, useCompiling, useDraft } from "./useDraft";
 import { useDraftEditor } from "./useDraftEditor";
 import { useVersionPreview } from "./useDraftEdits";
 import { useRubric, useVersions } from "./useRubric";
@@ -136,7 +136,7 @@ function shownVersion(params: URLSearchParams): number | null {
 export function DescribePage() {
   const version = shownVersion(useSearchParams());
   const draft = useDraft();
-  const { editing, preview, error } = useDraftEditor(draft.data);
+  const { editing, preview, error } = useDraftEditor(draft.data, useCompiling());
   const frozen = useVersions().data?.find((v) => v.version === version);
   const frozenPreview = useVersionPreview(version).data;
   const { highlighted, show, clear } = useHighlight();

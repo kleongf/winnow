@@ -1,6 +1,7 @@
 // Editing the draft on its Criterion cards. A threshold mid-drag is held here, unsaved, and
 // previewed on the anchor pool as it moves; letting go saves it. Toggles and settings save at
-// once. None of it calls a model.
+// once. None of it calls a model. While a compile is under way the cards are read-only: it may
+// replace the Criteria being edited.
 import { useState } from "react";
 
 import type { CardEditor } from "./CriterionCard";
@@ -15,7 +16,7 @@ function without(thresholds: Thresholds, id: string): Thresholds {
   return Object.fromEntries(Object.entries(thresholds).filter(([key]) => key !== id));
 }
 
-export function useDraftEditor(draft: RubricDraft | null | undefined) {
+export function useDraftEditor(draft: RubricDraft | null | undefined, compiling: boolean) {
   const [dragged, setDragged] = useState<Thresholds>({});
   const edit = useEditDraft();
   const criteria = Object.fromEntries(
@@ -23,7 +24,7 @@ export function useDraftEditor(draft: RubricDraft | null | undefined) {
   );
   const preview = useDraftPreview({ criteria }, Boolean(draft));
 
-  const editorFor = (criterion: Criterion): CardEditor => ({
+  const cardEditor = (criterion: Criterion): CardEditor => ({
     threshold: dragged[criterion.id] ?? criterion.threshold,
     onDrag: (value) => {
       setDragged((d) => ({ ...d, [criterion.id]: roundThreshold(value, criterion.unit) }));
@@ -47,7 +48,7 @@ export function useDraftEditor(draft: RubricDraft | null | undefined) {
 
   const editing: DraftEditing = {
     preview: preview.data,
-    editorFor,
+    editorFor: (criterion) => (compiling ? undefined : cardEditor(criterion)),
     onSettings: (settings) => {
       edit.mutate({ criteria: {}, ...settings });
     },

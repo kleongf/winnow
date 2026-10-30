@@ -11,7 +11,7 @@ import type { AnchorPreview, DraftEdit } from "./useDraftEdits";
 
 export interface DraftEditing {
   preview?: AnchorPreview | undefined;
-  editorFor: (criterion: Criterion) => CardEditor;
+  editorFor: (criterion: Criterion) => CardEditor | undefined; // none: read-only for now
   onSettings: (edit: Omit<DraftEdit, "criteria">) => void;
 }
 
