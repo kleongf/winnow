@@ -1,14 +1,15 @@
 """Re-record the Meta responses that tests and e2e replay: `uv run python -m tests.record_meta`.
 
 Runs the real ingest pipeline (Spark-alone baseline and wrist track) against the Meta API on the
-e2e fixture Episodes, compiles the frozen Description against e2e's Dev set, then boxes each
-Episode with E2E_BOX in each exterior view in turn and runs what a saved box queues (exterior
-track and target box), writing every reply to RECORDINGS. Costs about $0.80, which is added to
-the main cost log. Re-record after changing a prompt, a schema or the fixture Episodes.
+e2e fixture Episodes, compiles the frozen Description against e2e's Dev set and recompiles it
+with one Phrase edited (EDITED), then boxes each Episode with E2E_BOX in each exterior view in
+turn and runs what a saved box queues (exterior track and target box), writing every reply to
+RECORDINGS. Costs about $0.80, which is added to the main cost log. Re-record after changing a
+prompt, a schema or the fixture Episodes.
 
 With `--missing`, replies already recorded are replayed and only the text-only calls missing
-from RECORDINGS (a changed compile prompt) are made for real and appended; only compile's cost
-is logged. Cents, not dollars.
+from RECORDINGS (a changed compile prompt, a new edit) are made for real and appended; only
+compile's cost is logged. Cents, not dollars.
 """
 
 import asyncio
@@ -39,6 +40,8 @@ E2E_EPISODES = 17  # what scripts/e2e-server.ts writes
 # e2e's Dev set (DEV_SET in e2e/helpers.ts), which compile's anchor-pool ranges come from.
 # Fixture Episode 0 has the same robot data, so backend tests compile against it as well.
 E2E_DEV_SET = (6,)
+# The frozen Description with its grasp Phrase edited, which e2e and backend tests recompile.
+EDITED = FROZEN.text.replace(FROZEN.phrases[0], "grasps the object within two tries")
 # The box e2e draws (a drag from 40% to 60% of each side of the 320x180 frame) and puts.
 E2E_BOX = {"x1": 128, "y1": 72, "x2": 192, "y2": 108}
 
@@ -84,6 +87,9 @@ async def _record(settings: Settings, transport: Transport) -> int:
         ctx.sets.add("dev", [episode_id("droid_100", i) for i in E2E_DEV_SET])
         draft = await compile_draft(ctx, FROZEN.text)
         sys.stdout.write(f"compile: {[(p.text, p.status) for p in draft.phrases]}\n")
+        edited = await compile_draft(ctx, EDITED)  # recompiles the grasp Phrase only
+        asked = [r.text for r in edited.recompiled or []]
+        sys.stdout.write(f"recompile {asked}: {[c.id for c in edited.criteria]}\n")
         for camera in get_args(ExteriorCamera):
             ids = [episode_id("droid_100", i) for i in indices]
             for boxed in ids:
