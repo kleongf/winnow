@@ -1,17 +1,17 @@
 """Bisecting an assumed threshold over anchor Episodes with known values."""
 
-from winnow.interview.bisection import Asked, Point, next_point, resolve
+from winnow.interview.bisection import Answered, Point, next_point, resolve
 
 # Eight anchor Episodes, 0.5 apart.
 POINTS = [Point(f"droid_100:{i}", 0.5 * (i + 1)) for i in range(8)]
 
 
-def bisect(threshold: float, comparator: str, fine_up_to: float) -> list[Asked]:
+def bisect(threshold: float, comparator: str, fine_up_to: float) -> list[Answered]:
     """Answer each question as a curator who finds anything up to `fine_up_to` fine."""
-    asked: list[Asked] = []
+    asked: list[Answered] = []
     while (point := next_point(POINTS, asked, threshold, comparator)) is not None:
         fine = point.value <= fine_up_to if comparator in ("<", "<=") else point.value >= fine_up_to
-        asked.append(Asked(point.episode_id, point.value, fine))
+        asked.append(Answered(point.episode_id, point.value, fine))
     return asked
 
 
@@ -24,9 +24,8 @@ def test_it_converges_in_at_most_three_questions_and_brackets_the_threshold():
 
     assert [(a.value, a.fine) for a in asked] == [(1.0, True), (3.0, False), (2.0, True)]
     resolution = resolve(asked, threshold=1.0, comparator="<")
-    # Midway between the closest fine (2.0) and not-fine (3.0) Episodes; the unsure band is
-    # exactly the gap between them.
-    assert (resolution.outcome, resolution.threshold, resolution.margin) == ("set", 2.5, 0.5)
+    # Midway between the closest fine (2.0) and not-fine (3.0) Episodes, the margin their gap.
+    assert (resolution.outcome, resolution.threshold, resolution.margin) == ("set", 2.5, 1.0)
 
 
 def test_a_threshold_where_fine_is_high_bisects_the_other_way():
@@ -34,11 +33,11 @@ def test_a_threshold_where_fine_is_high_bisects_the_other_way():
 
     assert [(a.value, a.fine) for a in asked] == [(3.0, True), (1.5, False), (2.5, True)]
     resolution = resolve(asked, threshold=3.0, comparator=">=")
-    assert (resolution.outcome, resolution.threshold, resolution.margin) == ("set", 2.0, 0.5)
+    assert (resolution.outcome, resolution.threshold, resolution.margin) == ("set", 2.0, 1.0)
 
 
 def test_answers_that_all_agree_with_the_threshold_confirm_it():
-    asked = [Asked("droid_100:0", 0.5, True)]
+    asked = [Answered("droid_100:0", 0.5, True)]
 
     resolution = resolve(asked, threshold=1.0, comparator="<")
 

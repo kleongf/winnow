@@ -12,7 +12,7 @@ export type CriterionPreview = components["schemas"]["CriterionPreview"];
 
 const previewKey = [...draftKey, "preview"] as const;
 
-function failure(error: unknown, fallback: string): Error {
+export function failure(error: unknown, fallback: string): Error {
   const detail = (error as { detail?: unknown } | undefined)?.detail;
   return new Error(typeof detail === "string" ? detail : fallback);
 }

@@ -69,18 +69,27 @@ function editSentence(start: number, end: number): void {
 }
 
 /** The Description, and under it the interview while the draft is shown. */
-function LeftColumn(props: { interview: boolean; onShowCriterion: (id: string) => void }) {
+function LeftColumn(props: {
+  interview: boolean;
+  onShowCriterion: (id: string) => void;
+  onUndone: () => void;
+}) {
   return (
     <div className="sticky top-32 max-h-[calc(100vh-9rem)] self-start overflow-y-auto pb-4">
       <DescriptionForm />
       {props.interview && (
-        <InterviewTimeline onShowCriterion={props.onShowCriterion} onEditSentence={editSentence} />
+        <InterviewTimeline
+          onShowCriterion={props.onShowCriterion}
+          onUndone={props.onUndone}
+          onEditSentence={editSentence}
+        />
       )}
     </div>
   );
 }
 
-/** The Criterion an interview answer changed: highlighted on its card, scrolled into view. */
+/** The Criterion an interview answer changed: highlighted on its card, scrolled into view, until
+ * an undo takes the change back. */
 function useHighlight() {
   const [highlighted, setHighlighted] = useState<string | null>(null);
   const show = (criterionId: string) => {
@@ -89,7 +98,10 @@ function useHighlight() {
       .getElementById(`criterion-${criterionId}`)
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
-  return { highlighted, show };
+  const clear = () => {
+    setHighlighted(null);
+  };
+  return { highlighted, show, clear };
 }
 
 function shownVersion(params: URLSearchParams): number | null {
@@ -103,7 +115,7 @@ export function DescribePage() {
   const { editing, preview, error } = useDraftEditor(draft.data);
   const frozen = useVersions().data?.find((v) => v.version === version);
   const frozenPreview = useVersionPreview(version).data;
-  const { highlighted, show } = useHighlight();
+  const { highlighted, show, clear } = useHighlight();
   return (
     <div>
       <DescribeHeader
@@ -112,7 +124,11 @@ export function DescribePage() {
         preview={version === null ? preview : frozenPreview}
       />
       <div className="grid grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-8 px-8 py-5">
-        <LeftColumn interview={version === null && Boolean(draft.data)} onShowCriterion={show} />
+        <LeftColumn
+          interview={version === null && Boolean(draft.data)}
+          onShowCriterion={show}
+          onUndone={clear}
+        />
         <div aria-label={version === null ? "Rubric draft" : "Rubric version"} role="region">
           {error && <p className="mb-2 text-sm text-destructive">{error.message}</p>}
           {version !== null ? (

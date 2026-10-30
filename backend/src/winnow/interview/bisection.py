@@ -6,8 +6,8 @@ fine past the closest not-fine one), and the next question asks about the median
 inside it. At most three questions per threshold.
 
 Then: answers on both sides put the threshold midway between the closest fine and not-fine
-Episodes, with a margin of half their gap, so the unsure band is exactly the stretch nobody
-answered. Answers all on one side that the assumed threshold already sorts right confirm it;
+Episodes, with their gap as its margin (the interview gap of the plan's effective margin).
+Answers all on one side that the assumed threshold already sorts right confirm it;
 answers all on one side that it sorts wrong leave it unbracketed, since no anchor Episode shows
 where the line is (their labels still hold).
 """
@@ -30,7 +30,7 @@ class Point:
 
 
 @dataclass(frozen=True)
-class Asked:
+class Answered:
     episode_id: str
     value: float
     fine: bool  # the curator's answer: True passes the Phrase
@@ -62,14 +62,14 @@ class _Bracket:
         return above and below
 
 
-def _bracket(asked: Sequence[Asked], sign: int) -> _Bracket:
+def _bracket(asked: Sequence[Answered], sign: int) -> _Bracket:
     fine = [a.value * sign for a in asked if a.fine]
     not_fine = [a.value * sign for a in asked if not a.fine]
     return _Bracket(max(fine, default=None), min(not_fine, default=None))
 
 
 def next_point(
-    points: Sequence[Point], asked: Sequence[Asked], threshold: float, comparator: str
+    points: Sequence[Point], asked: Sequence[Answered], threshold: float, comparator: str
 ) -> Point | None:
     """The anchor Episode to ask about next, or None when the threshold is settled."""
     sign = _sign(comparator)
@@ -94,18 +94,18 @@ def _passes(value: float, threshold: float, comparator: str) -> bool:
     return distance > 0 or (inclusive and distance == 0)
 
 
-def _sorted_right(asked: Sequence[Asked], threshold: float, comparator: str) -> bool:
+def _sorted_right(asked: Sequence[Answered], threshold: float, comparator: str) -> bool:
     """Whether the threshold already passes every fine answer and fails every other one."""
     return all(_passes(a.value, threshold, comparator) == a.fine for a in asked)
 
 
-def resolve(asked: Sequence[Asked], threshold: float, comparator: str) -> Resolution:
+def resolve(asked: Sequence[Answered], threshold: float, comparator: str) -> Resolution:
     sign = _sign(comparator)
     bracket = _bracket(asked, sign)
     if bracket.fine is not None and bracket.not_fine is not None:
         middle = (bracket.fine + bracket.not_fine) / 2 * sign
         gap = abs(bracket.not_fine - bracket.fine)
-        return Resolution("set", round(middle, 6), round(gap / 2, 6))
+        return Resolution("set", round(middle, 6), round(gap, 6))
     if _sorted_right(asked, threshold, comparator):
         return Resolution("confirmed", threshold, None)
     return Resolution("unbracketed", threshold, None)

@@ -52,6 +52,7 @@ test("the interview covers the Phrases, then a bisection card confirms the pause
   // Undo puts the assumption back and asks again.
   await answered.getByRole("button", { name: "Undo" }).click();
   await expect(pauses.getByTestId("assumption")).toHaveCount(1);
+  await expect(pauses).not.toHaveAttribute("data-highlighted");
   await expect(question).toContainText("fine for “no long pauses”?");
   expect(errors).toEqual([]);
 });

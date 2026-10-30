@@ -132,10 +132,10 @@ def test_a_bisection_card_brackets_the_threshold_and_labels_each_episode_it_asks
     after = answer(drafted, "fail")
 
     grasps = criterion_of(drafted, ONE_GRASP)
-    assert (grasps["threshold"], grasps["margin"], grasps["assumptions"]) == (2.0, 1.0, [])
+    assert (grasps["threshold"], grasps["margin"], grasps["assumptions"]) == (2.0, 2.0, [])
     settled = after["answered"][-1]
     assert settled["changed_criterion"] == grasps["id"]
-    assert settled["effect"].endswith("Threshold 1 → 2, margin ± 1.")
+    assert settled["effect"].endswith("Threshold 1 → 2, margin ± 2.")
     labels = drafted.get("/api/episodes/droid_100:2/labels").json()
     assert [(x["phrase"], x["value"], x["source"], x["rubric_version"]) for x in labels] == [
         (ONE_GRASP, "fail", "interview", None)
@@ -194,6 +194,7 @@ def test_marking_phrases_context_covers_them_and_undo_puts_them_back(drafted: Te
     undone = drafted.delete(f"/api/interview/answers/{unsupported['id']}").json()
 
     assert phrase_statuses(drafted)[NEVER_DROPS] == "unsupported"
+    assert phrase_statuses(drafted)["smoothly"] == "context"  # the later answer stands
     assert undone["covered"] is False
     assert undone["question"]["text"] == NEVER_DROPS
 
@@ -235,3 +236,18 @@ def test_an_answer_re_sorts_the_anchor_pool_and_an_unbracketed_threshold_stays_a
     assert after["answered"][-1]["resolution"] == "unbracketed"
     assert criterion_of(drafted, ONE_GRASP)["assumptions"] == ["One attempt is the most."]
     assert rejected() == []  # its label overrides the Phrase's fail
+
+
+def test_undo_keeps_direct_edits_made_since_to_what_the_answer_did_not_change(
+    drafted: TestClient,
+):
+    to_grasp_threshold(drafted)
+    answer(drafted, "pass")
+    settled = answer(drafted, "fail")["answered"][-1]
+    grasps = criterion_of(drafted, ONE_GRASP)["id"]
+    drafted.patch("/api/rubric/draft", json={"criteria": {grasps: {"hard": False}}})
+
+    drafted.delete(f"/api/interview/answers/{settled['id']}")
+
+    after = criterion_of(drafted, ONE_GRASP)
+    assert (after["threshold"], after["hard"]) == (1.0, False)

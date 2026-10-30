@@ -89,8 +89,12 @@ class StoredAnswer(InterviewAnswer):
     """An answer as kept, with what undo puts back."""
 
     value: float | None = None  # a threshold answer's measured value
+    # What undo puts back, and only that, so later answers and direct edits stand: the settled
+    # Criterion's threshold, margin and assumptions; the Phrase made Context (None when it was
+    # words in no Phrase, which undo takes out of the Phrases again).
     criterion_before: Criterion | None = None
-    phrases_before: list[DraftPhrase] | None = None
+    context_at: int | None = None  # where the Phrase made Context starts
+    phrase_before: DraftPhrase | None = None
 
 
 class Interview(BaseModel):

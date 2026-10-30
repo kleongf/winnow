@@ -24,10 +24,11 @@ function Status(props: { interview: Interview }) {
 
 export function InterviewTimeline(props: {
   onShowCriterion: (criterionId: string) => void;
+  onUndone: () => void;
   onEditSentence: (start: number, end: number) => void;
 }) {
-  const { onShowCriterion, onEditSentence } = props;
-  const interview = useInterview(true);
+  const { onShowCriterion, onUndone, onEditSentence } = props;
+  const interview = useInterview();
   const answer = useAnswer();
   const undo = useUndo();
   const pending = answer.isPending || undo.isPending;
@@ -46,7 +47,7 @@ export function InterviewTimeline(props: {
               pending={pending}
               onShow={onShowCriterion}
               onUndo={(id) => {
-                undo.mutate(id);
+                undo.mutate(id, { onSuccess: onUndone });
               }}
             />
           </li>

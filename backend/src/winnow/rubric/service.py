@@ -29,7 +29,7 @@ async def compile_draft(ctx: AppContext, description: str) -> RubricDraft:
     return ctx.drafts.save(draft)
 
 
-def _draft(ctx: AppContext) -> RubricDraft:
+def current_draft(ctx: AppContext) -> RubricDraft:
     draft = ctx.drafts.get()
     if draft is None:
         raise NoDraftError("There's no Rubric draft yet: compile a Description first")
@@ -38,12 +38,12 @@ def _draft(ctx: AppContext) -> RubricDraft:
 
 def edit_draft(ctx: AppContext, edit: DraftEdit) -> RubricDraft:
     """Applies direct edits to the draft and saves it, with no model call."""
-    return ctx.drafts.save(apply_edit(_draft(ctx), edit))
+    return ctx.drafts.save(apply_edit(current_draft(ctx), edit))
 
 
 def preview_draft(ctx: AppContext, edit: DraftEdit) -> AnchorPreview:
     """The draft, with `edit` applied but not saved, scored on the anchor pool."""
-    draft = apply_edit(_draft(ctx), edit)
+    draft = apply_edit(current_draft(ctx), edit)
     facts = revealed_anchor_facts(ctx)
     labels = anchor_labels(ctx, list(facts))
     return anchor_preview(facts, draft.rubric(), draft.criteria, None, labels)
@@ -59,4 +59,4 @@ def preview_version(ctx: AppContext, version: RubricVersion) -> AnchorPreview:
 def run_draft(ctx: AppContext) -> RubricVersion:
     """Freezes the draft into the next Rubric version, which every Episode is then scored
     against. Never waits for unconfirmed assumptions."""
-    return ctx.rubrics.add(_draft(ctx).rubric())
+    return ctx.rubrics.add(current_draft(ctx).rubric())

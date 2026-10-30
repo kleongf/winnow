@@ -12,6 +12,7 @@ from winnow.interview.service import (
     current,
     undo,
 )
+from winnow.labels.service import UnknownPhraseError
 from winnow.rubric.service import NoDraftError
 
 router = APIRouter(tags=["interview"])
@@ -28,7 +29,7 @@ def _on_interview(act: Callable[[], Interview]) -> Interview:
         return act()
     except (NoDraftError, UnknownAnswerError) as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
-    except StaleQuestionError as error:
+    except (StaleQuestionError, UnknownPhraseError) as error:  # the draft changed meanwhile
         raise HTTPException(status_code=409, detail=str(error)) from error
 
 

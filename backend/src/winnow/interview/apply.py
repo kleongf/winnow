@@ -47,12 +47,18 @@ def settle(draft: RubricDraft, criterion_id: str, resolution: Resolution) -> Rub
     return _replace(draft, found.model_copy(update=changes))
 
 
-def restore(
-    draft: RubricDraft, before: Criterion | None, phrases: list[DraftPhrase] | None
-) -> RubricDraft:
-    """The draft with an answer's Criterion and Phrases put back as they were before it."""
-    if before is not None and any(c.id == before.id for c in draft.criteria):
-        draft = _replace(draft, before)
-    if phrases is not None:
-        draft = draft.model_copy(update={"phrases": phrases})
-    return draft
+def restore_criterion(draft: RubricDraft, before: Criterion) -> RubricDraft:
+    """Puts back what settling changed (threshold, margin, assumptions), keeping later edits."""
+    current = next((c for c in draft.criteria if c.id == before.id), None)
+    if current is None:
+        return draft
+    settled = {"threshold", "margin", "assumptions"}
+    return _replace(draft, current.model_copy(update=before.model_dump(include=settled)))
+
+
+def restore_phrase(draft: RubricDraft, start: int, before: DraftPhrase | None) -> RubricDraft:
+    """Puts back the Phrase made Context at `start`: as it was, or gone when it was words in no
+    Phrase. Every other Phrase stays as it is now."""
+    others = [p for p in draft.phrases if p.start != start]
+    phrases = others if before is None else sorted([*others, before], key=lambda p: p.start)
+    return draft.model_copy(update={"phrases": phrases})

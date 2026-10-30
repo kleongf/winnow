@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { reviewKey } from "../review/useReview";
 import { draftKey } from "../rubric/useDraft";
+import { failure } from "../rubric/useDraftEdits";
 import { triageKey } from "../triage/useTriage";
 
 export type Interview = components["schemas"]["Interview"];
@@ -17,16 +18,14 @@ export type AnswerValue = AnswerDraw["answer"];
 // Under the draft's key, so whatever changes the draft (compile, an edit) asks again.
 const interviewKey = [...draftKey, "interview"] as const;
 
-function failure(error: unknown, fallback: string): Error {
-  const detail = (error as { detail?: unknown } | undefined)?.detail;
-  return new Error(typeof detail === "string" ? detail : fallback);
+function isInterview(query: { queryKey: readonly unknown[] }): boolean {
+  return query.queryKey[draftKey.length] === interviewKey[draftKey.length];
 }
 
 /** The interview on the Rubric draft: the answered cards and the question code asks next. */
-export function useInterview(enabled: boolean) {
+export function useInterview() {
   return useQuery({
     queryKey: interviewKey,
-    enabled,
     queryFn: async () => {
       const { data, response } = await api.GET("/api/interview");
       if (!response.ok || !data) throw new Error(`Interview failed: ${String(response.status)}`);
@@ -43,7 +42,7 @@ function useAfterAnswer() {
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: draftKey,
-        predicate: (query) => query.queryKey[2] !== "interview",
+        predicate: (query) => !isInterview(query),
       }),
       queryClient.invalidateQueries({ queryKey: triageKey }),
       queryClient.invalidateQueries({ queryKey: reviewKey }),

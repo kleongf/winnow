@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from winnow.criteria.english import english
 from winnow.criteria.models import Criterion
 from winnow.interview.anchor import AnchorResult
-from winnow.interview.bisection import MAX_QUESTIONS, Asked, Point, next_point
+from winnow.interview.bisection import MAX_QUESTIONS, Answered, Point, next_point
 from winnow.interview.models import PhraseQuestion, StoredAnswer, ThresholdQuestion
 from winnow.interview.wording import (
     PHRASE_OPTIONS,
@@ -82,10 +82,10 @@ def phrase_questions(draft: RubricDraft, answered: set[str]) -> list[PhraseQuest
     return sorted((q for q in questions if q.key not in answered), key=lambda q: q.start)
 
 
-def asked_on(answers: Sequence[StoredAnswer], key: str) -> list[Asked]:
+def asked_on(answers: Sequence[StoredAnswer], key: str) -> list[Answered]:
     """A threshold's pass/fail answers so far, as bisection reads them."""
     return [
-        Asked(a.episode_id, a.value, a.answer == "pass")
+        Answered(a.episode_id, a.value, a.answer == "pass")
         for a in answers
         if a.key == key and a.episode_id is not None and a.value is not None
     ]
@@ -123,7 +123,7 @@ def _ranked(candidates: list[_Candidate], open_keys: set[str]) -> list[_Candidat
     )
 
 
-def _question(candidate: _Candidate, asked: list[Asked]) -> ThresholdQuestion | None:
+def _question(candidate: _Candidate, asked: list[Answered]) -> ThresholdQuestion | None:
     c = candidate.criterion
     points = [Point(r.episode_id, r.value) for r in candidate.results]
     point = next_point(points, asked, c.threshold, c.comparator)
