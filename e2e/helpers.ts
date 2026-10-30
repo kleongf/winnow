@@ -46,7 +46,8 @@ export async function freezeDevSet(request: APIRequestContext): Promise<void> {
   }[];
   if (sets.find((s) => s.name === "dev")?.frozen_at === null) {
     await request.post("/api/sets/dev/episodes", { data: { episode_ids: DEV_SET.map(episodeId) } });
-    await request.post("/api/sets/dev/freeze");
+    // Forced: the fixture Dev set holds none of the real Dev set's already-seen Episodes.
+    await request.post("/api/sets/dev/freeze", { data: { force: true } });
   }
 }
 

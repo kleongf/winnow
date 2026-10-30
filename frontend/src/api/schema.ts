@@ -794,7 +794,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Post Freeze */
+        /**
+         * Post Freeze
+         * @description 409 with the protocol warnings unless `force`; other refusals are plain errors.
+         */
         post: operations["post_freeze_api_sets__name__freeze_post"];
         delete?: never;
         options?: never;
@@ -1526,6 +1529,24 @@ export interface components {
             y1: number;
             /** Y2 */
             y2: number;
+        };
+        /** FreezeRequest */
+        FreezeRequest: {
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+        };
+        /**
+         * FreezeWarnings
+         * @description The 409 body when a freeze would break the protocol and wasn't forced.
+         */
+        FreezeWarnings: {
+            /** Detail */
+            detail: string;
+            /** Warnings */
+            warnings: string[];
         };
         /**
          * FrozenDescription
@@ -3833,7 +3854,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["FreezeRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3842,6 +3867,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EpisodeSet"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FreezeWarnings"];
                 };
             };
             /** @description Validation Error */
