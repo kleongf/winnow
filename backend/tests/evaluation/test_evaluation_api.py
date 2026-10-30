@@ -284,3 +284,32 @@ def test_interview_and_review_labels_apply_to_dev_set_episodes(asked_api: TestCl
     winnow = rows(run(dev, "dev"))["winnow"]
 
     assert (winnow["keeps"], winnow["rejects"]) == (0, 3)
+
+
+def test_the_report_crosses_the_dataset_outcome_and_times_review(test_set: TestClient):
+    report = typed(run(test_set, "test"))
+
+    # Fixture Episode 2 ships a failing Dataset outcome, 0 and 1 a success; 1 fails a Phrase.
+    outcome = report.dataset_outcome
+    assert (outcome.success_meets, outcome.success_fails, outcome.failure_fails) == (1, 1, 1)
+    assert [(d.episode_id, d.failed_phrases) for d in outcome.disagreements] == [
+        ("droid_100:1", [NEVER_DROPS])
+    ]
+    # Each label took 30 s; Winnow decided 2 of the 3 Episodes.
+    time = report.review_time
+    assert (time.minutes_per_episode, time.decided, time.minutes_saved) == (0.5, 2, 1.0)
+    assert [row.kind for row in report.tracking_health] == ["wrist", "exterior"]
+
+
+def test_the_cli_prints_the_ablation_cost_and_dataset_outcome(
+    test_set: TestClient, settings: Settings, capsys: pytest.CaptureFixture[str]
+):
+    assert main(["eval", "test"], settings=settings) == 0
+
+    out = capsys.readouterr().out
+    assert "Source ablation ($0, re-scored from the cache)" in out
+    assert "  Robot data only (3 of 7 Criteria): " in out
+    assert "Cost per 1,000 Episodes (extrapolated from 4 Episodes' cost log)" in out
+    assert "Review minutes saved: 0.5 min per Episode x 2 decided automatically = 1.0 min" in out
+    assert "  droid_100:1: Dataset success, Reference label fails never drops it" in out
+    assert "±" not in out

@@ -5,12 +5,13 @@ signals leave the report alone."""
 
 import statistics
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 from winnow.baseline.models import BaselineAnswer, EpisodeBaseline
 from winnow.baseline.prompts import FROZEN, Description
 from winnow.reference_labels.models import FailInterval, ReferenceLabel
+from winnow.tracking.models import TrackKind
 from winnow.triage.models import Triage, TriageDecision
 from winnow.triage.reason import labelled_fails, rejecting_fails
 
@@ -36,6 +37,14 @@ class Ranking:
 
 
 @dataclass(frozen=True)
+class TrackCheck:
+    """One SAM track of an Episode, as tracking health counts it."""
+
+    lost: bool  # its health over the whole track flags it lost
+    review_signal: bool  # a hard Criterion reading it is unsure for "track lost"
+
+
+@dataclass(frozen=True)
 class EvaluationCase:
     episode_id: str
     duration_s: float
@@ -46,6 +55,11 @@ class EvaluationCase:
     spark_alone_claim: Claim | None  # for a Reject: its samples' failure type and time
     winnow_ranking: Ranking
     spark_alone_ranking: Ranking
+    dataset_outcome: bool | None = None  # the source's success flag, if it ships one
+    failbench: bool | None = None  # Spark's "did it succeed?" answer; None without one
+    elapsed_s: float = 0.0  # the label-mode timer on its first-pass Reference label
+    tracks: Mapping[TrackKind, TrackCheck] = field(default_factory=dict[TrackKind, TrackCheck])
+    too_small: bool = False  # excluded at selection as "object too small to see"
 
     @property
     def description_failure(self) -> bool:
