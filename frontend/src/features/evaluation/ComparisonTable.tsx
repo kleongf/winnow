@@ -9,18 +9,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { balancedAccuracyText, countOf, interval, lengthRuleText } from "./reportText";
-import type { EvaluationReport, Proportion } from "./useEvaluation";
-
-function Rate(props: { p: Proportion }) {
-  const range = interval(props.p);
-  return (
-    <div className="tabular-nums">
-      <div>{countOf(props.p)}</div>
-      {range && <div className="text-xs text-muted-foreground">{range}</div>}
-    </div>
-  );
-}
+import { Rate } from "./Rate";
+import { balancedAccuracyText, lengthRuleText } from "./reportText";
+import type { EvaluationReport } from "./useEvaluation";
 
 export function ComparisonTable(props: { report: EvaluationReport }) {
   const { comparison } = props.report;

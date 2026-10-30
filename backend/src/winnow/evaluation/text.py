@@ -10,6 +10,7 @@ from winnow.evaluation.models import (
     RightReason,
     SystemRow,
 )
+from winnow.evaluation.protocol_text import protocol_text
 from winnow.sets.models import SET_LABELS
 
 COLUMNS = ("System", "Keeps", "Rejects", "Undecided", "Coverage", "False keeps", "False rejects")
@@ -99,6 +100,7 @@ def report_text(report: EvaluationReport) -> str:
         mcnemar_text(report.mcnemar),
         "Failures per Phrase:",
         *(phrase_text(p) for p in report.phrase_failures),
+        *protocol_text(report),
     ]
     table_lines = [line.rstrip() for line in lines]
     return "\n".join([header, "", *table_lines, "", rule, "", *sections]) + "\n"

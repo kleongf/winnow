@@ -286,6 +286,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/evaluation/disagreements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Disagreements
+         * @description Reference-labelled Episodes where Winnow's Triage decision, as the Workstation shows it
+         *     now, differs from Spark alone's majority answer. Scored on every read, with no Meta call.
+         */
+        get: operations["list_disagreements_api_evaluation_disagreements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/evaluation/runs": {
         parameters: {
             query?: never;
@@ -848,6 +869,28 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AblationRow
+         * @description Winnow re-scored from what is already stored with only some sources' Criteria: a masked
+         *     source's Criteria are left out, as if the Rubric had been compiled without that model, so a
+         *     Phrase only they checked goes unchecked. No Meta call is made.
+         */
+        AblationRow: {
+            coverage: components["schemas"]["Proportion"];
+            /** Criteria */
+            criteria: number;
+            false_keeps: components["schemas"]["Proportion"];
+            /** Label */
+            label: string;
+            /**
+             * Mask
+             * @enum {string}
+             */
+            mask: "robot_data" | "robot_data_sam" | "robot_data_visual" | "all";
+            /** Of */
+            of: number;
+            right_reason: components["schemas"]["Proportion"] | null;
+        };
         /** AnchorEpisode */
         AnchorEpisode: {
             /** Confidence */
@@ -1197,6 +1240,27 @@ export interface components {
             window_name: string;
         };
         /**
+         * DatasetOutcome
+         * @description The Dataset outcome ("was the task done") against the Reference label ("does it meet the
+         *     Description"), over the labelled Episodes whose source ships one.
+         */
+        DatasetOutcome: {
+            /** Compared */
+            compared: number;
+            /** Disagreements */
+            disagreements: components["schemas"]["OutcomeDisagreement"][];
+            /** Failure Fails */
+            failure_fails: number;
+            /** Failure Meets */
+            failure_meets: number;
+            /** No Outcome */
+            no_outcome: number;
+            /** Success Fails */
+            success_fails: number;
+            /** Success Meets */
+            success_meets: number;
+        };
+        /**
          * DatasetStatus
          * @description Description-independent work on the Dataset so far, for the Prepare page.
          */
@@ -1223,6 +1287,30 @@ export interface components {
             wrist_no_closure: number;
             /** Wrist Tracks */
             wrist_tracks: number | null;
+        };
+        /**
+         * Disagreement
+         * @description A Reference-labelled Episode where Winnow's Triage decision (as the Workstation shows it
+         *     now) and Spark alone's majority answer differ.
+         */
+        Disagreement: {
+            /** Episode Id */
+            episode_id: string;
+            /** Failed Phrases */
+            failed_phrases: string[];
+            /** Set Name */
+            set_name: ("dev" | "test") | null;
+            /** Spark Alone */
+            spark_alone: ("keep" | "reject") | null;
+            /** Spark Alone Reason */
+            spark_alone_reason: string | null;
+            /**
+             * Winnow
+             * @enum {string}
+             */
+            winnow: "keep" | "reject" | "needs_review";
+            /** Winnow Reason */
+            winnow_reason: string;
         };
         /**
          * DraftEdit
@@ -1335,17 +1423,23 @@ export interface components {
         };
         /** EvaluationReport */
         EvaluationReport: {
+            /** Ablation */
+            ablation: components["schemas"]["AblationRow"][];
             comparison: components["schemas"]["Comparison"];
+            cost: components["schemas"]["MetaCost"];
+            dataset_outcome: components["schemas"]["DatasetOutcome"];
             /** Description Failures */
             description_failures: number;
             /** Episodes */
             episodes: number;
+            failbench: components["schemas"]["FailBenchCheck"];
             /** Labelled */
             labelled: number;
             matched_coverage: components["schemas"]["MatchedCoverage"];
             mcnemar: components["schemas"]["McNemar"];
             /** Phrase Failures */
             phrase_failures: components["schemas"]["PhraseFailures"][];
+            review_time: components["schemas"]["ReviewTime"];
             right_reason: components["schemas"]["RightReason"];
             /** Risk Coverage */
             risk_coverage: components["schemas"]["RiskCoverage"][];
@@ -1356,6 +1450,8 @@ export interface components {
              * @enum {string}
              */
             set_name: "dev" | "test";
+            /** Tracking Health */
+            tracking_health: components["schemas"]["TrackHealthRow"][];
         };
         /** EvaluationRequest */
         EvaluationRequest: {
@@ -1379,6 +1475,19 @@ export interface components {
              * @enum {string}
              */
             reason: "not pick-and-place" | "object too small to see";
+        };
+        /**
+         * FailBenchCheck
+         * @description Spark's plain "did it succeed?" answer scored against the Dataset outcome, to tie back to
+         *     FailBench's published 0.72 balanced accuracy on DROID.
+         */
+        FailBenchCheck: {
+            agrees: components["schemas"]["Proportion"];
+            /** Answered */
+            answered: number;
+            /** Balanced Accuracy */
+            balanced_accuracy: number | null;
+            failures_caught: components["schemas"]["Proportion"];
         };
         /**
          * FailInterval
@@ -1635,6 +1744,27 @@ export interface components {
             winnow_only_right: number;
         };
         /**
+         * MetaCost
+         * @description Cost per 1,000 Episodes, extrapolated from what the set's Episodes cost in the cost log:
+         *     x10 for a Test set of 100. Not run at 1,000.
+         */
+        MetaCost: {
+            /** Compile Usd */
+            compile_usd: number;
+            /** Episodes */
+            episodes: number;
+            /** Spark Alone Per 1000 Usd */
+            spark_alone_per_1000_usd: number | null;
+            /** Spark Alone Usd */
+            spark_alone_usd: number;
+            /** Steps */
+            steps: components["schemas"]["StepCost"][];
+            /** Winnow Per 1000 Usd */
+            winnow_per_1000_usd: number | null;
+            /** Winnow Usd */
+            winnow_usd: number;
+        };
+        /**
          * Moment
          * @description A point in time that matters to a Criterion result.
          */
@@ -1653,6 +1783,15 @@ export interface components {
             answer: "accept" | "context" | "pass" | "fail" | "skip";
             /** Label */
             label: string;
+        };
+        /** OutcomeDisagreement */
+        OutcomeDisagreement: {
+            /** Dataset Outcome */
+            dataset_outcome: boolean;
+            /** Episode Id */
+            episode_id: string;
+            /** Failed Phrases */
+            failed_phrases: string[];
         };
         /** PhraseChip */
         PhraseChip: {
@@ -1806,6 +1945,24 @@ export interface components {
             reviewed: number;
             /** Rubric Version */
             rubric_version: number;
+        };
+        /**
+         * ReviewTime
+         * @description A person's minutes, from the label-mode timer: what Winnow saves by deciding Episodes
+         *     automatically, and the human cost per Episode left (one hand-drawn box plus Needs review).
+         */
+        ReviewTime: {
+            /** Decided */
+            decided: number;
+            /** Minutes Per Episode */
+            minutes_per_episode: number | null;
+            /** Minutes Saved */
+            minutes_saved: number | null;
+            needs_review: components["schemas"]["Proportion"];
+            /** Needs Review Minutes Per Episode */
+            needs_review_minutes_per_episode: number | null;
+            /** Timed */
+            timed: number;
         };
         /** RightReason */
         RightReason: {
@@ -1994,6 +2151,27 @@ export interface components {
             episodes: number;
             /** Name */
             name: string;
+        };
+        /**
+         * StepCost
+         * @description What one pipeline step spent on the set's Episodes, from the cost log.
+         */
+        StepCost: {
+            /** Calls */
+            calls: number;
+            /** Episodes */
+            episodes: number;
+            /** Label */
+            label: string;
+            /** Step */
+            step: string;
+            /**
+             * System
+             * @enum {string}
+             */
+            system: "winnow" | "spark_alone" | "other";
+            /** Usd */
+            usd: number;
         };
         /**
          * StoredLabel
@@ -2215,6 +2393,24 @@ export interface components {
             lost: boolean;
             /** Missing Fraction */
             missing_fraction: number;
+        };
+        /**
+         * TrackHealthRow
+         * @description One SAM track type over the labelled Episodes.
+         */
+        TrackHealthRow: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "wrist" | "exterior";
+            /** Label */
+            label: string;
+            lost: components["schemas"]["Proportion"];
+            /** Needs Review */
+            needs_review: number;
+            /** Too Small */
+            too_small: number;
         };
         /**
          * TrackPlot
@@ -2842,6 +3038,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_disagreements_api_evaluation_disagreements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Disagreement"][];
                 };
             };
         };

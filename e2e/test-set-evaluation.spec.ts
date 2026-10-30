@@ -71,6 +71,28 @@ test("the Evaluation page runs the Test set, shows the comparison and logs the r
   const phrases = page.getByRole("table", { name: "Failures per Phrase" });
   await expect(phrases.getByText("Too few to score").first()).toBeVisible();
 
+  // The $0 source ablation, one row per set of sources, each with the Criteria it keeps.
+  const ablation = page.getByRole("table", { name: "Source ablation" });
+  await expect(ablation.getByRole("row")).toHaveCount(5); // with the header row
+  await expect(page.getByTestId("ablation-robot_data")).toContainText(
+    /Robot data only\s*\d+ of \d+/,
+  );
+  await expect(page.getByTestId("ablation-all")).toContainText("All sources");
+  const tracking = page.getByRole("table", { name: "SAM tracking health" });
+  for (const track of ["Wrist object track", "Exterior object track"])
+    await expect(tracking.getByRole("cell", { name: track })).toBeVisible();
+  // Cost per 1,000 Episodes from the replayed calls' cost log, and the label-mode timer.
+  await expect(page.getByTestId("cost-winnow")).toContainText(/\$\d+\.\d{2}/);
+  await expect(page.getByTestId("minutes-saved")).toContainText(/\d+\.\d min/);
+  await expect(page.getByRole("table", { name: "Cost by step" })).toContainText(
+    "Wrist object track (SAM)",
+  );
+  // Its Dataset outcome is a failure, and its Reference label fails a Phrase: they agree.
+  await expect(
+    page.getByRole("table", { name: "Dataset outcome against Reference labels" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("failbench")).toContainText("Agrees with the Dataset outcome");
+
   expect(await logged()).toBe(before + 1);
   const log = page.getByRole("table", { name: "Test run log" });
   await expect(log.getByRole("row")).toHaveCount(before + 2); // with the header row

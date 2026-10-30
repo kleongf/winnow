@@ -97,3 +97,23 @@ test("J and K step through Episodes and Esc goes back to the table", async ({ pa
   await expect(page.getByRole("heading", { name: "Episodes" })).toBeVisible();
   await expect(page).toHaveURL(/\?page=episodes$/);
 });
+
+test("a disagreement on the Evaluation page opens its Workstation", async ({ page, request }) => {
+  // SECOND needs review (its visual samples split, and placement has no exterior track), while
+  // Spark alone's recorded answers reject it.
+  await referenceLabel(request, [episodeId(SECOND)]);
+  await page.goto("/?page=evaluation");
+
+  const list = page.getByRole("table", { name: "Spark alone and Winnow disagree" });
+  const row = list
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: episodeId(SECOND), exact: true }) });
+  await expect(row.getByTestId("triage-decision")).toHaveText(["Needs review", "Reject"]);
+  await row.click();
+
+  await expect(page).toHaveURL(new RegExp(`page=episodes&episode=droid_100%3A${String(SECOND)}`));
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText(
+    episodeId(SECOND),
+  );
+  await expect(page.getByLabel("Episode video")).toBeVisible();
+});

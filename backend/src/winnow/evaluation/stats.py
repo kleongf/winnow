@@ -2,7 +2,17 @@
 
 from math import sqrt
 
-from winnow.evaluation.models import Proportion
+from pydantic import BaseModel
+
+
+class Proportion(BaseModel):
+    """`count` of `of`, with its 95% Wilson interval; no interval when `of` is 0."""
+
+    count: int
+    of: int
+    low: float | None
+    high: float | None
+
 
 Z_95 = 1.959964  # two-sided 95%
 

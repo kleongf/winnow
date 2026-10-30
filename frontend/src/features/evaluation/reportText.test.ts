@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { balancedAccuracyText, countOf, interval, lengthRuleText, slackText } from "./reportText";
+import {
+  balancedAccuracyText,
+  countOf,
+  interval,
+  lengthRuleText,
+  minutesText,
+  slackText,
+  usdText,
+} from "./reportText";
 
 describe("report text", () => {
   it("puts the count first and the interval separately, never ±", () => {
@@ -32,5 +40,18 @@ describe("report text", () => {
   it("shows balanced accuracy to two places, or a dash when it can't be scored", () => {
     expect(balancedAccuracyText((2 / 3 + 1 / 2) / 2)).toBe("0.58");
     expect(balancedAccuracyText(null)).toBe("–");
+  });
+
+  it("prices in dollars, with more places for sums under a cent", () => {
+    expect(usdText(8.2)).toBe("$8.20");
+    expect(usdText(0.0514)).toBe("$0.05");
+    expect(usdText(0.0028)).toBe("$0.0028");
+    expect(usdText(0)).toBe("$0.00");
+    expect(usdText(null)).toBe("–");
+  });
+
+  it("states minutes to one place", () => {
+    expect(minutesText(1.5)).toBe("1.5 min");
+    expect(minutesText(null)).toBe("–");
   });
 });

@@ -15,6 +15,13 @@ export type RiskCoverage = components["schemas"]["RiskCoverage"];
 export type MatchedCoverage = components["schemas"]["MatchedCoverage"];
 export type McNemar = components["schemas"]["McNemar"];
 export type PhraseFailures = components["schemas"]["PhraseFailures"];
+export type AblationRow = components["schemas"]["AblationRow"];
+export type TrackHealthRow = components["schemas"]["TrackHealthRow"];
+export type MetaCost = components["schemas"]["MetaCost"];
+export type ReviewTime = components["schemas"]["ReviewTime"];
+export type DatasetOutcome = components["schemas"]["DatasetOutcome"];
+export type FailBenchCheck = components["schemas"]["FailBenchCheck"];
+export type Disagreement = components["schemas"]["Disagreement"];
 
 const testRunsKey = ["evaluation", "test-runs"] as const;
 
@@ -25,6 +32,19 @@ export function useTestRuns() {
     queryFn: async () => {
       const { data, response } = await api.GET("/api/evaluation/test-runs");
       if (!response.ok || !data) throw new Error(`Test runs failed: ${String(response.status)}`);
+      return data;
+    },
+  });
+}
+
+/** Episodes where Spark alone and Winnow disagree, scored live on every read. */
+export function useDisagreements() {
+  return useQuery({
+    queryKey: ["evaluation", "disagreements"],
+    queryFn: async () => {
+      const { data, response } = await api.GET("/api/evaluation/disagreements");
+      if (!response.ok || !data)
+        throw new Error(`Disagreements failed: ${String(response.status)}`);
       return data;
     },
   });

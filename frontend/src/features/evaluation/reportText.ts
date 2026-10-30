@@ -35,3 +35,13 @@ export function lengthRuleText(rule: LengthRule | null): string {
   const side = rule.keep === "longer" ? "≥" : "≤";
   return `Length alone keeps Episodes ${side} ${rule.threshold_s.toFixed(1)} s (threshold set in hindsight).`;
 }
+
+/** Dollars to the cent, or to four places for a sum under a cent; a dash when there is none. */
+export function usdText(usd: number | null): string {
+  if (usd === null) return "–";
+  return `$${usd > 0 && usd < 0.01 ? usd.toFixed(4) : usd.toFixed(2)}`;
+}
+
+export function minutesText(minutes: number | null): string {
+  return minutes === null ? "–" : `${minutes.toFixed(1)} min`;
+}

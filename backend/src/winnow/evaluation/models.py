@@ -8,6 +8,15 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from winnow.evaluation.protocol_models import (
+    AblationRow,
+    DatasetOutcome,
+    FailBenchCheck,
+    MetaCost,
+    ReviewTime,
+    TrackHealthRow,
+)
+from winnow.evaluation.stats import Proportion
 from winnow.sets.models import SetName
 
 System = Literal["winnow", "winnow_review_kept", "spark_alone", "length_alone"]
@@ -17,15 +26,6 @@ SYSTEM_LABELS: dict[System, str] = {
     "spark_alone": "Spark alone",
     "length_alone": "Length alone",
 }
-
-
-class Proportion(BaseModel):
-    """`count` of `of`, with its 95% Wilson interval; no interval when `of` is 0."""
-
-    count: int
-    of: int
-    low: float | None
-    high: float | None
 
 
 class SystemRow(BaseModel):
@@ -148,6 +148,12 @@ class EvaluationReport(BaseModel):
     matched_coverage: MatchedCoverage
     mcnemar: McNemar
     phrase_failures: list[PhraseFailures]  # in the frozen Description's order
+    ablation: list[AblationRow]  # robot data only; + SAM; + Spark visual; all
+    tracking_health: list[TrackHealthRow]  # wrist, then exterior
+    cost: MetaCost
+    review_time: ReviewTime
+    dataset_outcome: DatasetOutcome
+    failbench: FailBenchCheck
 
 
 class TestRun(BaseModel):
