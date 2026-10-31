@@ -2,47 +2,23 @@
 only the changed visual Criteria call Spark."""
 
 from collections.abc import Iterator
-from dataclasses import dataclass
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from tests.helpers import ask_visual, reference_label, wait_for_job
-from tests.meta.fakes import NoTranscribe
-from tests.rubric.scripted import ScriptedCompile, criterion, phrase
+from tests.interview.scripted_text import ScriptedText
+from tests.rubric.scripted import criterion, phrase
 from tests.visual.answers import PARAPHRASES, QUESTION
-from tests.visual.scripted import ScriptedVisual
+from tests.visual.scripted import CompileAndAsk, ScriptedVisual
 from winnow.app import create_app
 from winnow.core.settings import Settings
-from winnow.meta.models import MetaContent
-from winnow.meta.transport import Reply
 
 ON_SAUCER = "puts the cup on the saucer"
 UPRIGHT = "keeps it upright"
 LEVEL = "keeps it level"
 DESCRIPTION = f"Tidy place: {ON_SAUCER}, and {UPRIGHT}."
 EPISODE = "droid_100:0"
-
-
-@dataclass
-class CompileAndAsk(NoTranscribe):
-    """Scripted compile answers, and scripted visual answers to whatever is asked."""
-
-    compile: ScriptedCompile
-    visual: ScriptedVisual
-
-    async def upload(self, path: Path) -> str:
-        return await self.visual.upload(path)
-
-    async def count_tokens(self, model: str, content: MetaContent) -> int:
-        return 1000
-
-    async def respond(self, model: str, content: MetaContent, options: dict[str, object]) -> Reply:
-        text_format = options.get("text")
-        if isinstance(text_format, dict) and text_format["format"]["name"] == "rubric":
-            return await self.compile.respond(model, content, options)
-        return await self.visual.respond(model, content, options)
 
 
 def visual(question: str, paraphrases: list[str]) -> dict[str, object]:
@@ -65,7 +41,7 @@ def stays(word: str) -> dict[str, object]:
 
 @pytest.fixture
 def spark() -> CompileAndAsk:
-    return CompileAndAsk(ScriptedCompile(answers=[]), ScriptedVisual())
+    return CompileAndAsk(ScriptedText(answers=[]), ScriptedVisual())
 
 
 @pytest.fixture
