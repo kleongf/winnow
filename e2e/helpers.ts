@@ -28,6 +28,7 @@ export const EPISODES = {
   audit: [15, 18],
   voice: [19],
   reason: [20],
+  quality: [22, 23],
 } as const;
 
 export function episodeId(index: number): string {
