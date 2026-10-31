@@ -10,7 +10,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from winnow.episodes.clips import copy_cut, cut_h264, probe
+from winnow.episodes.clips import copy_cut, cut_h264, frame_checksum, probe
 from winnow.episodes.droid101 import DATA, FPS, META_FOLDER, VIDEO, Droid101
 from winnow.export.tables import task_texts
 
@@ -51,6 +51,8 @@ class Droid101Export:
             listed = self._read(path, ["episode_index"]).column("episode_index").to_pylist()
             if wanted.intersection(int(str(i)) for i in listed):
                 found.append(self._read(path))
+        if not found:
+            raise ValueError(f"droid_1.0.1 has none of Episodes {indices}")
         return _only(pa.concat_tables(found), indices)
 
     def frames(self, row: Mapping[str, Any]) -> pa.Table:
@@ -60,8 +62,9 @@ class Droid101Export:
         return _only(self._data[1], [int(row["episode_index"])])
 
     def write_video(self, row: Mapping[str, Any], key: str, out: Path) -> float:
-        """A stream copy of the Episode's stretch; re-encoded instead if the copy came out short
-        of any of its frames."""
+        """A stream copy of the Episode's stretch; re-encoded instead (as lossless H.264, so
+        every frame decodes the same) if the copy came out short of any of its frames or doesn't
+        start on the Episode's first one."""
         prefix = f"videos/{key}"
         path = VIDEO.format(
             key=key, chunk=row[f"{prefix}/chunk_index"], file=row[f"{prefix}/file_index"]
@@ -69,7 +72,8 @@ class Droid101Export:
         source, start = self._files.video_input(path), float(row[f"{prefix}/from_timestamp"])
         length = int(row["length"])
         offset = copy_cut(source, start, length / FPS, out)
-        if probe(out)[0] >= round(offset * FPS) + length:
+        whole = probe(out)[0] >= round(offset * FPS) + length
+        if whole and frame_checksum(str(out), offset) == frame_checksum(source, start):
             return offset
-        cut_h264(source, start, length, out)
+        cut_h264(source, start, length, out, lossless=True)
         return 0.0

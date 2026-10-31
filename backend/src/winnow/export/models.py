@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from typing import Literal
 
-from winnow.triage.models import TriageDecision
+from pydantic import BaseModel
 
 
 class Rejection(BaseModel):
@@ -8,7 +8,7 @@ class Rejection(BaseModel):
 
     episode_id: str
     source_index: int
-    decision: TriageDecision  # reject or needs_review
+    decision: Literal["reject", "needs_review"]
     reason: str
 
 

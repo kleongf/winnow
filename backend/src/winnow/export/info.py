@@ -73,11 +73,12 @@ def info_json(
     fps: float,
     videos: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    """`videos`: each camera's feature, keyed like the data's columns."""
+    """`videos`: each camera's feature, keyed like the data's columns, as read from the exported
+    files (the source's own may describe other files: droid_100's, its shared videos)."""
     info = dict(source or {})
     info.update(
         codebase_version=CODEBASE_VERSION,
-        fps=fps,
+        fps=round(fps) if fps.is_integer() else fps,
         total_episodes=episodes,
         total_frames=data.num_rows,
         total_tasks=tasks,
@@ -85,6 +86,6 @@ def info_json(
         splits={"train": f"0:{episodes}"},
         data_path=DATA_PATH,
         video_path=VIDEO_PATH if videos else None,
-        features=info.get("features") or {**data_features(data), **videos},
+        features={**(info.get("features") or data_features(data)), **videos},
     )
     return info

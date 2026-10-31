@@ -11,7 +11,7 @@ test("Export writes the kept Episodes and says where", async ({ page }) => {
 
   const written = page.getByTestId("export-written");
   await expect(written).toContainText(
-    /Exported \d+ kept Episodes, and the Reasons for \d+ not kept, to \S+\/exports\/\S+/,
+    /Exported \d+ kept Episodes?, and the Reasons for \d+ not kept, to \S+\/exports\/\S+/,
     {
       timeout: 30_000,
     },

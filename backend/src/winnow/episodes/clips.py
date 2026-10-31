@@ -57,13 +57,15 @@ def first_frame(clip: Path, out: Path) -> None:
     partial.replace(out)
 
 
-def cut_h264(source: str, start_s: float, frames: int, out: Path) -> None:
-    """`frames` frames of `source` from `start_s`, which may be an https URL ffmpeg range-reads."""
+def cut_h264(source: str, start_s: float, frames: int, out: Path, lossless: bool = False) -> None:
+    """`frames` frames of `source` from `start_s`, which may be an https URL ffmpeg range-reads;
+    `lossless` keeps every decoded frame exactly, in a larger file."""
     out.parent.mkdir(parents=True, exist_ok=True)
     partial = out.with_suffix(".partial.mp4")
+    quality = ["-qp", "0"] if lossless else []
     _ffmpeg(
         "-ss", f"{start_s:.4f}", "-i", source, "-frames:v", str(frames),
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an",
+        "-c:v", "libx264", *quality, "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an",
         str(partial),
     )  # fmt: skip
     partial.replace(out)
@@ -81,6 +83,21 @@ def keyframe_at(source: str, t: float) -> float:
     if result.returncode != 0 or not result.stdout.strip():
         raise RuntimeError(f"ffprobe failed: {result.stderr.strip() or result.returncode}")
     return float(result.stdout.split()[0].strip(","))
+
+
+def frame_checksum(source: str, t: float) -> str:
+    """The decoded frame at `t`'s checksum: the same picture gives the same one in any file."""
+    result = subprocess.run(
+        [
+            *("ffmpeg", "-loglevel", "error", "-ss", f"{t:.6f}", "-i", source),
+            *("-frames:v", "1", "-f", "framemd5", "-"),
+        ],
+        capture_output=True, text=True, check=False,
+    )  # fmt: skip
+    lines = [line for line in result.stdout.splitlines() if not line.startswith("#")]
+    if result.returncode != 0 or not lines:
+        raise RuntimeError(f"ffmpeg failed: {result.stderr.strip() or result.returncode}")
+    return lines[0].rsplit(",", 1)[1].strip()
 
 
 def copy_cut(source: str, start_s: float, duration_s: float, out: Path) -> float:

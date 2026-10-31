@@ -36,8 +36,9 @@ class ExportPlan:
 
     def summary(self, out: Path) -> str:
         kept = sum(len(indices) for indices in self.kept.values())
+        episodes = "Episode" if kept == 1 else "Episodes"
         rest = len(self.rejections)
-        return f"{kept} kept Episodes, and the Reasons for {rest} not kept, to {out}"
+        return f"{kept} kept {episodes}, and the Reasons for {rest} not kept, to {out}"
 
 
 def export_plan(ctx: AppContext) -> ExportPlan:
