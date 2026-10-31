@@ -27,19 +27,19 @@ export function TriagePanel(props: {
         <span className="text-xs text-muted-foreground tabular-nums" data-testid="confidence">
           Confidence {triage.confidence.toFixed(2)}
         </span>
-        {quality !== null && (
-          <span
-            className="text-xs text-muted-foreground tabular-nums"
-            data-testid="quality"
-            title={QUALITY_TITLE}
-          >
-            Quality {formatQuality(quality)}
-          </span>
-        )}
         <span className="ml-auto text-xs text-muted-foreground">
           Rubric v{triage.rubric_version}
         </span>
       </div>
+      {quality !== null && (
+        <p
+          className="mt-1 text-xs text-muted-foreground tabular-nums"
+          data-testid="quality"
+          title={QUALITY_TITLE}
+        >
+          Quality {formatQuality(quality)} · from soft Criteria, relative to the run
+        </p>
+      )}
       <p className="mt-2 text-[15px] leading-snug" data-testid="reason">
         <SeekableText spans={triage.reason} onSeek={props.onSeek} />
       </p>
