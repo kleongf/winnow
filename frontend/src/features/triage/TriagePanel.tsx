@@ -24,16 +24,6 @@ export function TriagePanel(props: {
         <span className="text-xs text-muted-foreground tabular-nums" data-testid="confidence">
           Confidence {triage.confidence.toFixed(2)}
         </span>
-        {triage.reason_source === "spark" && (
-          <span
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-            data-testid="reason-source"
-            title="Spark rewrote the template Reason from this Episode's Evidence"
-          >
-            <Sparkles aria-hidden className="size-3" />
-            written by Spark
-          </span>
-        )}
         <span className="ml-auto text-xs text-muted-foreground">
           Rubric v{triage.rubric_version}
         </span>
@@ -41,6 +31,16 @@ export function TriagePanel(props: {
       <p className="mt-2 text-[15px] leading-snug" data-testid="reason">
         <SeekableText spans={triage.reason} onSeek={props.onSeek} />
       </p>
+      {triage.reason_source === "spark" && (
+        <p
+          className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground"
+          data-testid="reason-source"
+          title="Spark rewrote the template Reason from this Episode's Evidence"
+        >
+          <Sparkles aria-hidden className="size-3" />
+          written by Spark
+        </p>
+      )}
       <div className="mt-4 mb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
         Criterion results
       </div>
