@@ -183,7 +183,8 @@ def test_cli_exports_to_the_folder_given_and_never_over_another_export(
     out = tmp_path / "kept"
 
     assert main(["export", str(out)], settings=settings) == 0
-    assert f"3 kept Episodes and 2 Reasons for the rest in {out}" in capsys.readouterr().out
+    written = f"3 kept Episodes, and the Reasons for 2 not kept, to {out}"
+    assert written in capsys.readouterr().out
     assert sorted(p.name for p in out.iterdir()) == ["droid_1.0.1", "droid_100", "rejections.jsonl"]
     assert main(["export", str(out)], settings=settings) == 1
     assert "already exists" in capsys.readouterr().out
@@ -198,7 +199,7 @@ def test_the_api_exports_in_the_background_to_a_new_folder_under_the_data_dir(
     job = wait_for_job(api, started.json()["job_id"])
     [item] = cast(list[dict[str, object]], job["items"])
     assert item["status"] == "done", item["detail"]
-    out = Path(str(item["detail"]).rsplit(" in ", 1)[1])
+    out = Path(str(item["detail"]).rsplit(" to ", 1)[1])
     assert out.parent == settings.data_dir / "exports"
     assert (out / "droid_1.0.1" / "meta" / "info.json").exists()
     assert api.get("/api/jobs/latest", params={"kind": "export"}).json()["id"] == job["id"]
