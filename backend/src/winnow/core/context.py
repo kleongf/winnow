@@ -120,7 +120,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         if isinstance(droid101, Droid101):
             steps["select"] = select_step(meta, selection, droid101, settings.data_dir)
     runner = JobRunner(jobs, steps, concurrency=settings.ingest_concurrency)
-    return AppContext(
+    ctx = AppContext(
         settings,
         db,
         sources,
@@ -145,6 +145,13 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         runner,
         meta,
     )
+    if meta is not None:
+        # The step scores Episodes through the context, so it's added once that exists; the
+        # runner reads `steps` when an item runs.
+        from winnow.triage.reason_steps import reason_step
+
+        steps["reason"] = reason_step(meta, ctx)
+    return ctx
 
 
 def get_context(request: Request) -> AppContext:
