@@ -65,14 +65,8 @@ function ReviewHeader(props: { reviewed: number; left: number; current: ReviewIt
       progress={total > 0 ? reviewed / total : undefined}
       actions={
         current && (
-          <span className="text-sm" data-testid="review-current">
-            {current.episode_id}{" "}
-            <span className="text-muted-foreground">
-              · confidence{" "}
-              <span className="tabular-nums" data-testid="review-confidence">
-                {current.confidence.toFixed(2)}
-              </span>
-            </span>
+          <span className="text-sm font-medium tabular-nums" data-testid="review-current">
+            {current.episode_id}
           </span>
         )
       }
@@ -94,9 +88,7 @@ function ReviewWorkstation(props: { item: ReviewItem; episode: Episode }) {
       actions={(playhead) => (
         <>
           <YourCall item={item} pending={save.isPending} onAnswer={answer} />
-          {save.isError && (
-            <p className="-mt-3 mb-4 text-xs text-destructive">{save.error.message}</p>
-          )}
+          {save.isError && <p className="-mt-2 text-xs text-destructive">{save.error.message}</p>}
           <VoicePanel
             episodeId={item.episode_id}
             unsure={item.unsure.map((u) => u.phrase)}

@@ -147,9 +147,7 @@ function AuditWorkstation(props: { item: AuditItem; phrases: string[]; episode: 
               mark.mutate({ episodeId: item.episode_id, value: "fail", phrases: [phrase] });
             }}
           />
-          {mark.isError && (
-            <p className="-mt-3 mb-4 text-xs text-destructive">{mark.error.message}</p>
-          )}
+          {mark.isError && <p className="-mt-2 text-xs text-destructive">{mark.error.message}</p>}
         </>
       }
     />
