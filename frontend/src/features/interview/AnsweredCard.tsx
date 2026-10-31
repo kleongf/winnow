@@ -10,10 +10,24 @@ const ANSWER_LABELS: Record<AnswerValue, string> = {
   context: "marked Context",
   pass: "fine",
   fail: "not fine",
+  hard: "hard",
+  soft: "soft",
   skip: "skipped",
 };
 
+/** What a grasp-setting answer said of the moment it was asked about. */
+function settingSaid(key: string, value: AnswerValue): string {
+  const rise = key === "setting:grasp_rise_m";
+  if (value === "pass") return rise ? "lifted" : "closed";
+  if (value === "fail") return rise ? "not lifted" : "open";
+  return ANSWER_LABELS[value];
+}
+
 function heading(answer: InterviewAnswer): string {
+  if (answer.kind === "setting" && answer.measurement && answer.episode_id) {
+    const said = settingSaid(answer.key, answer.answer);
+    return `${answer.subject}: ${answer.measurement} on ${answer.episode_id}, ${said}`;
+  }
   if (answer.measurement && answer.episode_id) {
     return `${answer.measurement} on ${answer.episode_id}: ${ANSWER_LABELS[answer.answer]}`;
   }

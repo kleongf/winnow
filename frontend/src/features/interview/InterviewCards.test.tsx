@@ -3,7 +3,13 @@ import { expect, test, vi } from "vitest";
 
 import { AnsweredCard } from "./AnsweredCard";
 import { QuestionCard } from "./QuestionCard";
-import type { InterviewAnswer, PhraseQuestion, ThresholdQuestion } from "./useInterview";
+import type {
+  HardSoftQuestion,
+  InterviewAnswer,
+  PhraseQuestion,
+  SettingQuestion,
+  ThresholdQuestion,
+} from "./useInterview";
 
 const threshold: ThresholdQuestion = {
   kind: "threshold",
@@ -92,4 +98,122 @@ test("an answered card shows its answer and effect, and undoes it", () => {
   expect(screen.getByRole("article")).toHaveTextContent("Threshold 2 s → 1.5 s");
   fireEvent.click(screen.getByRole("button", { name: "Undo" }));
   expect(onUndo).toHaveBeenCalledWith(7);
+});
+
+const hardSoft: HardSoftQuestion = {
+  kind: "hard_soft",
+  key: "hard:grasp-attempts",
+  prompt:
+    "If an Episode fails “Grasp attempts ≤ 1”, should it be rejected outright, or only lower its quality?",
+  options: [
+    { answer: "hard", label: "Hard: reject it outright" },
+    { answer: "soft", label: "Soft: only lower its quality" },
+    { answer: "skip", label: "Skip: leave it hard" },
+  ],
+  criterion_id: "grasp-attempts",
+  phrase: "on the first try",
+  english: "Grasp attempts ≤ 1",
+  hard: true,
+};
+
+const setting: SettingQuestion = {
+  kind: "setting",
+  key: "setting:gripper_closed_level",
+  prompt: "Is the gripper closed at this moment?",
+  options: [
+    { answer: "pass", label: "Closed" },
+    { answer: "fail", label: "Open" },
+    { answer: "skip", label: "Skip: leave this setting assumed" },
+  ],
+  setting: "gripper_closed_level",
+  name: "Gripper closed level",
+  assumption: "Closed above 0.2 of the gripper's range.",
+  episode_id: "droid_100:6",
+  value: 1,
+  measurement: "closed to 1.00",
+  camera: "wrist_image_left",
+  clip: { start: 0.5, end: 2.5 },
+  asked: 0,
+  max_questions: 3,
+};
+
+test("a hard/soft card asks about the Criterion, with no sentence to edit", () => {
+  const onAnswer = vi.fn();
+  render(
+    <QuestionCard
+      question={hardSoft}
+      pending={false}
+      onAnswer={onAnswer}
+      onEditSentence={vi.fn()}
+    />,
+  );
+
+  expect(screen.getByText("Hard or soft")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Edit the sentence" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Soft: only lower its quality" }));
+  expect(onAnswer).toHaveBeenCalledWith("soft");
+});
+
+test("a setting card plays the moment and names the setting and its assumption", () => {
+  const onAnswer = vi.fn();
+  render(<QuestionCard question={setting} pending={false} onAnswer={onAnswer} />);
+
+  expect(screen.getByText("Assumed grasp setting")).toBeInTheDocument();
+  expect(screen.getByLabelText("Episode clip")).toHaveAttribute(
+    "src",
+    "/api/episodes/droid_100%3A6/clips/wrist_image_left#t=0.5,2.5",
+  );
+  expect(screen.getByTestId("clip-value")).toHaveTextContent("closed to 1.00");
+  expect(screen.getByText(/Gripper closed level · Closed above 0\.2/)).toBeInTheDocument();
+  expect(screen.getByText(/^Question 1 of at most 3/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Closed" }));
+  expect(onAnswer).toHaveBeenCalledWith("pass");
+});
+
+function answered(fields: Partial<InterviewAnswer>): InterviewAnswer {
+  return {
+    id: 8,
+    key: "",
+    kind: "phrase",
+    subject: "",
+    episode_id: null,
+    measurement: null,
+    answer: "skip",
+    effect: "",
+    changed_criterion: null,
+    label_id: null,
+    resolution: null,
+    answered_at: "2026-10-30T12:00:00Z",
+    ...fields,
+  };
+}
+
+test("answered hard/soft and setting cards say what was answered in their own words", () => {
+  render(
+    <>
+      <AnsweredCard
+        answer={answered({ kind: "hard_soft", subject: "Grasp attempts ≤ 1", answer: "soft" })}
+        pending={false}
+        onUndo={vi.fn()}
+        onShow={vi.fn()}
+      />
+      <AnsweredCard
+        answer={answered({
+          kind: "setting",
+          key: "setting:grasp_rise_m",
+          subject: "Grasp rise",
+          episode_id: "droid_100:6",
+          measurement: "rose 9.8 cm",
+          answer: "fail",
+        })}
+        pending={false}
+        onUndo={vi.fn()}
+        onShow={vi.fn()}
+      />
+    </>,
+  );
+
+  const [hard, rise] = screen.getAllByRole("article");
+  expect(hard).toHaveTextContent("“Grasp attempts ≤ 1”: soft");
+  expect(rise).toHaveTextContent("Grasp rise: rose 9.8 cm on droid_100:6, not lifted");
 });

@@ -11,7 +11,9 @@ export type Interview = components["schemas"]["Interview"];
 export type InterviewAnswer = components["schemas"]["InterviewAnswer"];
 export type PhraseQuestion = components["schemas"]["PhraseQuestion"];
 export type ThresholdQuestion = components["schemas"]["ThresholdQuestion"];
-export type Question = PhraseQuestion | ThresholdQuestion;
+export type HardSoftQuestion = components["schemas"]["HardSoftQuestion"];
+export type SettingQuestion = components["schemas"]["SettingQuestion"];
+export type Question = PhraseQuestion | ThresholdQuestion | HardSoftQuestion | SettingQuestion;
 export type AnswerDraw = components["schemas"]["AnswerDraw"];
 export type AnswerValue = AnswerDraw["answer"];
 
