@@ -80,6 +80,9 @@ class Triage(BaseModel):
 class EpisodeTriage(Triage):
     episode_id: str
     rubric_version: int
+    # The mean robust z of its soft Criteria within the run (`triage.quality`): higher is better.
+    # None with no soft value to compare, and for an Episode scored on its own.
+    quality: float | None = None
 
 
 class PhraseChip(BaseModel):
@@ -94,6 +97,7 @@ class TriageRow(BaseModel):
     confidence: float
     not_passed: list[PhraseChip]  # checked Phrases that didn't pass, in Rubric order
     uncertainty: list[UncertaintySignal]  # every signal on the Episode's results, once each
+    quality: float | None  # relative to the run, from soft Criteria only; never decides
 
 
 class TriageList(BaseModel):

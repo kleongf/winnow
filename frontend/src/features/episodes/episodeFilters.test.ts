@@ -14,6 +14,7 @@ function row(id: string, confidence: number, extra: Partial<TriageRow> = {}): Tr
     confidence,
     not_passed: [],
     uncertainty: [],
+    quality: null,
     ...extra,
   };
 }
