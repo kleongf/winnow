@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 
 /** The fixture Episodes each spec owns. Every spec shares one e2e server, whose Reference labels,
  * sets and boxes are permanent, so a spec ingests, labels, boxes, adds to a set and asserts on
@@ -200,4 +200,31 @@ export async function boxEpisode(
       return job.finished;
     })
     .toBe(true);
+}
+
+/** The frozen Description, whose compile against the Dev set is recorded
+ * (backend/tests/record_meta.py): the describe specs compile it, and leave it compiled. */
+export const FROZEN =
+  "Expert pick-and-place: grasps the object on the first try, never drops it, places it in or " +
+  "on the target named in the instruction, no long pauses.";
+
+/** Undo every interview answer, latest first, withdrawing the labels they left. */
+export async function undoInterview(request: APIRequestContext): Promise<void> {
+  const interview = (await (await request.get("/api/interview")).json()) as {
+    answered: { id: number }[];
+  };
+  for (const { id } of [...interview.answered].reverse()) {
+    await request.delete(`/api/interview/answers/${String(id)}`);
+  }
+}
+
+/** Skip each interview question until one of `kind` (its card's label) is asked. */
+export async function skipTo(question: Locator, kind: string): Promise<void> {
+  for (let i = 0; i < 20; i++) {
+    const asked = (await question.textContent()) ?? "";
+    if (asked.startsWith(kind)) return;
+    await question.getByRole("button", { name: /^Skip/ }).click();
+    await expect(question).not.toHaveText(asked); // the next question is up
+  }
+  throw new Error(`No ${kind} question`);
 }

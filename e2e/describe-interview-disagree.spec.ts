@@ -1,14 +1,13 @@
-import { expect, test, type APIRequestContext, type Locator } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 
-import { DEV_SET, episodeId, freezeDevSet } from "./helpers.ts";
+import { DEV_SET, episodeId, FROZEN, freezeDevSet, skipTo, undoInterview } from "./helpers.ts";
 
-// The frozen Description, whose recorded compile the other describe specs expect to find.
-const FROZEN =
-  "Expert pick-and-place: grasps the object on the first try, never drops it, places it in or " +
-  "on the target named in the instruction, no long pauses.";
-// Its compile is scripted (backend/tests/record_interview.py): CAREFUL's two Criteria disagree on
-// the Dev set Episode, which grasps once (a pass) but keeps the arm moving over a second (a fail).
-// The answer labels that Episode on CAREFUL, a Phrase no other spec has; afterEach withdraws it.
+// DISAGREE's compile is scripted (backend/tests/record_interview.py): CAREFUL's two Criteria
+// disagree on the Dev set Episode, which grasps once (a pass) but keeps the arm moving over a
+// second (a fail).
+// Like describe-interview.spec.ts, this spec claims no Episode: its answer labels the Dev set
+// Episode, but on CAREFUL, a Phrase no other spec has, and afterEach withdraws the label and
+// compiles the frozen Description again for the other describe specs.
 const CAREFUL = "grasps it once and quickly";
 const DISAGREE = `Careful pick: ${CAREFUL}.`;
 const EPISODE = episodeId(DEV_SET[0]);
@@ -20,36 +19,15 @@ async function compile(request: APIRequestContext, description: string): Promise
   expect(compiled.ok()).toBe(true);
 }
 
-/** Undo every answer, latest first, withdrawing the labels they left. */
-async function undoAll(request: APIRequestContext): Promise<void> {
-  const interview = (await (await request.get("/api/interview")).json()) as {
-    answered: { id: number }[];
-  };
-  for (const { id } of [...interview.answered].reverse()) {
-    await request.delete(`/api/interview/answers/${String(id)}`);
-  }
-}
-
 test.beforeEach(async ({ request }) => {
   await freezeDevSet(request);
   await compile(request, DISAGREE);
 });
 
 test.afterEach(async ({ request }) => {
-  await undoAll(request);
+  await undoInterview(request);
   await compile(request, FROZEN);
 });
-
-/** Skip each question until one of `kind` (its card's label) is asked. */
-async function skipTo(question: Locator, kind: string): Promise<void> {
-  for (let i = 0; i < 20; i++) {
-    const asked = (await question.textContent()) ?? "";
-    if (asked.startsWith(kind)) return;
-    await question.getByRole("button", { name: /^Skip/ }).click();
-    await expect(question).not.toHaveText(asked); // the next question is up
-  }
-  throw new Error(`No ${kind} question`);
-}
 
 test("where a Phrase's Criteria disagree, a Pass answer labels the Episode and re-sorts it", async ({
   page,
