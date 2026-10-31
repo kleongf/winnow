@@ -1,22 +1,9 @@
-import { expect, test, type APIRequestContext, type Locator } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-import { freezeDevSet } from "./helpers.ts";
+import { FROZEN, freezeDevSet, skipTo, undoInterview } from "./helpers.ts";
 
-// The frozen Description, whose compile against the Dev set is recorded. Hard/soft and setting
-// answers judge no Episode on a Phrase, so they leave no label: this spec claims no Episode.
-const FROZEN =
-  "Expert pick-and-place: grasps the object on the first try, never drops it, places it in or " +
-  "on the target named in the instruction, no long pauses.";
-
-/** Undo every answer, latest first, so the draft is as compiled for the specs after. */
-async function undoAll(request: APIRequestContext): Promise<void> {
-  const interview = (await (await request.get("/api/interview")).json()) as {
-    answered: { id: number }[];
-  };
-  for (const { id } of [...interview.answered].reverse()) {
-    await request.delete(`/api/interview/answers/${String(id)}`);
-  }
-}
+// Hard/soft and setting answers judge no Episode on a Phrase, so they leave no label: this spec
+// claims no Episode.
 
 test.beforeEach(async ({ request }) => {
   await freezeDevSet(request); // one Dev set Episode, which grasps cleanly
@@ -27,19 +14,8 @@ test.beforeEach(async ({ request }) => {
 });
 
 test.afterEach(async ({ request }) => {
-  await undoAll(request);
+  await undoInterview(request);
 });
-
-/** Skip each question until one of `kind` (its card's label) is asked. */
-async function skipTo(question: Locator, kind: string): Promise<void> {
-  for (let i = 0; i < 20; i++) {
-    const asked = (await question.textContent()) ?? "";
-    if (asked.startsWith(kind)) return;
-    await question.getByRole("button", { name: /^Skip/ }).click();
-    await expect(question).not.toHaveText(asked); // the next question is up
-  }
-  throw new Error(`No ${kind} question`);
-}
 
 test("after the thresholds, it asks whether a Criterion is hard, then confirms a grasp setting", async ({
   page,

@@ -1,7 +1,7 @@
 // The Describe interview, under the Description: answered cards collapsed to their effect, then
 // the one question code asks next. It is done once every Phrase is covered; assumed thresholds,
-// hard or soft, and assumed grasp settings can still be asked after that, and Run never waits
-// for them.
+// hard or soft, assumed grasp settings and Phrases whose Criteria disagree can still be asked
+// after that, and Run never waits for them.
 import { AnsweredCard } from "./AnsweredCard";
 import { QuestionCard } from "./QuestionCard";
 import { type Interview, useAnswer, useInterview, useUndo } from "./useInterview";
@@ -15,6 +15,7 @@ function stillAsked(interview: Interview): string {
     [interview.thresholds_left, "assumed threshold"],
     [interview.hard_soft_left, "hard-or-soft question"],
     [interview.settings_left, "assumed grasp setting"],
+    [interview.disagree_left, "Criteria-disagree question"],
   ] as const;
   const counts = left.filter(([n]) => n > 0).map(([n, word]) => plural(n, word));
   return counts.length > 0 ? ` Can still be asked: ${counts.join(", ")}.` : "";
@@ -74,8 +75,7 @@ export function InterviewTimeline(props: {
             onAnswer={(value) => {
               const question = data.question;
               if (!question) return;
-              const onEpisode = question.kind === "threshold" || question.kind === "setting";
-              const episodeId = onEpisode ? question.episode_id : null;
+              const episodeId = "episode_id" in question ? question.episode_id : null;
               answer.mutate(
                 { key: question.key, episode_id: episodeId, answer: value },
                 {

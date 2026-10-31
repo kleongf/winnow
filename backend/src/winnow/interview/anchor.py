@@ -1,7 +1,8 @@
-"""What the interview may show of the anchor pool: each Criterion's measured value on each anchor
-Episode with a Reference label (the rest stay blind), and the stretch it was measured over; and
-each grasp setting's value at one moment of each such Episode."""
+"""What the interview may show of the anchor pool: the draft scored on each anchor Episode with a
+Reference label (the rest stay blind), so each Criterion's result there and the stretch it was
+measured over; and each grasp setting's value at one moment of each such Episode."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -14,7 +15,7 @@ from winnow.interview.models import Clip, SettingName
 from winnow.reference_labels.gate import revealed_ids
 from winnow.rubric.anchor_pool import anchor_episodes
 from winnow.rubric.models import RubricDraft
-from winnow.triage.models import CriterionResult
+from winnow.triage.models import CriterionResult, Triage
 from winnow.triage.scoring import score
 from winnow.triage.service import episode_facts
 
@@ -30,7 +31,7 @@ class AnchorResult:
     clip: Clip
 
 
-def _clip(result: CriterionResult, duration: float) -> Clip:
+def result_clip(result: CriterionResult, duration: float) -> Clip:
     """Around the moments the measurement marks, else its window, else the whole Episode."""
     times = [m.t for m in result.moments]
     if times:
@@ -40,23 +41,52 @@ def _clip(result: CriterionResult, duration: float) -> Clip:
     return Clip(start=0.0, end=duration)
 
 
-def anchor_results(ctx: AppContext, draft: RubricDraft) -> dict[str, list[AnchorResult]]:
-    """By Criterion id, the anchor Episodes it measured a value on."""
+@dataclass(frozen=True)
+class AnchorTriage:
+    """The draft scored on one anchor Episode with a Reference label, with what a clip of it
+    needs."""
+
+    episode_id: str
+    camera: str | None  # the view to play when a result names none
+    duration: float  # s
+    triage: Triage
+
+    def camera_for(self, result: CriterionResult) -> str | None:
+        return result.camera or self.camera
+
+
+def anchor_triage(ctx: AppContext, draft: RubricDraft) -> list[AnchorTriage]:
+    """Every Criterion of the draft, switched off or not, scored on each revealed anchor Episode
+    (with no label: the interview asks about the Criteria's own results)."""
     revealed = revealed_ids(ctx)
     everything = draft.rubric().model_copy(update={"criteria": draft.criteria})
-    found: dict[str, list[AnchorResult]] = {c.id: [] for c in draft.criteria}
+    found: list[AnchorTriage] = []
     for episode in anchor_episodes(ctx):
         if episode.id not in revealed:
             continue
         facts = episode_facts(ctx, episode)
         duration = float(facts.t[-1]) if len(facts.t) else 0.0
-        for result in score(everything, facts).criteria:
+        camera = episode.cameras[0] if episode.cameras else None
+        found.append(AnchorTriage(episode.id, camera, duration, score(everything, facts)))
+    return found
+
+
+def anchor_results(
+    draft: RubricDraft, triaged: Sequence[AnchorTriage]
+) -> dict[str, list[AnchorResult]]:
+    """By Criterion id, the anchor Episodes it measured a value on."""
+    found: dict[str, list[AnchorResult]] = {c.id: [] for c in draft.criteria}
+    for episode in triaged:
+        for result in episode.triage.criteria:
             if result.value is None:
                 continue
-            camera = result.camera or (episode.cameras[0] if episode.cameras else None)
             found[result.criterion_id].append(
                 AnchorResult(
-                    episode.id, result.value, result.measurement, camera, _clip(result, duration)
+                    episode.episode_id,
+                    result.value,
+                    result.measurement,
+                    episode.camera_for(result),
+                    result_clip(result, episode.duration),
                 )
             )
     return found

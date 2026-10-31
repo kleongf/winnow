@@ -134,3 +134,28 @@ def setting_effect(name: SettingName, resolution: Resolution, before: Setting) -
         f"{title} {_setting_value(name, before.value)} → "
         f"{_setting_value(name, resolution.threshold)}, margin ± {margin}."
     )
+
+
+def disagree_prompt(phrase: str, crisp: bool) -> str:
+    if crisp:
+        return f"Its Criteria disagree on this Episode. Does “{phrase}” pass?"
+    return f"A fail on “{phrase}” can't be confirmed on this Episode. Does it pass?"
+
+
+def disagree_options(phrase: str) -> list[Option]:
+    return [
+        Option(answer="pass", label=f"Pass: “{phrase}” passes"),
+        Option(answer="fail", label=f"Fail: “{phrase}” fails"),
+        Option(answer="skip", label="Skip: let its Criteria decide"),
+    ]
+
+
+def disagree_measurement(fails: int, passes: int) -> str:
+    """What the Phrase's Criteria say, e.g. "1 fails, 1 passes"."""
+    said = [f"{fails} fail{'s' if fails == 1 else ''}"]
+    if passes:
+        said.append(f"{passes} pass{'es' if passes == 1 else ''}")
+    return ", ".join(said)
+
+
+DISAGREE_SKIPPED = "Skipped: its Criteria decide."

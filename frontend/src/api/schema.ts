@@ -1572,6 +1572,54 @@ export interface components {
             wrist_tracks: number | null;
         };
         /**
+         * DisagreeQuestion
+         * @description Does the Phrase pass on this anchor Episode, where its Criteria disagree (one fails while
+         *     another passes) or a fail is unconfirmed? Asked once per Phrase.
+         */
+        DisagreeQuestion: {
+            /** Camera */
+            camera: string | null;
+            clip: components["schemas"]["Clip"];
+            /** Episode Id */
+            episode_id: string;
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "disagree";
+            /** Measurement */
+            measurement: string;
+            /** Options */
+            options: components["schemas"]["Option"][];
+            /** Phrase */
+            phrase: string;
+            /** Prompt */
+            prompt: string;
+            /** Results */
+            results: components["schemas"]["DisagreeResult"][];
+        };
+        /**
+         * DisagreeResult
+         * @description One Criterion's result on the Episode asked about.
+         */
+        DisagreeResult: {
+            /** Criterion Id */
+            criterion_id: string;
+            /** English */
+            english: string;
+            /** Measurement */
+            measurement: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pass" | "fail" | "unsure";
+            /** Unconfirmed */
+            unconfirmed: boolean;
+        };
+        /**
          * Disagreement
          * @description A Reference-labelled Episode where Winnow's Triage decision (as the Workstation shows it
          *     now) and Spark alone's majority answer differ.
@@ -1910,12 +1958,14 @@ export interface components {
             answered: components["schemas"]["InterviewAnswer"][];
             /** Covered */
             covered: boolean;
+            /** Disagree Left */
+            disagree_left: number;
             /** Hard Soft Left */
             hard_soft_left: number;
             /** Phrases Left */
             phrases_left: number;
             /** Question */
-            question: (components["schemas"]["PhraseQuestion"] | components["schemas"]["ThresholdQuestion"] | components["schemas"]["HardSoftQuestion"] | components["schemas"]["SettingQuestion"]) | null;
+            question: (components["schemas"]["PhraseQuestion"] | components["schemas"]["ThresholdQuestion"] | components["schemas"]["HardSoftQuestion"] | components["schemas"]["SettingQuestion"] | components["schemas"]["DisagreeQuestion"]) | null;
             /** Settings Left */
             settings_left: number;
             /** Thresholds Left */
@@ -1947,7 +1997,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "phrase" | "words" | "threshold" | "hard_soft" | "setting";
+            kind: "phrase" | "words" | "threshold" | "hard_soft" | "setting" | "disagree";
             /** Label Id */
             label_id: number | null;
             /** Measurement */
