@@ -1,12 +1,14 @@
 """The interview's last questions: per Phrase, the anchor Episode where its Criteria disagree most.
 
-A Phrase's Criteria disagree on an Episode when one fails crisply while another passes, or when
-a fail is unconfirmed (its primitive can't fail the Phrase on its own). Most disagreeing means
-the most Criteria taking a side, then the result nearest a coin toss. Each Phrase is asked about
-at most once, and never on an Episode that already has a label on it in force. Pure: the service
-reads the draft scored on the anchor pool and the labels.
+A Phrase's Criteria disagree on an Episode when one fails crisply while another passes crisply,
+or when a fail is unconfirmed (its primitive can't fail the Phrase on its own). Most disagreeing
+means a crisp fail beside a crisp pass before an unconfirmed fail alone, then the most Criteria
+taking a side, then the result nearest its threshold, in effective margins. Each Phrase is asked
+about at most once, and never on an Episode with a label in force on that Phrase. Pure: the
+service reads the draft scored on the anchor pool and the labels.
 """
 
+import math
 from collections.abc import Sequence, Set
 from dataclasses import dataclass
 
@@ -38,22 +40,37 @@ class _Disagreement:
         return [*self.fails, *self.unconfirmed, *self.passes]
 
     @property
-    def rank(self) -> tuple[int, float]:
-        """Lowest first: the most Criteria taking a side, then the one nearest a coin toss."""
-        return -len(self.sides), min(abs(r.p_pass - 0.5) for r in self.sides)
+    def crisp(self) -> bool:
+        return bool(self.fails and self.passes)
+
+    @property
+    def rank(self) -> tuple[bool, int, float]:
+        """Lowest first: crisp, then the most Criteria taking a side, then the nearest margin."""
+        return not self.crisp, -len(self.sides), min(_margins_off(r) for r in self.sides)
+
+
+def _margins_off(result: CriterionResult) -> float:
+    """How far the value sits from the threshold, in effective margins; inf with no margin."""
+    if result.value is None or result.margin <= 0:
+        return math.inf
+    return abs(result.value - result.threshold) / result.margin
+
+
+def _unconfirmed(result: CriterionResult) -> bool:
+    return result.uncertainty == "unconfirmed fail"
 
 
 def _disagreement(episode: AnchorTriage, ids: Set[str]) -> _Disagreement | None:
     results = [r for r in episode.triage.criteria if r.criterion_id in ids]
     fails = [r for r in results if r.status == "fail" and r.uncertainty is None]
-    unconfirmed = [r for r in results if r.uncertainty == "unconfirmed fail"]
-    passes = [r for r in results if r.status == "pass"]
+    unconfirmed = [r for r in results if _unconfirmed(r)]
+    passes = [r for r in results if r.status == "pass" and r.uncertainty is None]
     if not (fails and passes) and not unconfirmed:
         return None
     return _Disagreement(episode, results, fails, unconfirmed, passes)
 
 
-def _most(
+def _most_disagreeing(
     phrase: DraftPhrase,
     criteria: Sequence[Criterion],
     triaged: Sequence[AnchorTriage],
@@ -78,7 +95,7 @@ def _clip(d: _Disagreement) -> Clip:
 def _question(phrase: DraftPhrase, d: _Disagreement) -> DisagreeQuestion:
     return DisagreeQuestion(
         key=disagree_key(phrase.start),
-        prompt=disagree_prompt(phrase.text, crisp=bool(d.fails and d.passes)),
+        prompt=disagree_prompt(phrase.text, crisp=d.crisp),
         options=disagree_options(phrase.text),
         phrase=phrase.text,
         episode_id=d.episode.episode_id,
@@ -91,7 +108,7 @@ def _question(phrase: DraftPhrase, d: _Disagreement) -> DisagreeQuestion:
                 english=r.english,
                 status=r.status,
                 measurement=r.measurement,
-                unconfirmed=r.uncertainty == "unconfirmed fail",
+                unconfirmed=_unconfirmed(r),
             )
             for r in d.results
         ],
@@ -110,7 +127,9 @@ def disagree_questions(
     switched_on = [c for c in draft.criteria if c.id not in draft.disabled]
     found: list[tuple[DraftPhrase, _Disagreement]] = []
     for phrase in draft.phrases:
-        most = _most(phrase, switched_on, triaged, labelled)
-        if most is not None and disagree_key(phrase.start) not in asked:
+        if disagree_key(phrase.start) in asked:
+            continue
+        most = _most_disagreeing(phrase, switched_on, triaged, labelled)
+        if most is not None:
             found.append((phrase, most))
     return [_question(p, d) for p, d in sorted(found, key=lambda pd: pd[1].rank)]

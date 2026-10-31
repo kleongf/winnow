@@ -139,3 +139,21 @@ def test_a_recompile_carries_the_answer_on_a_phrase_it_left_alone(
     disagreeing.delete(f"/api/interview/answers/{carried['id']}")
     assert labels(disagreeing, "droid_100:2")[0]["withdrawn_at"] is not None
     assert interview(disagreeing)["question"]["key"] == carried["key"]
+
+
+def test_a_crisp_fail_beside_a_crisp_pass_is_asked_before_an_unconfirmed_fail(
+    api: TestClient, spark: ScriptedCompile
+):
+    # Release height's fail is unconfirmed on every anchor Episode; only on Episode 2 does a
+    # crisp grasp fail sit beside the crisp pause pass too.
+    grasps = criterion("grasp_attempts", "<=", 1)
+    pauses = criterion("longest_still_s", "<", 5, params={"speed_below_m_s": 0.01})
+    low = criterion("release_height_m", "<=", -1)
+    spark.answers.append({"phrases": [phrase(TIDY, criteria=[grasps, pauses, low])]})
+    api.post("/api/rubric/draft/compile", json={"description": TIDY})
+
+    question = skip_to(api, "disagree")
+
+    assert question["episode_id"] == "droid_100:2"
+    assert question["prompt"] == f"Its Criteria disagree on this Episode. Does “{TIDY}” pass?"
+    assert question["measurement"] == "2 fail, 1 passes"

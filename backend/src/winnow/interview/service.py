@@ -75,7 +75,7 @@ class _State:
         return next(iter(asked), None)
 
 
-def _labelled(ctx: AppContext, triaged: list[AnchorTriage]) -> set[tuple[str, str]]:
+def _labelled_pairs(ctx: AppContext, triaged: list[AnchorTriage]) -> set[tuple[str, str]]:
     """The (Episode id, Phrase) pairs of the anchor pool with a label in force."""
     return {
         (e.episode_id, label.phrase) for e in triaged for label in ctx.labels.in_force(e.episode_id)
@@ -98,7 +98,7 @@ def _state(ctx: AppContext) -> _State:
         threshold_questions(draft, anchor, answers),
         hard_soft_questions(draft, answers),
         setting_questions(draft, moments, answers),
-        disagree_questions(draft, triaged, _labelled(ctx, triaged), answers),
+        disagree_questions(draft, triaged, _labelled_pairs(ctx, triaged), answers),
     )
 
 
@@ -127,6 +127,21 @@ def _answer_phrase(
     return stored.model_copy(update={"context_at": q.start, "phrase_before": before})
 
 
+def _label_answer(
+    ctx: AppContext, q: ThresholdQuestion | DisagreeQuestion, answer: AnswerValue
+) -> StoredAnswer:
+    """A pass or fail answer on an anchor Episode, saved as an interview label on the Phrase."""
+    value = "pass" if answer == "pass" else "fail"
+    label = save_draft_label(
+        ctx, q.episode_id, LabelDraw(phrase=q.phrase, value=value, source="interview")
+    )
+    stored = StoredAnswer.unchanged(
+        q.key, q.kind, q.phrase, answer, label_effect(q.episode_id, value, q.phrase)
+    )
+    update = {"episode_id": q.episode_id, "measurement": q.measurement, "label_id": label.id}
+    return stored.model_copy(update=update)
+
+
 def _answer_threshold(
     ctx: AppContext, state: _State, q: ThresholdQuestion, answer: AnswerValue
 ) -> StoredAnswer:
@@ -134,24 +149,10 @@ def _answer_threshold(
         return StoredAnswer.unchanged(
             q.key, "threshold", q.phrase, answer, "Skipped: the threshold stays assumed."
         )
-    value = "pass" if answer == "pass" else "fail"  # its options are pass, fail and skip
-    label = save_draft_label(
-        ctx, q.episode_id, LabelDraw(phrase=q.phrase, value=value, source="interview")
-    )
-    asked = [*asked_on(state.answers, q.key), Answered(q.episode_id, q.value, value == "pass")]
+    stored = _label_answer(ctx, q, answer).model_copy(update={"value": q.value})
+    asked = [*asked_on(state.answers, q.key), Answered(q.episode_id, q.value, answer == "pass")]
     found = criterion(state.draft, q.criterion_id)
     points = [Point(r.episode_id, r.value) for r in state.anchor[found.id]]
-    stored = StoredAnswer.unchanged(
-        q.key, "threshold", q.phrase, answer, label_effect(q.episode_id, value, q.phrase)
-    )
-    stored = stored.model_copy(
-        update={
-            "episode_id": q.episode_id,
-            "measurement": q.measurement,
-            "value": q.value,
-            "label_id": label.id,
-        }
-    )
     if next_point(points, asked, found.threshold, found.comparator) is not None:
         return stored  # bisection goes on
     resolution = resolve(asked, found.threshold, found.comparator)
@@ -170,15 +171,7 @@ def _answer_threshold(
 def _answer_disagree(ctx: AppContext, q: DisagreeQuestion, answer: AnswerValue) -> StoredAnswer:
     if answer == "skip":
         return StoredAnswer.unchanged(q.key, "disagree", q.phrase, answer, DISAGREE_SKIPPED)
-    value = "pass" if answer == "pass" else "fail"  # its options are pass, fail and skip
-    label = save_draft_label(
-        ctx, q.episode_id, LabelDraw(phrase=q.phrase, value=value, source="interview")
-    )
-    stored = StoredAnswer.unchanged(
-        q.key, "disagree", q.phrase, answer, label_effect(q.episode_id, value, q.phrase)
-    )
-    update = {"episode_id": q.episode_id, "measurement": q.measurement, "label_id": label.id}
-    return stored.model_copy(update=update)
+    return _label_answer(ctx, q, answer)
 
 
 def _asked(state: _State, draw: AnswerDraw) -> Question:
