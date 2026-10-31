@@ -42,7 +42,7 @@ from winnow.rubric.service import compile_draft
 from winnow.tracking.exterior import box_items
 
 RECORDINGS = Path(__file__).parent / "recordings" / "fixture_episodes.jsonl"
-E2E_EPISODES = 20  # what scripts/e2e-server.ts writes
+E2E_EPISODES = 21  # what scripts/e2e-server.ts writes
 # e2e's Dev set (DEV_SET in e2e/helpers.ts), which compile's anchor-pool ranges come from.
 # Fixture Episode 0 has the same robot data, so backend tests compile against it as well.
 E2E_DEV_SET = (6,)
