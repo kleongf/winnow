@@ -34,6 +34,7 @@ from winnow.episodes.store import episode_id
 from winnow.interview.models import TextDraw
 from winnow.interview.service import current
 from winnow.interview.text import answer_text
+from winnow.interview.text_prompt import MAPPING_SCHEMA_NAME, REWRITE_SCHEMA_NAME
 from winnow.meta.models import MetaContent
 from winnow.meta.replay import RecordingTransport, ReplayTransport
 from winnow.meta.transport import Reply
@@ -94,9 +95,9 @@ SCRIPT: list[tuple[str, str, object]] = [
     ("rubric", json.dumps(CHANGE_TEXT), clarified_compile()),
     ("rubric", json.dumps(STEADY_EDITED), edit_compile()),
     ("rubric", json.dumps(STEADY), steady_compile()),
-    ("interview_text", json.dumps(PICK_TEXT), {"choice": "context", "reply": PICKED}),
-    ("interview_text", json.dumps(CHANGE_TEXT), {"choice": "change", "reply": CHANGED}),
-    ("description_rewrite", json.dumps(EDIT_TEXT), {"description": STEADY_EDITED, "reply": EDITED}),
+    (MAPPING_SCHEMA_NAME, json.dumps(PICK_TEXT), {"choice": "context", "reply": PICKED}),
+    (MAPPING_SCHEMA_NAME, json.dumps(CHANGE_TEXT), {"choice": "change", "reply": CHANGED}),
+    (REWRITE_SCHEMA_NAME, json.dumps(EDIT_TEXT), {"description": STEADY_EDITED, "reply": EDITED}),
 ]
 
 

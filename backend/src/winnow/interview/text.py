@@ -16,20 +16,21 @@ from winnow.core.context import AppContext
 from winnow.interview.models import (
     AnswerDraw,
     AnswerValue,
-    DisagreeQuestion,
     Interview,
     PhraseQuestion,
     Question,
-    SettingQuestion,
     TextDraw,
     TextReply,
     ThresholdQuestion,
+    asked_episode,
 )
 from winnow.interview.service import StaleQuestionError, answer, current
 from winnow.interview.text_prompt import (
     CHANGE,
+    MAPPING_SCHEMA_NAME,
     NONE,
     REWRITE_SCHEMA,
+    REWRITE_SCHEMA_NAME,
     mapping_prompt,
     mapping_schema,
     rewrite_prompt,
@@ -85,11 +86,15 @@ async def _answer_question(
     span = _changeable(draft, asking)
     choices = [*(o.answer for o in asking.options), *([CHANGE] if span else []), NONE]
     subject = None if span is None else draft.description[span[0] : span[1]]
-    request = _request(mapping_prompt(asking, text, subject), mapping_schema(choices), "text")
+    request = _request(
+        mapping_prompt(asking, text, subject), mapping_schema(choices), MAPPING_SCHEMA_NAME
+    )
     mapped = _read(_Mapped, await meta.spark(request))
     if mapped.choice not in choices:
         raise TextAnswerError(f"Spark answered “{mapped.choice}”, which wasn't offered")
     if mapped.choice == CHANGE and span is not None:
+        if current(ctx).question != asking:  # answered meanwhile
+            raise StaleQuestionError("That question was answered while Spark read your words")
         draft = await clarify_draft(ctx, draft.compiled_at, *span, text)
         interview = current(ctx)
     elif mapped.choice != NONE:
@@ -115,15 +120,12 @@ def _value(asking: Question, choice: str) -> AnswerValue:
 
 
 def _draw(asking: Question, value: AnswerValue) -> AnswerDraw:
-    on_episode = isinstance(asking, ThresholdQuestion | SettingQuestion | DisagreeQuestion)
-    return AnswerDraw(
-        key=asking.key, episode_id=asking.episode_id if on_episode else None, answer=value
-    )
+    return AnswerDraw(key=asking.key, episode_id=asked_episode(asking), answer=value)
 
 
 async def _edit_description(ctx: AppContext, meta: MetaClient, text: str) -> TextReply:
     draft = current_draft(ctx)
-    request = _request(rewrite_prompt(draft.description, text), REWRITE_SCHEMA, "rewrite")
+    request = _request(rewrite_prompt(draft.description, text), REWRITE_SCHEMA, REWRITE_SCHEMA_NAME)
     rewritten = _read(_Rewritten, await meta.spark(request))
     description = rewritten.description.strip()
     if not description or len(description) > DESCRIPTION_MAX:
@@ -135,15 +137,15 @@ async def _edit_description(ctx: AppContext, meta: MetaClient, text: str) -> Tex
     return TextReply(interview=current(ctx), draft=draft, reply=_line(rewritten.reply))
 
 
-def _request(prompt: str, schema: dict[str, object], kind: str) -> SparkRequest:
+def _request(prompt: str, schema: dict[str, object], schema_name: str) -> SparkRequest:
     return SparkRequest(
         SPARK_CONTRIBUTOR,
         (Text(prompt),),
         schema,
-        f"interview:{kind}",
+        f"interview:{schema_name}",
         effort="low",
         max_output_tokens=MAX_OUTPUT_TOKENS,
-        schema_name="interview_text" if kind == "text" else "description_rewrite",
+        schema_name=schema_name,
     )
 
 

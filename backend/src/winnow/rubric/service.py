@@ -29,6 +29,9 @@ class DraftChangedError(Exception):
     """The draft's Description changed while Spark read an edit of it."""
 
 
+_CLARIFY_CHANGED = "The draft changed while Spark read your answer: answer again"
+
+
 async def compile_draft(ctx: AppContext, description: str, fresh: bool = False) -> RubricDraft:
     """Compiles `description` against the anchor pool and saves it as the draft.
 
@@ -75,31 +78,31 @@ async def clarify_draft(
 ) -> RubricDraft:
     """Recompiles only the draft's text at [start, end), a Phrase or words in no Phrase, with the
     curator's own words about it, `text`, and saves it. Every other Phrase keeps its Criteria,
-    edits and labels, and the interview answers that still hold carry over, as for an edit.
+    edits and labels, and the interview answers that still hold carry over, as for an edit. The
+    labels answers about that text left stay too: its text is unchanged, and they say how
+    Episodes fare on it.
 
     Raises DraftChangedError, saving nothing, unless the draft is the one compiled at
-    `compiled_at`, before and once Spark answers, with the same Phrases around that text."""
-    draft = _clarifying(ctx, compiled_at)
+    `compiled_at`, before and once Spark answers, with the same Phrases around that text and
+    no interview answer added or undone meanwhile (direct edits may come in between)."""
+    draft, answered = _clarifying(ctx, compiled_at)
     diff = clarify_diff(draft.description, draft.phrases, start, end)
     manifest = _manifest(ctx, draft.settings)
     compiled = await ask_clarified(_meta(ctx), draft.description, manifest, diff, text)
-    now = _clarifying(ctx, compiled_at)
+    now, still = _clarifying(ctx, compiled_at)
     redo = clarify_diff(now.description, now.phrases, start, end)
-    if _spans(redo) != _spans(diff):
-        raise DraftChangedError(CLARIFY_CHANGED)
+    if still != answered or _spans(redo) != _spans(diff):
+        raise DraftChangedError(_CLARIFY_CHANGED)
     return _store_recompiled(ctx, now, now.description, redo, compiled)
 
 
-CLARIFY_CHANGED = "The draft changed while Spark read your answer: answer again"
-
-
-def _clarifying(ctx: AppContext, compiled_at: str) -> RubricDraft:
-    """The draft, if it is still the one compiled at `compiled_at`: no recompile since. Direct
-    edits and template answers don't recompile, so they may come in between."""
+def _clarifying(ctx: AppContext, compiled_at: str) -> tuple[RubricDraft, list[int]]:
+    """The draft, if it is still the one compiled at `compiled_at`, and its interview answers'
+    ids."""
     draft = current_draft(ctx)
     if draft.compiled_at != compiled_at:
-        raise DraftChangedError(CLARIFY_CHANGED)
-    return draft
+        raise DraftChangedError(_CLARIFY_CHANGED)
+    return draft, [a.id for a in ctx.interview.answers(compiled_at)]
 
 
 def _store_recompiled(

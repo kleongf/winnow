@@ -13,6 +13,8 @@ from winnow.interview.models import (
     ThresholdQuestion,
 )
 
+MAPPING_SCHEMA_NAME = "interview_text"
+REWRITE_SCHEMA_NAME = "description_rewrite"
 CHANGE = "change"  # compile the asked text again, read with the curator's words
 NONE = "none"  # the words answer nothing asked
 _REPLY = 'In "reply", say back to the curator, in one short sentence, what you understood.'

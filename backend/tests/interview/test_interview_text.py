@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.helpers import app_context
 from tests.interview.client import (
     DESCRIPTION,
     NEVER_DROPS,
@@ -18,23 +19,20 @@ from tests.interview.client import (
     criterion_of,
     interview,
     phrase_statuses,
+    say,
     skip_to,
 )
 from tests.interview.scripted_text import ScriptedText
 from tests.rubric.scripted import criterion, phrase
 from winnow.app import create_app
 from winnow.core.settings import Settings
+from winnow.interview.models import AnswerDraw
+from winnow.interview.service import answer as answer_now
 
 
 @pytest.fixture
 def spark() -> ScriptedText:
     return ScriptedText(answers=[])
-
-
-def say(api: TestClient, text: str, key: str | None) -> Any:
-    response = api.post("/api/interview/text", json={"text": text, "question_key": key})
-    assert response.status_code == 200, response.text
-    return response.json()
 
 
 def mapped(choice: str, reply: str = "Got it.") -> dict[str, object]:
@@ -268,9 +266,65 @@ def test_with_no_draft_there_is_nothing_to_answer(api: TestClient, spark: Script
     assert spark.read == []
 
 
+# One answer of each kind that changes something, cycling where a question offers several.
+CHANGING = {"phrase": ["context"], "words": ["accept"], "hard_soft": ["soft", "hard"]}
+
+
 def test_template_answers_never_ask_spark(drafted: TestClient, spark: ScriptedText):
-    calls = len(spark.formats)
+    calls, given = len(spark.formats), 0
+    while (question := interview(drafted)["question"]) is not None:
+        values = CHANGING.get(question["kind"], ["pass", "fail"])
+        answer(drafted, values[given % len(values)])
+        given += 1
 
-    skip_to(drafted, None)  # every question answered from its options
-
+    answered = {a["answer"] for a in interview(drafted)["answered"]}
+    assert {"context", "accept", "pass", "fail", "soft", "hard"} <= answered
     assert len(spark.formats) == calls
+
+
+def asking_now(api: TestClient) -> AnswerDraw:
+    question = interview(api)["question"]
+    return AnswerDraw(key=question["key"], episode_id=question.get("episode_id"), answer="accept")
+
+
+def test_the_question_answered_while_spark_compiles_the_words_is_a_409_that_keeps_it(
+    drafted: TestClient, spark: ScriptedText
+):
+    ctx = app_context(drafted)
+    before = drafted.get("/api/rubric/draft").json()
+    question = interview(drafted)["question"]
+    spark.texts.append(mapped("change"))
+    spark.answers.append({"phrases": [phrase(NEVER_DROPS, "context", reason="Flavour.")]})
+    draw = asking_now(drafted)
+    spark.while_reading = lambda: answer_now(ctx, draw)
+
+    response = drafted.post(
+        "/api/interview/text", json={"text": "Just flavour.", "question_key": question["key"]}
+    )
+
+    assert response.status_code == 409, response.text
+    assert drafted.get("/api/rubric/draft").json()["compiled_at"] == before["compiled_at"]
+    assert [a["answer"] for a in interview(drafted)["answered"]] == ["accept"]
+
+
+def test_a_recompile_while_spark_compiles_the_words_is_a_409_that_keeps_it(
+    drafted: TestClient, spark: ScriptedText
+):
+    ctx = app_context(drafted)
+    question = interview(drafted)["question"]
+    spark.texts.append(mapped("change"))
+    spark.answers.append({"phrases": [phrase(NEVER_DROPS, "context", reason="Flavour.")]})
+
+    def recompiled_meanwhile() -> None:
+        draft = ctx.drafts.get()
+        assert draft is not None
+        ctx.drafts.save(draft.model_copy(update={"compiled_at": "later"}))
+
+    spark.while_reading = recompiled_meanwhile
+
+    response = drafted.post(
+        "/api/interview/text", json={"text": "Just flavour.", "question_key": question["key"]}
+    )
+
+    assert response.status_code == 409, response.text
+    assert drafted.get("/api/rubric/draft").json()["compiled_at"] == "later"

@@ -28,6 +28,7 @@ from winnow.interview.models import (
     SettingQuestion,
     StoredAnswer,
     ThresholdQuestion,
+    asked_episode,
 )
 from winnow.interview.questions import asked_on, phrase_questions, threshold_questions
 from winnow.interview.settings_answers import answer_hard_soft, answer_setting
@@ -183,9 +184,9 @@ def _asked(state: _State, draw: AnswerDraw) -> Question:
         raise StaleQuestionError("That question isn't the one being asked")
     if draw.answer not in {o.answer for o in asking.options}:
         raise StaleQuestionError(f"“{draw.answer}” doesn't answer this question")
-    on_episode = isinstance(asking, ThresholdQuestion | SettingQuestion | DisagreeQuestion)
-    if on_episode and draw.episode_id != asking.episode_id:
-        raise StaleQuestionError(f"The question is about {asking.episode_id} now")
+    episode = asked_episode(asking)
+    if episode is not None and draw.episode_id != episode:
+        raise StaleQuestionError(f"The question is about {episode} now")
     return asking
 
 

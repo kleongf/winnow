@@ -66,6 +66,14 @@ def answer(api: TestClient, value: str) -> Any:
     return response.json()
 
 
+def say(api: TestClient, text: str, key: str | None) -> Any:
+    """The curator's own words: to the question with `key`, or, with None, about the
+    Description."""
+    response = api.post("/api/interview/text", json={"text": text, "question_key": key})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
 def skip_to(api: TestClient, kind: str | None) -> Any:
     """Past every question before the first of `kind` (None: every question): Phrases left
     unchecked, the rest skipped. Returns that question, or None when none is left."""

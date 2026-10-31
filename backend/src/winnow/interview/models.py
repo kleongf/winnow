@@ -145,6 +145,13 @@ Question = Annotated[
 ]
 
 
+def asked_episode(question: Question) -> str | None:
+    """The anchor Episode a threshold, setting or disagree question is asked on."""
+    if isinstance(question, ThresholdQuestion | SettingQuestion | DisagreeQuestion):
+        return question.episode_id
+    return None
+
+
 class AnswerDraw(BaseModel):
     key: str  # the question's
     episode_id: str | None = None  # a threshold, setting or disagree question's anchor Episode

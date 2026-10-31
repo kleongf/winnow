@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.helpers import reference_label, wait_for_job
-from tests.interview.client import skip_to
+from tests.interview.client import say, skip_to
 from tests.record_interview import (
     CAREFUL,
     CHANGE_TEXT,
@@ -72,12 +72,6 @@ def steady(api: TestClient) -> Any:
     compiled = api.post("/api/rubric/draft/compile", json={"description": STEADY, "fresh": True})
     assert compiled.status_code == 200, compiled.text
     return api.get("/api/interview").json()["question"]
-
-
-def say(api: TestClient, text: str, key: str | None) -> Any:
-    said = api.post("/api/interview/text", json={"text": text, "question_key": key})
-    assert said.status_code == 200, said.text
-    return said.json()
 
 
 def test_the_scripted_words_pick_an_answer_or_compile_the_phrase_again(replay_api: TestClient):
