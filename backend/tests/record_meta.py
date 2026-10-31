@@ -31,17 +31,18 @@ from winnow.episodes.fixtures import write_fixture_source
 from winnow.episodes.service import ingest_items
 from winnow.episodes.store import episode_id
 from winnow.jobs.models import WorkItem
+from winnow.meta.audio import wav_duration_ms
 from winnow.meta.costs import CostEntry
-from winnow.meta.models import MetaContent
+from winnow.meta.models import MetaContent, Transcript
 from winnow.meta.openai_transport import OpenAITransport
-from winnow.meta.pricing import SAM, sam_cost, spark_cost
+from winnow.meta.pricing import SAM, sam_cost, spark_cost, transcribe_cost
 from winnow.meta.replay import RecordingTransport, ReplayTransport, UnrecordedCallError
 from winnow.meta.transport import Reply, Transport
 from winnow.rubric.service import compile_draft
 from winnow.tracking.exterior import box_items
 
 RECORDINGS = Path(__file__).parent / "recordings" / "fixture_episodes.jsonl"
-E2E_EPISODES = 19  # what scripts/e2e-server.ts writes
+E2E_EPISODES = 20  # what scripts/e2e-server.ts writes
 # e2e's Dev set (DEV_SET in e2e/helpers.ts), which compile's anchor-pool ranges come from.
 # Fixture Episode 0 has the same robot data, so backend tests compile against it as well.
 E2E_DEV_SET = (6,)
@@ -80,6 +81,18 @@ class ReplayThenRecord:
             usd = _price(model, reply.usage)
             self.made.append(CostEntry(model, "record_meta", usd, latency, dict(reply.usage)))
             return reply
+
+    async def transcribe(self, model: str, audio: Path, options: dict[str, object]) -> Transcript:
+        try:
+            return await self._replay.transcribe(model, audio, options)
+        except UnrecordedCallError:
+            started = time.monotonic()
+            transcript = await self._record.transcribe(model, audio, options)
+            latency = time.monotonic() - started
+            audio_ms = wav_duration_ms(audio)
+            usd = transcribe_cost(audio_ms)
+            self.made.append(CostEntry(model, "record_meta", usd, latency, {"audio_ms": audio_ms}))
+            return transcript
 
     async def _real_part(self, part: dict[str, object]) -> dict[str, object]:
         if "file_id" not in part:

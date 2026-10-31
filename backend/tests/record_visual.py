@@ -16,6 +16,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from tests.meta.fakes import NoTranscribe
 from tests.record_meta import E2E_EPISODES, RECORDINGS
 from winnow.core.context import AppContext, build_context
 from winnow.core.settings import get_settings
@@ -37,7 +38,7 @@ WRITTEN_INSTRUCTION = "Put the block in the bowl"  # what e2e's referenceLabel w
 USAGE = {"input_tokens": 9000, "output_tokens": 120}
 
 
-class ScriptedAnswers:
+class ScriptedAnswers(NoTranscribe):
     """Replays RECORDINGS, and answers each visual sample from SCRIPTED."""
 
     def __init__(self, replay: ReplayTransport) -> None:

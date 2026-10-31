@@ -5,6 +5,7 @@ description = "Filter robot demonstration Episodes against a plain-English Rubri
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.162.0",
+    "httpx2>=2.16.0",
     "huggingface-hub>=2.3.0",
     "meta-sam-parser>=0.1.0",
     "numpy>=2.5.4",
@@ -13,6 +14,7 @@ dependencies = [
     "pyarrow>=26.0.0",
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.1",
+    "python-multipart>=0.0.32",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -26,7 +28,6 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "httpx2>=2.16.0",
     "pyarrow-stubs>=20.0.0.20260819",
     "pyright>=1.1.414",
     "pytest>=9.1.1",

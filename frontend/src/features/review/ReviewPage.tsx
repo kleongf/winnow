@@ -7,9 +7,10 @@ import { navigate, useSearchParams } from "../core/url";
 import { useEpisodes, type Episode } from "../episodes/useEpisodes";
 import { Workstation } from "../episodes/Workstation";
 import { useSaveLabel } from "../labels/useLabels";
+import { VoicePanel } from "../voice/VoicePanel";
 import { UpNext } from "./UpNext";
 import { useReviewQueue, type ReviewItem } from "./useReview";
-import { YourCall } from "./YourCall";
+import { YourCall, type Answer } from "./YourCall";
 
 export function ReviewPage() {
   const params = useSearchParams();
@@ -83,30 +84,32 @@ function ReviewHeader(props: { reviewed: number; left: number; current: ReviewIt
   );
 }
 
-/** The Workstation with "Your call" in its actions slot; each answer is a `review` label. */
+/** The Workstation with "Your call" and Voice in its actions slot; each answer, clicked, keyed
+ * or spoken and confirmed, is a `review` label. */
 function ReviewWorkstation(props: { item: ReviewItem; episode: Episode }) {
   const { item, episode } = props;
   const save = useSaveLabel();
+  const answer = (phrase: string, value: Answer) => {
+    save.mutate({ episodeId: item.episode_id, draw: { phrase, value, source: "review" } });
+  };
   return (
     <Workstation
       episode={episode}
-      actions={
+      actions={(playhead) => (
         <>
-          <YourCall
-            item={item}
-            pending={save.isPending}
-            onAnswer={(phrase, value) => {
-              save.mutate({
-                episodeId: item.episode_id,
-                draw: { phrase, value, source: "review" },
-              });
-            }}
-          />
+          <YourCall item={item} pending={save.isPending} onAnswer={answer} />
           {save.isError && (
             <p className="-mt-3 mb-4 text-xs text-destructive">{save.error.message}</p>
           )}
+          <VoicePanel
+            episodeId={item.episode_id}
+            unsure={item.unsure.map((u) => u.phrase)}
+            playhead={playhead}
+            saving={save.isPending}
+            onConfirm={answer}
+          />
         </>
-      }
+      )}
     />
   );
 }

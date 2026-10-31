@@ -3,13 +3,14 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from tests.meta.fakes import NoTranscribe
 from winnow.meta.models import MetaContent
 from winnow.meta.replay import ReplayTransport
 from winnow.meta.transport import Reply
 
 
 @dataclass
-class CountingReplay:
+class CountingReplay(NoTranscribe):
     """The replay transport, counting every call that reaches it and keeping each compile
     request's text."""
 

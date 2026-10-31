@@ -26,6 +26,7 @@ export const EPISODES = {
   prepare: [14, 17],
   review: [16],
   audit: [15, 18],
+  voice: [19],
 } as const;
 
 export function episodeId(index: number): string {

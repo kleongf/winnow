@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
+from tests.meta.fakes import NoTranscribe
 from winnow.meta.models import MetaContent
 from winnow.meta.transport import Reply
 
@@ -50,7 +51,7 @@ def phrase(
 
 
 @dataclass
-class ScriptedCompile:
+class ScriptedCompile(NoTranscribe):
     answers: list[object]  # a dict is sent as JSON, a str as is
     prompts: list[list[str]] = field(default_factory=list[list[str]])  # each call's text parts
     while_reading: Callable[[], object] | None = None  # runs during the next compile call, once
