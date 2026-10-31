@@ -18,12 +18,17 @@ from winnow.episodes.fixtures import write_fixture_source
 from winnow.meta.models import MetaContent
 from winnow.meta.replay import ReplayTransport
 from winnow.meta.transport import Reply
+from winnow.visual.prompts import VISUAL_SCHEMA
 
 SPLIT = 10  # the Episode `tests.record_visual` scripts to split 2-1
+VISUAL_FORMAT = {"format": {"type": "json_schema", "name": "visual", "schema": VISUAL_SCHEMA}}
 
 
 @dataclass
 class CountingReplay(NoTranscribe):
+    """Counts the visual question's calls. Asking also queues Spark's Reasons, which run alongside
+    and aren't recorded here: they fail, are never cached, and would count again each time."""
+
     replay: ReplayTransport
     responses: int = 0
 
@@ -34,7 +39,8 @@ class CountingReplay(NoTranscribe):
         return await self.replay.count_tokens(model, content)
 
     async def respond(self, model: str, content: MetaContent, options: dict[str, object]) -> Reply:
-        self.responses += 1
+        if options["text"] == VISUAL_FORMAT:
+            self.responses += 1
         return await self.replay.respond(model, content, options)
 
 
