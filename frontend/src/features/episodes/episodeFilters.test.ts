@@ -22,10 +22,11 @@ function row(id: string, confidence: number, extra: Partial<TriageRow> = {}): Tr
 const episodes = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
 const triageOf = new Map(
   [
-    row("a", 0.9),
+    row("a", 0.9, { quality: 0.5 }),
     row("b", 0.6, {
       not_passed: [{ phrase: PLACES, status: "unsure" }],
       uncertainty: ["near threshold"],
+      quality: -1.2,
     }),
     row("c", 0.7, {
       not_passed: [{ phrase: PLACES, status: "unsure" }],
@@ -58,13 +59,29 @@ describe("applyFilters", () => {
     expect(ids("sort=confidence")).toEqual(["b", "c", "a", "d"]);
     expect(ids("sort=-confidence")).toEqual(["a", "c", "b", "d"]);
   });
+
+  it("sorts by quality either way, Episodes with none or unscored last", () => {
+    expect(ids("sort=-quality")).toEqual(["a", "b", "c", "d"]);
+    expect(ids("sort=quality")).toEqual(["b", "a", "c", "d"]);
+  });
 });
 
 describe("nextSort", () => {
   it("cycles least confident first, most confident first, then off", () => {
-    expect(nextSort(null)).toBe("confidence");
-    expect(nextSort("confidence")).toBe("-confidence");
-    expect(nextSort("-confidence")).toBeNull();
+    expect(nextSort(null, "confidence")).toBe("confidence");
+    expect(nextSort("confidence", "confidence")).toBe("-confidence");
+    expect(nextSort("-confidence", "confidence")).toBeNull();
+  });
+
+  it("cycles best quality first, worst first, then off", () => {
+    expect(nextSort(null, "quality")).toBe("-quality");
+    expect(nextSort("-quality", "quality")).toBe("quality");
+    expect(nextSort("quality", "quality")).toBeNull();
+  });
+
+  it("starts afresh on a column the table isn't sorted by", () => {
+    expect(nextSort("-confidence", "quality")).toBe("-quality");
+    expect(nextSort("quality", "confidence")).toBe("confidence");
   });
 });
 

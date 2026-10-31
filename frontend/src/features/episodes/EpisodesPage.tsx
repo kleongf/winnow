@@ -1,6 +1,6 @@
 // Every ingested Episode in a dense table, sorted into Triage tabs with its Reason (only once it
 // has a Reference label; until then it's awaiting one and has no Triage decision), filterable by
-// Phrase, Uncertainty signal and set, and sortable by confidence; a row opens the full-page
+// Phrase, Uncertainty signal and set, and sortable by confidence or quality; a row opens the full-page
 // Workstation. The tab, filters, sort, open Episode and its start time live in the URL; J/K
 // step through the Episodes shown.
 import { navigate, useSearchParams } from "../core/url";
@@ -117,8 +117,8 @@ export function EpisodesPage() {
             triageOf={triageOf}
             setOf={setOf}
             sort={filters.sort}
-            onSort={() => {
-              navigate({ sort: nextSort(filters.sort) });
+            onSort={(column) => {
+              navigate({ sort: nextSort(filters.sort, column) });
             }}
             onOpen={open}
           />
