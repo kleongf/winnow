@@ -39,6 +39,7 @@ from winnow.tracking.store import TrackStore
 from winnow.tracking.target import target_box_step
 from winnow.tracking.target_store import TargetBoxStore
 from winnow.tracking.wrist import track_wrist_step
+from winnow.triage.reason_store import SparkReasonStore
 from winnow.visual.steps import VisualSources, crop_step, visual_step
 from winnow.visual.store import VisualStore
 
@@ -64,6 +65,7 @@ class AppContext:
     interview: InterviewStore  # the Describe interview's answers on the draft
     test_runs: TestRunLog
     visual: VisualStore  # Spark's answers to visual Criteria
+    reasons: SparkReasonStore  # Spark's Reasons, swapped in over the template ones
     jobs: JobStore
     runner: JobRunner
     meta: MetaClient | None  # None without a Meta API key: no step that calls Meta runs
@@ -100,6 +102,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
     interview = InterviewStore(db)
     test_runs = TestRunLog(db)
     visual = VisualStore(db)
+    reasons = SparkReasonStore(db)
     jobs = JobStore(db)
     meta = _meta(settings, db, transport)
     visual_sources = VisualSources(rubrics, episodes, boxes, tracks, targets, visual)
@@ -137,6 +140,7 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         interview,
         test_runs,
         visual,
+        reasons,
         jobs,
         runner,
         meta,

@@ -16,6 +16,7 @@ from winnow.criteria.primitives import Kind, Primitive
 from winnow.visual.models import VisualAnswers
 
 TriageDecision = Literal["keep", "reject", "needs_review"]
+ReasonSource = Literal["template", "spark"]
 LabelSource = Literal["interview", "review", "audit"]
 
 
@@ -73,6 +74,7 @@ class Triage(BaseModel):
     phrases: list[PhraseResult]
     p_keep: float  # the min over hard Phrases' p_pass
     confidence: float  # max(p_keep, 1 - p_keep): 0.5 is a coin toss
+    reason_source: ReasonSource = "template"  # "spark": Spark's Reason, swapped in for its key
 
 
 class EpisodeTriage(Triage):
@@ -97,3 +99,7 @@ class TriageRow(BaseModel):
 class TriageList(BaseModel):
     rubric_version: int
     rows: list[TriageRow]
+
+
+class ReasonsStarted(BaseModel):
+    job_id: int | None  # None: every Reject and Needs review already has Spark's Reason
