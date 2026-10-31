@@ -23,7 +23,14 @@ function settingSaid(key: string, value: AnswerValue): string {
   return ANSWER_LABELS[value];
 }
 
+/** What a disagree answer said the Phrase did on its Episode. */
+const PHRASE_SAID: Partial<Record<AnswerValue, string>> = { pass: "passes", fail: "fails" };
+
 function heading(answer: InterviewAnswer): string {
+  const said = PHRASE_SAID[answer.answer];
+  if (answer.kind === "disagree" && answer.episode_id && said) {
+    return `“${answer.subject}” on ${answer.episode_id}: ${said}`;
+  }
   if (answer.kind === "setting" && answer.measurement && answer.episode_id) {
     const said = settingSaid(answer.key, answer.answer);
     return `${answer.subject}: ${answer.measurement} on ${answer.episode_id}, ${said}`;
