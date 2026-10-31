@@ -2,45 +2,20 @@
 (written by `tests.record_visual`), with the real `meta/` code underneath."""
 
 from collections.abc import Iterator
-from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from tests.helpers import ask_visual, reference_label, wait_for_job
-from tests.meta.fakes import NoTranscribe
 from tests.record_meta import RECORDINGS
 from tests.record_visual import VISUAL_ANSWERS
+from tests.rubric.replay import CountingReplay
 from winnow.app import create_app
 from winnow.core.settings import Settings
-from winnow.meta.models import MetaContent
 from winnow.meta.replay import ReplayTransport
-from winnow.meta.transport import Reply
-from winnow.visual.prompts import VISUAL_SCHEMA
 
 SPLIT = 10  # the Episode `tests.record_visual` scripts to split 2-1
-VISUAL_FORMAT = {"format": {"type": "json_schema", "name": "visual", "schema": VISUAL_SCHEMA}}
-
-
-@dataclass
-class CountingReplay(NoTranscribe):
-    """Counts the visual question's calls. Asking also queues Spark's Reasons, which run alongside
-    and aren't recorded here: they fail, are never cached, and would count again each time."""
-
-    replay: ReplayTransport
-    responses: int = 0
-
-    async def upload(self, path: Path) -> str:
-        return await self.replay.upload(path)
-
-    async def count_tokens(self, model: str, content: MetaContent) -> int:
-        return await self.replay.count_tokens(model, content)
-
-    async def respond(self, model: str, content: MetaContent, options: dict[str, object]) -> Reply:
-        if options["text"] == VISUAL_FORMAT:
-            self.responses += 1
-        return await self.replay.respond(model, content, options)
 
 
 @pytest.fixture(scope="module")
@@ -85,10 +60,13 @@ def test_a_visual_criterion_scores_fixture_episodes_from_recorded_answers(
 
 
 def test_asking_again_is_all_cache_hits(replay_api: TestClient, replay: CountingReplay):
+    # Only the visual question's calls count: asking also queues Spark's Reasons, which run
+    # alongside and aren't recorded here, so they fail, are never cached, and call every time.
     ask_visual(replay_api)
-    before = replay.responses
+    before = replay.formats.count("visual")
 
     again = ask_visual(replay_api)
 
     assert again["failed"] == 0
-    assert replay.responses == before
+    assert before > 0
+    assert replay.formats.count("visual") == before

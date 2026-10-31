@@ -24,5 +24,9 @@ runs:
         fi
     - shell: bash
       run: |
-        if [[ -x ~/ffmpeg/ffmpeg ]]; then echo ~/ffmpeg >> "$GITHUB_PATH"; fi
-        ~/ffmpeg/ffmpeg -version 2>/dev/null | head -1 || ffmpeg -version | head -1
+        bin=ffmpeg
+        if [[ -x ~/ffmpeg/ffmpeg ]]; then
+          echo ~/ffmpeg >> "$GITHUB_PATH"
+          bin=~/ffmpeg/ffmpeg
+        fi
+        "$bin" -hide_banner -version | sed -n 1p
