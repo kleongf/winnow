@@ -6,11 +6,11 @@ from typing import Annotated, Literal, get_args
 
 from pydantic import BaseModel, Field
 
-from winnow.criteria.models import Criterion, Setting
+from winnow.criteria.models import Criterion, Setting, Status
 from winnow.interview.bisection import Outcome
 from winnow.rubric.models import DraftPhrase
 
-QuestionKind = Literal["phrase", "words", "threshold", "hard_soft", "setting"]
+QuestionKind = Literal["phrase", "words", "threshold", "hard_soft", "setting", "disagree"]
 # accept: leave it unchecked; context: it checks nothing; pass / fail: the anchor Episode is
 # fine or not on the Phrase (on a setting: closed or lifted, or not); hard / soft: failing the
 # Criterion rejects the Episode, or only lowers its quality; skip: leave it as assumed.
@@ -25,6 +25,10 @@ def hard_key(criterion_id: str) -> str:
 
 def setting_key(name: SettingName) -> str:
     return f"setting:{name}"
+
+
+def disagree_key(phrase_start: int) -> str:
+    return f"disagree:{phrase_start}"
 
 
 def setting_of(key: str) -> SettingName:
@@ -109,15 +113,41 @@ class SettingQuestion(BaseModel):
     max_questions: int
 
 
+class DisagreeResult(BaseModel):
+    """One Criterion's result on the Episode asked about."""
+
+    criterion_id: str
+    english: str
+    status: Status
+    measurement: str
+    unconfirmed: bool  # a fail its primitive can't confirm on its own
+
+
+class DisagreeQuestion(BaseModel):
+    """Does the Phrase pass on this anchor Episode, where its Criteria disagree (one fails while
+    another passes) or a fail is unconfirmed? Asked once per Phrase."""
+
+    kind: Literal["disagree"] = "disagree"
+    key: str
+    prompt: str
+    options: list[Option]
+    phrase: str
+    episode_id: str
+    measurement: str  # what the Criteria say, e.g. "1 fails, 1 passes"
+    camera: str | None
+    clip: Clip  # spans what each Criterion measured
+    results: list[DisagreeResult]  # the Phrase's Criteria switched on, in Rubric order
+
+
 Question = Annotated[
-    PhraseQuestion | ThresholdQuestion | HardSoftQuestion | SettingQuestion,
+    PhraseQuestion | ThresholdQuestion | HardSoftQuestion | SettingQuestion | DisagreeQuestion,
     Field(discriminator="kind"),
 ]
 
 
 class AnswerDraw(BaseModel):
     key: str  # the question's
-    episode_id: str | None = None  # a threshold or setting question's anchor Episode
+    episode_id: str | None = None  # a threshold, setting or disagree question's anchor Episode
     answer: AnswerValue
 
 
@@ -181,3 +211,4 @@ class Interview(BaseModel):
     thresholds_left: int  # assumed thresholds code can still ask about
     hard_soft_left: int  # Criteria not yet confirmed hard or soft
     settings_left: int  # assumed grasp settings code can still ask about
+    disagree_left: int  # Phrases whose Criteria disagree on an anchor Episode, not yet asked

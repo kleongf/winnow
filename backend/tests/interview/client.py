@@ -54,6 +54,14 @@ def answer(api: TestClient, value: str) -> Any:
     return response.json()
 
 
+def skip_to(api: TestClient, kind: str | None) -> Any:
+    """Past every question before the first of `kind` (None: every question): Phrases left
+    unchecked, the rest skipped. Returns that question, or None when none is left."""
+    while (question := interview(api)["question"]) is not None and question["kind"] != kind:
+        answer(api, "accept" if question["kind"] in ("phrase", "words") else "skip")
+    return question
+
+
 def criterion_of(api: TestClient, phrase_text: str) -> Any:
     draft = api.get("/api/rubric/draft").json()
     return next(c for c in draft["criteria"] if c["phrase"] == phrase_text)

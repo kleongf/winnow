@@ -2,10 +2,12 @@
 // Unsupported Phrase or words in no Phrase; a threshold card asks whether one anchor Episode's
 // measured value is fine, one step of bisecting an assumed threshold; a hard/soft card asks
 // whether failing a Criterion rejects an Episode; a setting card asks whether the gripper is
-// closed (or lifted) at one anchor Episode's moment, one step of bisecting a grasp setting.
+// closed (or lifted) at one anchor Episode's moment, one step of bisecting a grasp setting; a
+// disagree card asks whether a Phrase passes on an anchor Episode its Criteria disagree on.
 import { Button } from "@/components/ui/button";
 
 import { AnchorClip } from "./AnchorClip";
+import { DisagreeDetails } from "./DisagreeDetails";
 import type { AnswerValue, Question, SettingQuestion, ThresholdQuestion } from "./useInterview";
 
 const KIND_LABELS: Record<Question["kind"], string> = {
@@ -14,6 +16,7 @@ const KIND_LABELS: Record<Question["kind"], string> = {
   threshold: "Assumed threshold",
   hard_soft: "Hard or soft",
   setting: "Assumed grasp setting",
+  disagree: "Criteria disagree",
 };
 
 function ThresholdDetails(props: { question: ThresholdQuestion }) {
@@ -65,6 +68,7 @@ export function QuestionCard(props: {
       <p className="mt-1 text-sm font-medium">{question.prompt}</p>
       {question.kind === "threshold" && <ThresholdDetails question={question} />}
       {question.kind === "setting" && <SettingDetails question={question} />}
+      {question.kind === "disagree" && <DisagreeDetails question={question} />}
       <div className="mt-2 flex flex-wrap gap-1.5">
         {question.options.map((option) => (
           <Button

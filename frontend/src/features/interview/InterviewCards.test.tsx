@@ -4,6 +4,7 @@ import { expect, test, vi } from "vitest";
 import { AnsweredCard } from "./AnsweredCard";
 import { QuestionCard } from "./QuestionCard";
 import type {
+  DisagreeQuestion,
   HardSoftQuestion,
   InterviewAnswer,
   PhraseQuestion,
@@ -216,4 +217,76 @@ test("answered hard/soft and setting cards say what was answered in their own wo
   const [hard, rise] = screen.getAllByRole("article");
   expect(hard).toHaveTextContent("“Grasp attempts ≤ 1”: soft");
   expect(rise).toHaveTextContent("Grasp rise: rose 9.8 cm on droid_100:6, not lifted");
+});
+
+const disagree: DisagreeQuestion = {
+  kind: "disagree",
+  key: "disagree:23",
+  prompt: "Its Criteria disagree on this Episode. Does “a quick, clean grasp” pass?",
+  options: [
+    { answer: "pass", label: "Pass: “a quick, clean grasp” passes" },
+    { answer: "fail", label: "Fail: “a quick, clean grasp” fails" },
+    { answer: "skip", label: "Skip: let its Criteria decide" },
+  ],
+  phrase: "a quick, clean grasp",
+  episode_id: "droid_100:6",
+  measurement: "1 fails, 1 passes",
+  camera: "exterior_1_left",
+  clip: { start: 0, end: 6.5 },
+  results: [
+    {
+      criterion_id: "grasp-attempts",
+      english: "Grasp attempts ≤ 1",
+      status: "pass",
+      measurement: "1 attempt",
+      unconfirmed: false,
+    },
+    {
+      criterion_id: "active-duration-s",
+      english: "Time the arm is moving < 1 s",
+      status: "fail",
+      measurement: "5.2 s",
+      unconfirmed: false,
+    },
+  ],
+};
+
+test("a disagree card plays the Episode and shows each Criterion's result beside Pass and Fail", () => {
+  const onAnswer = vi.fn();
+  render(<QuestionCard question={disagree} pending={false} onAnswer={onAnswer} />);
+
+  expect(screen.getByText("Criteria disagree")).toBeInTheDocument();
+  expect(screen.getByLabelText("Episode clip")).toHaveAttribute(
+    "src",
+    "/api/episodes/droid_100%3A6/clips/exterior_1_left#t=0,6.5",
+  );
+  const results = screen.getAllByTestId("disagree-result");
+  expect(results.map((r) => r.textContent)).toEqual([
+    "passGrasp attempts ≤ 11 attempt",
+    "failTime the arm is moving < 1 s5.2 s",
+  ]);
+  fireEvent.click(screen.getByRole("button", { name: "Fail: “a quick, clean grasp” fails" }));
+  expect(onAnswer).toHaveBeenCalledWith("fail");
+});
+
+test("an answered disagree card says what the Phrase did on the Episode", () => {
+  render(
+    <AnsweredCard
+      answer={answered({
+        kind: "disagree",
+        key: "disagree:23",
+        subject: "a quick, clean grasp",
+        episode_id: "droid_100:6",
+        measurement: "1 fails, 1 passes",
+        answer: "fail",
+      })}
+      pending={false}
+      onUndo={vi.fn()}
+      onShow={vi.fn()}
+    />,
+  );
+
+  expect(screen.getByRole("article")).toHaveTextContent(
+    "“a quick, clean grasp” on droid_100:6: fails",
+  );
 });
