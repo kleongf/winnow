@@ -69,6 +69,36 @@ def cut_h264(source: str, start_s: float, frames: int, out: Path) -> None:
     partial.replace(out)
 
 
+def keyframe_at(source: str, t: float) -> float:
+    """The time of the last keyframe at or before `t`: where a stream copy from `t` starts."""
+    result = subprocess.run(
+        [
+            *("ffprobe", "-v", "error", "-select_streams", "v:0", "-read_intervals"),
+            *(f"{t:.6f}%+#1", "-show_entries", "packet=pts_time", "-of", "csv=p=0", source),
+        ],
+        capture_output=True, text=True, check=False,
+    )  # fmt: skip
+    if result.returncode != 0 or not result.stdout.strip():
+        raise RuntimeError(f"ffprobe failed: {result.stderr.strip() or result.returncode}")
+    return float(result.stdout.split()[0].strip(","))
+
+
+def copy_cut(source: str, start_s: float, duration_s: float, out: Path) -> float:
+    """The stretch from `start_s` copied without re-encoding, so in the source's own codec. A
+    copy can only start on a keyframe, so it starts at the one before `start_s` and ends a
+    second late (frames held back for reordering); returns where `start_s` falls in it."""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    partial = out.with_suffix(".partial.mp4")
+    key = keyframe_at(source, start_s)
+    offset = max(start_s - key, 0.0)
+    _ffmpeg(
+        "-ss", f"{key:.6f}", "-i", source, "-t", f"{offset + duration_s + 1.0:.6f}",
+        "-map", "0:v:0", "-c", "copy", str(partial),
+    )  # fmt: skip
+    partial.replace(out)
+    return offset
+
+
 def cut_cropped(
     source: Path, start_s: float, end_s: float, crop: tuple[int, int, int, int] | None, out: Path
 ) -> None:
