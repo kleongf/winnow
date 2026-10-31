@@ -4,12 +4,20 @@ draft and may leave an interview label, and undo puts both back. No model call a
 from dataclasses import dataclass
 
 from winnow.core.context import AppContext
-from winnow.interview.anchor import AnchorResult, anchor_results, anchor_setting_points
+from winnow.interview.anchor import (
+    AnchorResult,
+    AnchorTriage,
+    anchor_results,
+    anchor_setting_points,
+    anchor_triage,
+)
 from winnow.interview.apply import criterion, mark_context, settle, undone
 from winnow.interview.bisection import Answered, Point, next_point, resolve
+from winnow.interview.disagree import disagree_questions
 from winnow.interview.models import (
     AnswerDraw,
     AnswerValue,
+    DisagreeQuestion,
     HardSoftQuestion,
     Interview,
     PhraseQuestion,
@@ -22,7 +30,12 @@ from winnow.interview.models import (
 from winnow.interview.questions import asked_on, phrase_questions, threshold_questions
 from winnow.interview.settings_answers import answer_hard_soft, answer_setting
 from winnow.interview.settings_questions import hard_soft_questions, setting_questions
-from winnow.interview.wording import label_effect, phrase_effect, resolution_effect
+from winnow.interview.wording import (
+    DISAGREE_SKIPPED,
+    label_effect,
+    phrase_effect,
+    resolution_effect,
+)
 from winnow.labels.models import LabelDraw
 from winnow.labels.service import save_draft_label
 from winnow.rubric.models import RubricDraft
@@ -47,19 +60,34 @@ class _State:
     thresholds: list[ThresholdQuestion]
     hard_soft: list[HardSoftQuestion]
     settings: list[SettingQuestion]
+    disagree: list[DisagreeQuestion]
 
     @property
     def asking(self) -> Question | None:
-        """In order: Phrases, thresholds, hard or soft, grasp settings."""
-        asked = [*self.phrases, *self.thresholds, *self.hard_soft, *self.settings]
+        """In order: Phrases, thresholds, hard or soft, grasp settings, Criteria that disagree."""
+        asked = [
+            *self.phrases,
+            *self.thresholds,
+            *self.hard_soft,
+            *self.settings,
+            *self.disagree,
+        ]
         return next(iter(asked), None)
+
+
+def _labelled(ctx: AppContext, triaged: list[AnchorTriage]) -> set[tuple[str, str]]:
+    """The (Episode id, Phrase) pairs of the anchor pool with a label in force."""
+    return {
+        (e.episode_id, label.phrase) for e in triaged for label in ctx.labels.in_force(e.episode_id)
+    }
 
 
 def _state(ctx: AppContext) -> _State:
     """The draft scored on the anchor pool once, and every question still open."""
     draft = current_draft(ctx)
     answers = ctx.interview.answers(draft.compiled_at)
-    anchor = anchor_results(ctx, draft)
+    triaged = anchor_triage(ctx, draft)
+    anchor = anchor_results(draft, triaged)
     moments = anchor_setting_points(ctx, draft.settings)
     return _State(
         draft,
@@ -70,6 +98,7 @@ def _state(ctx: AppContext) -> _State:
         threshold_questions(draft, anchor, answers),
         hard_soft_questions(draft, answers),
         setting_questions(draft, moments, answers),
+        disagree_questions(draft, triaged, _labelled(ctx, triaged), answers),
     )
 
 
@@ -83,6 +112,7 @@ def current(ctx: AppContext) -> Interview:
         thresholds_left=len(state.thresholds),
         hard_soft_left=len(state.hard_soft),
         settings_left=len(state.settings),
+        disagree_left=len(state.disagree),
     )
 
 
@@ -137,6 +167,20 @@ def _answer_threshold(
     )
 
 
+def _answer_disagree(ctx: AppContext, q: DisagreeQuestion, answer: AnswerValue) -> StoredAnswer:
+    if answer == "skip":
+        return StoredAnswer.unchanged(q.key, "disagree", q.phrase, answer, DISAGREE_SKIPPED)
+    value = "pass" if answer == "pass" else "fail"  # its options are pass, fail and skip
+    label = save_draft_label(
+        ctx, q.episode_id, LabelDraw(phrase=q.phrase, value=value, source="interview")
+    )
+    stored = StoredAnswer.unchanged(
+        q.key, "disagree", q.phrase, answer, label_effect(q.episode_id, value, q.phrase)
+    )
+    update = {"episode_id": q.episode_id, "measurement": q.measurement, "label_id": label.id}
+    return stored.model_copy(update=update)
+
+
 def _asked(state: _State, draw: AnswerDraw) -> Question:
     """The question being asked, which `draw` must answer with one of its options."""
     asking = state.asking
@@ -144,7 +188,7 @@ def _asked(state: _State, draw: AnswerDraw) -> Question:
         raise StaleQuestionError("That question isn't the one being asked")
     if draw.answer not in {o.answer for o in asking.options}:
         raise StaleQuestionError(f"“{draw.answer}” doesn't answer this question")
-    on_episode = isinstance(asking, ThresholdQuestion | SettingQuestion)
+    on_episode = isinstance(asking, ThresholdQuestion | SettingQuestion | DisagreeQuestion)
     if on_episode and draw.episode_id != asking.episode_id:
         raise StaleQuestionError(f"The question is about {asking.episode_id} now")
     return asking
@@ -173,6 +217,8 @@ def answer(ctx: AppContext, draw: AnswerDraw) -> Interview:
         case SettingQuestion() as q:
             moments = state.moments[q.setting]
             stored = _changed(ctx, answer_setting(state.draft, state.answers, moments, q, value))
+        case DisagreeQuestion() as q:
+            stored = _answer_disagree(ctx, q, value)
     ctx.interview.add(state.draft.compiled_at, stored)
     return current(ctx)
 

@@ -1,11 +1,11 @@
 """Which interview answers still hold after a recompile, which edits only part of the Description.
 
 An answer about a Phrase, or words in no Phrase, that the edit left alone still holds, moved to
-where its text now sits; so does every answer on a threshold, or on whether a Criterion is hard,
-of a Criterion whose Phrase was kept, so a bisection goes on where it was. Answers on the grasp
-settings, which an edit never changes, always hold. Answers about text the edit changed or took
-out drop out of the interview: their questions are asked again, of the new text. Pure: the
-caller saves what it returns.
+where its text now sits; so does a Phrase's answer on an Episode its Criteria disagree on, and
+every answer on a threshold, or on whether a Criterion is hard, of a Criterion whose Phrase was
+kept, so a bisection goes on where it was. Answers on the grasp settings, which an edit never
+changes, always hold. Answers about text the edit changed or took out drop out of the interview:
+their questions are asked again, of the new text. Pure: the caller saves what it returns.
 """
 
 from winnow.interview.models import StoredAnswer
@@ -21,7 +21,8 @@ def _on_kept_criterion(answer: StoredAnswer, draft: RubricDraft, kept: set[str])
 
 
 def _moved(answer: StoredAnswer, diff: DescriptionDiff) -> StoredAnswer | None:
-    """A Phrase or words answer, moved with its text; None when the edit touched that text."""
+    """An answer keyed by where its Phrase or words start (`<kind>:<start>`), moved with its text;
+    None when the edit touched that text."""
     start = int(answer.key.removeprefix(f"{answer.kind}:"))
     now = diff.moved(start, start + len(answer.subject))
     if now is None:
@@ -52,7 +53,7 @@ def carried(
             moved = answer
         elif answer.kind in ("threshold", "hard_soft"):
             moved = answer if _on_kept_criterion(answer, draft, kept) else None
-        else:
+        else:  # "phrase", "words" and "disagree": keyed by where their text starts
             moved = _moved(answer, diff)
         if moved is not None:
             still.append(moved)

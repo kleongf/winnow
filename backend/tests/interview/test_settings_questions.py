@@ -14,16 +14,9 @@ from tests.interview.client import (
     interview,
     pauses_phrase,
     recompile,
+    skip_to,
 )
 from tests.rubric.scripted import ScriptedCompile
-
-
-def skip_to(api: TestClient, kind: str) -> Any:
-    """Past every question before the first of `kind`: Phrases left unchecked, the rest
-    skipped."""
-    while (question := interview(api)["question"])["kind"] != kind:
-        answer(api, "accept" if question["kind"] in ("phrase", "words") else "skip")
-    return question
 
 
 def test_after_the_thresholds_it_asks_hard_or_soft_per_criterion_then_each_setting(
