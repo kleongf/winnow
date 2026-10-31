@@ -4,7 +4,7 @@ visual job finishes, as each can change an Episode's results."""
 
 from winnow.core.context import AppContext
 from winnow.jobs.models import WorkItem
-from winnow.triage.service import templates
+from winnow.triage.service import template_triages
 from winnow.triage.spark_reason import reason_key
 
 
@@ -14,7 +14,7 @@ class MetaUnavailableError(RuntimeError):
 
 def reason_items(ctx: AppContext) -> list[WorkItem]:
     episodes = ctx.episodes.list()
-    version, triages = templates(ctx, episodes)
+    version, triages = template_triages(ctx, episodes)
     stored = ctx.reasons.keys()
     return [
         WorkItem("reason", {"episode_id": episode.id}, episode.id)

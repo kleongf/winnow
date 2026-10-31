@@ -43,7 +43,9 @@ def _triage(ctx: AppContext, version: RubricVersion, episode: Episode, s: float)
     )
 
 
-def templates(ctx: AppContext, episodes: list[Episode]) -> tuple[RubricVersion, list[Triage]]:
+def template_triages(
+    ctx: AppContext, episodes: list[Episode]
+) -> tuple[RubricVersion, list[Triage]]:
     """Every one of `episodes` scored like `scored`, but each with its template Reason: what
     Spark's Reasons are written from and keyed by."""
     version = ctx.rubrics.latest()

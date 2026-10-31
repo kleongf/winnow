@@ -43,6 +43,17 @@ def test_a_new_rubric_version_or_a_label_changes_the_key():
     assert reason_key(1, labelled) != key
 
 
+def test_any_time_spark_is_shown_moving_changes_the_key():
+    triage = regrasp()
+    [result] = triage.criteria
+    moved = [m.model_copy(update={"t": m.t + 0.2}) for m in result.moments]
+    elsewhere = triage.model_copy(
+        update={"criteria": [result.model_copy(update={"moments": moved})]}
+    )
+
+    assert reason_key(1, elsewhere) != reason_key(1, triage)
+
+
 def answering(
     tmp_path: Path, spans: Sequence[Mapping[str, object]]
 ) -> tuple[MetaClient, FakeTransport]:

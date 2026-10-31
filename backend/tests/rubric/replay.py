@@ -30,7 +30,7 @@ class CountingReplay(NoTranscribe):
     async def respond(self, model: str, content: MetaContent, options: dict[str, object]) -> Reply:
         self.calls += 1
         text_format = options.get("text")
-        name = "sam"
+        name = "sam"  # SAM is asked with no text format
         if isinstance(text_format, dict):
             name = str(text_format["format"]["name"])  # pyright: ignore[reportUnknownArgumentType]
         self.formats.append(name)

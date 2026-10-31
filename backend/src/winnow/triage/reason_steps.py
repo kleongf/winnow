@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from winnow.core.context import AppContext
 from winnow.jobs.models import Step
 from winnow.meta.client import MetaClient
-from winnow.triage.service import templates
+from winnow.triage.service import template_triages
 from winnow.triage.spark_reason import reason_key, write_reason
 
 
@@ -15,7 +15,7 @@ def reason_step(meta: MetaClient, ctx: AppContext) -> Step:
         episode = ctx.episodes.get(str(args["episode_id"]))
         if episode is None:
             raise LookupError(f"No Episode {args['episode_id']}")
-        version, [triage] = templates(ctx, [episode])
+        version, [triage] = template_triages(ctx, [episode])
         if triage.decision == "keep":
             return "kept: the template Reason stays"
         key = reason_key(version.version, triage)

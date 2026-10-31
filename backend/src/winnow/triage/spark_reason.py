@@ -40,20 +40,20 @@ def deciding(triage: Triage) -> list[CriterionResult]:
 
 
 def reason_key(version: int, triage: Triage) -> str:
-    """What a Spark Reason was written from: the Rubric version, the Triage decision, the
-    deciding results and labels, and the template Reason. Pass the template triage."""
+    """What a Spark Reason was written from: the Rubric version, the deciding results and
+    labels, and the prompt itself, which holds the Triage decision, the template Reason and every
+    time Spark may cite. Pass the template triage."""
     results = deciding(triage)
     named = {r.phrase for r in results} | {p.phrase for p in labelled_fails(triage.phrases)}
     written = {
         "version": version,
-        "decision": triage.decision,
         "results": [[r.criterion_id, r.status, r.value] for r in results],
         "labels": [
             [p.phrase, p.label.value, p.label.source]
             for p in triage.phrases
             if p.phrase in named and p.label is not None
         ],
-        "template": [[s.text, s.t] for s in triage.reason],
+        "prompt": reason_prompt(triage),
     }
     canonical = json.dumps(written, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:24]
@@ -69,11 +69,11 @@ def given_times(triage: Triage) -> list[float]:
 
 
 def _given(t: float, times: list[float]) -> float:
-    """The given time Spark cited, as given; raises if it cited none."""
-    match = next((g for g in times if abs(g - t) <= TIME_TOLERANCE_S), None)
-    if match is None:
+    """The given time nearest the one Spark cited; raises if none is within the tolerance."""
+    nearest = min(times, key=lambda g: abs(g - t), default=None)
+    if nearest is None or abs(nearest - t) > TIME_TOLERANCE_S:
         raise ReasonAnswerError(f"Spark cited {t} s, a time it wasn't given")
-    return match
+    return nearest
 
 
 def _checked(answer: str, triage: Triage) -> list[TextSpan]:

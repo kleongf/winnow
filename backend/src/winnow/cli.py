@@ -6,7 +6,8 @@ winnow sets add dev droid_100:3 droid_100:16 | remove dev droid_100:3 | freeze d
 winnow fixtures <dir> [--episodes N]
 winnow eval test [--rubric-version N] [--json]
 winnow ask [droid_100:42 ...]  (the latest Rubric's visual Criteria; default every Episode)
-winnow reasons  (Spark's Reason for every Reject and Needs review whose results changed)
+winnow reasons  (Spark's Reason for every Reject and Needs review whose results changed;
+                 run it after `winnow ask`, which, unlike the API, doesn't queue them)
 """
 
 import argparse

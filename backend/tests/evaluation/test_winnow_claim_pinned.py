@@ -9,7 +9,7 @@ from tests.helpers import app_context
 from winnow.baseline.prompts import FROZEN
 from winnow.criteria.models import TextSpan
 from winnow.evaluation.cases import winnow_claim
-from winnow.triage.service import episode_triage, templates
+from winnow.triage.service import episode_triage, template_triages
 from winnow.triage.spark_reason import reason_key
 
 FIRST_TRY = FROZEN.phrases[0]
@@ -27,7 +27,7 @@ def test_winnow_claim_and_right_reason_ignore_spark_s_reason(asked_api: TestClie
     before = run(api, "dev")
     claim = winnow_claim(episode_triage(ctx, episode))
 
-    version, [template] = templates(ctx, [episode])
+    version, [template] = template_triages(ctx, [episode])
     ctx.reasons.put(REGRASP, reason_key(version.version, template), ELSEWHERE)
 
     swapped = episode_triage(ctx, episode)

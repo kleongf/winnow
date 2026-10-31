@@ -30,7 +30,7 @@ from winnow.meta.transport import Reply
 from winnow.reference_labels.models import PhraseLabel, ReferenceLabelDraw
 from winnow.reference_labels.service import save_label
 from winnow.triage.reason_service import reason_items
-from winnow.triage.service import templates
+from winnow.triage.service import template_triages
 from winnow.triage.spark_reason import deciding
 
 REASON_ANSWERS = Path(__file__).parent / "recordings" / "reason_answers.jsonl"
@@ -80,7 +80,7 @@ async def _record(ctx: AppContext, spark: ScriptedReason) -> None:
     phrases = [PhraseLabel(phrase=p, passed=True) for p in FROZEN.phrases]
     draw = ReferenceLabelDraw(phrases=phrases, instruction=WRITTEN_INSTRUCTION, elapsed_s=10)
     save_label(ctx, episode, draw)
-    _, [triage] = templates(ctx, [episode])
+    _, [triage] = template_triages(ctx, [episode])
     assert triage.decision == "reject", triage.decision
     first, second, grasp = (m.t for m in deciding(triage)[0].moments)
     spark.spans = written_reason(first, second, grasp)
