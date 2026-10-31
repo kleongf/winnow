@@ -8,6 +8,7 @@ winnow eval test [--rubric-version N] [--json]
 winnow ask [droid_100:42 ...]  (the latest Rubric's visual Criteria; default every Episode)
 winnow reasons  (Spark's Reason for every Reject and Needs review whose results changed;
                  run it after `winnow ask`, which, unlike the API, doesn't queue them)
+winnow export <dir>  (the kept Episodes as LeRobot datasets, the rest's Reasons beside them)
 """
 
 import argparse
@@ -23,6 +24,7 @@ from winnow.episodes.service import ingest_items
 from winnow.evaluation.models import EvaluationRequest
 from winnow.evaluation.service import UnknownRubricVersionError, run_evaluation
 from winnow.evaluation.text import report_text
+from winnow.export.service import export_items
 from winnow.jobs.models import WorkItem
 from winnow.meta.transport import Transport
 from winnow.selection.service import sample_indices, selection_items
@@ -68,6 +70,8 @@ def _parser() -> argparse.ArgumentParser:
     ask = commands.add_parser("ask", help="ask Spark the latest Rubric's visual Criteria")
     ask.add_argument("episode_ids", nargs="*", help="default: every ingested Episode")
     commands.add_parser("reasons", help="have Spark write each out-of-date Reason")
+    export = commands.add_parser("export", help="write the kept Episodes in LeRobot format")
+    export.add_argument("out", type=Path, help="a new or empty folder")
     return parser
 
 
@@ -144,6 +148,8 @@ def _items(ctx: AppContext, args: argparse.Namespace) -> list[WorkItem]:
         return visual_items(ctx.rubrics.latest(), ids)
     if args.command == "reasons":
         return reason_items(ctx)
+    if args.command == "export":
+        return export_items(args.out.resolve())
     source = ctx.sources[args.source]
     assert isinstance(source, Droid101)
     sample = sample_indices([*source.index.values()], args.size, args.seed)
