@@ -15,7 +15,7 @@ from winnow.triage.models import Triage
 MAD_TO_SD = 1.4826  # scales the MAD to a standard deviation for normal data
 
 
-def quality(triages: Sequence[Triage]) -> list[float | None]:
+def qualities(triages: Sequence[Triage]) -> list[float | None]:
     """Each Triage's quality within `triages`, or None when it has no soft value to compare."""
     oriented: dict[str, dict[int, float]] = defaultdict(dict)  # Criterion -> Episode -> value
     for i, triage in enumerate(triages):

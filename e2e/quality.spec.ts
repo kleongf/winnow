@@ -8,9 +8,9 @@ type TriageList = components["schemas"]["TriageList"];
 // Quality comes from soft Criteria, and the Rubric every spec scores with has none. Running one
 // with a soft Criterion would change that Rubric for every later spec, and no Run could put it
 // back: the frozen Description compiles to a different Rubric than the seeded one. So the
-// table's reply is stubbed with the qualities these two Episodes get with the release height
-// soft (BETTER releases 5.3 cm above where it picked up, WORSE 6.5 cm);
-// backend/tests/triage/test_quality_api.py scores them for real.
+// table's reply is stubbed with qualities in the order these two Episodes would get with the
+// release height soft (BETTER releases 5.3 cm above where it picked up, WORSE 6.5 cm); their
+// values depend on the whole run. backend/tests/triage/test_quality_api.py scores them for real.
 const [BETTER, WORSE] = EPISODES.quality;
 const OWN: readonly number[] = EPISODES.quality;
 const QUALITY = new Map([

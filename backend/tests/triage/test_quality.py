@@ -19,7 +19,7 @@ from tests.triage.robot_data import (
 )
 from winnow.criteria.models import Comparator
 from winnow.triage.models import CriterionResult, Label, Triage
-from winnow.triage.quality import quality
+from winnow.triage.quality import qualities
 from winnow.triage.scoring import score
 
 _SCORED = score(rubric(first_try(), still(hard=False, id="pause")), facts(CLEAN_GRIPPER, CLEAN_Z))
@@ -47,14 +47,14 @@ def test_quality_is_the_robust_z_of_a_soft_value_against_the_runs_median_and_mad
     # Shorter pauses are better under "<". Median 3 s, MAD 1 s: z = (3 - v) / 1.4826.
     triages = [triage(soft(v)) for v in (1, 2, 3, 4, 5)]
 
-    assert quality(triages) == pytest.approx([1.349, 0.674, 0.0, -0.674, -1.349], abs=1e-3)
+    assert qualities(triages) == pytest.approx([1.349, 0.674, 0.0, -0.674, -1.349], abs=1e-3)
 
 
 def test_a_soft_criterion_whose_values_barely_vary_is_skipped_mad_zero():
     # Three of four Episodes pause 2 s: the MAD is 0, so the pauses say nothing about quality.
     triages = [triage(soft(v)) for v in (2, 2, 2, 5)]
 
-    assert quality(triages) == [None, None, None, None]
+    assert qualities(triages) == [None, None, None, None]
 
 
 def test_an_episodes_quality_is_the_mean_of_its_soft_zs_skipping_missing_values():
@@ -66,8 +66,8 @@ def test_an_episodes_quality_is_the_mean_of_its_soft_zs_skipping_missing_values(
         for p, h in zip(pauses, heights, strict=True)
     ]
 
-    assert quality(triages) == pytest.approx([0.674, 0.0, -0.674, -0.674], abs=1e-3)
-    assert quality([triage(), triage(soft(None))]) == [None, None]  # nothing soft to compare
+    assert qualities(triages) == pytest.approx([0.674, 0.0, -0.674, -0.674], abs=1e-3)
+    assert qualities([triage(), triage(soft(None))]) == [None, None]  # nothing soft to compare
 
 
 @pytest.mark.parametrize(
@@ -84,14 +84,14 @@ def test_quality_is_signed_so_the_passing_side_scores_higher(
 ):
     triages = [triage(soft(v, comparator, threshold=3)) for v in (1, 2, 3, 4, 5)]
 
-    assert quality(triages) == pytest.approx(expected, abs=1e-3)
+    assert qualities(triages) == pytest.approx(expected, abs=1e-3)
 
 
 def test_under_equals_closer_to_the_threshold_scores_higher():
     # Distances from 3: 2, 1, 0, 1, 2. Median 1, MAD 1: z = (1 - distance) / 1.4826.
     triages = [triage(soft(v, "==", threshold=3)) for v in (1, 2, 3, 4, 5)]
 
-    assert quality(triages) == pytest.approx([-0.674, 0.0, 0.674, 0.0, -0.674], abs=1e-3)
+    assert qualities(triages) == pytest.approx([-0.674, 0.0, 0.674, 0.0, -0.674], abs=1e-3)
 
 
 HARD = [first_try(), still(), release()]

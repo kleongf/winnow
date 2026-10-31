@@ -9,7 +9,7 @@ from winnow.rubric.models import RubricVersion
 from winnow.tracking.exterior import current_exterior_track
 from winnow.tracking.target import chosen_target_box
 from winnow.triage.models import EpisodeTriage, PhraseChip, Triage, TriageList, TriageRow
-from winnow.triage.quality import quality
+from winnow.triage.quality import qualities
 from winnow.triage.scoring import score
 from winnow.triage.spark_reason import reason_key
 
@@ -66,7 +66,8 @@ def scored(ctx: AppContext, episodes: list[Episode]) -> tuple[RubricVersion, lis
     s = ctx.calibrations.s_for(version.version)
     triages = [_triage(ctx, version, e, s) for e in episodes]
     return version, [
-        t.model_copy(update={"quality": q}) for t, q in zip(triages, quality(triages), strict=True)
+        t.model_copy(update={"quality": q})
+        for t, q in zip(triages, qualities(triages), strict=True)
     ]
 
 
