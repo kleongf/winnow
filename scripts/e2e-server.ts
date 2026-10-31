@@ -11,20 +11,21 @@ const E2E_FRONTEND_PORT = 5174 + PORT_OFFSET;
 const root = resolve("artifacts", "e2e-data");
 
 rmSync(root, { recursive: true, force: true });
-// Spark's recorded replies, plus the scripted answers to visual Criteria and the scripted voice
-// turn (written free by backend/tests/record_visual.py and record_voice.py: answers about test
-// patterns would mean nothing, and a live microphone never captures the same bytes twice).
+// Spark's recorded replies, plus the scripted answers to visual Criteria, the scripted voice turn
+// and the scripted Spark Reason (written free by backend/tests/record_visual.py, record_voice.py
+// and record_reason.py: answers about test patterns would mean nothing, and a live microphone
+// never captures the same bytes twice).
 const recordings = resolve("backend", "tests", "recordings");
 const replay = resolve(root, "replay.jsonl");
 mkdirSync(root, { recursive: true });
 writeFileSync(
   replay,
-  ["fixture_episodes.jsonl", "visual_answers.jsonl", "voice_answers.jsonl"]
+  ["fixture_episodes.jsonl", "visual_answers.jsonl", "voice_answers.jsonl", "reason_answers.jsonl"]
     .map((name) => readFileSync(resolve(recordings, name), "utf8"))
     .join(""),
 );
 const fixtures = ["run", "--project", "backend", "winnow", "fixtures", resolve(root, "droid_100")];
-execFileSync("uv", [...fixtures, "--episodes", "20"], { stdio: "inherit" });
+execFileSync("uv", [...fixtures, "--episodes", "21"], { stdio: "inherit" });
 
 const servers = await startServers({
   frontendPort: E2E_FRONTEND_PORT,

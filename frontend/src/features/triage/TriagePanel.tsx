@@ -1,5 +1,7 @@
-// The top of the Workstation's right panel: the Triage decision, its Reason (times in it seek),
-// and the Criterion results, expandable to their Evidence and moments.
+// The top of the Workstation's right panel: the Triage decision, its Reason (times in it seek,
+// marked when Spark wrote it), and the Criterion results, expandable to their Evidence and moments.
+import { Sparkles } from "lucide-react";
+
 import { CriterionResultRow } from "./CriterionResultRow";
 import { SeekableText } from "./SeekableText";
 import { TriageBadge } from "./TriageBadge";
@@ -29,6 +31,16 @@ export function TriagePanel(props: {
       <p className="mt-2 text-[15px] leading-snug" data-testid="reason">
         <SeekableText spans={triage.reason} onSeek={props.onSeek} />
       </p>
+      {triage.reason_source === "spark" && (
+        <p
+          className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground"
+          data-testid="reason-source"
+          title="Spark rewrote the template Reason from this Episode's Evidence"
+        >
+          <Sparkles aria-hidden className="size-3" />
+          written by Spark
+        </p>
+      )}
       <div className="mt-4 mb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
         Criterion results
       </div>

@@ -14,6 +14,7 @@ from winnow.rubric.models import AnchorPreview, DraftEdit, RubricDraft, RubricVe
 from winnow.rubric.preview import anchor_labels, anchor_preview, revealed_anchor_facts
 from winnow.rubric.recompile import ask_changes, recompile_rubric
 from winnow.rubric.seed import SEEDED_SETTINGS
+from winnow.triage.reason_service import queue_reasons
 
 
 class MetaUnavailableError(RuntimeError):
@@ -124,6 +125,9 @@ def preview_version(ctx: AppContext, version: RubricVersion) -> AnchorPreview:
 
 def run_draft(ctx: AppContext) -> RubricVersion:
     """Freezes the draft into the next Rubric version, which every Episode is then scored
-    against. Never waits for unconfirmed assumptions, and never asks Spark: visual Criteria are
-    asked only on request (`POST /api/visual/ask`, `winnow ask`)."""
-    return ctx.rubrics.add(current_draft(ctx).rubric())
+    against. Never waits for unconfirmed assumptions, and never asks Spark its visual Criteria:
+    those are asked only on request (`POST /api/visual/ask`, `winnow ask`). With the Meta API,
+    Spark's Reasons for the new version are queued in the background."""
+    version = ctx.rubrics.add(current_draft(ctx).rubric())
+    queue_reasons(ctx)
+    return version

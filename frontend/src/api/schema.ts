@@ -591,6 +591,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Reasons
+         * @description Have Spark write the Reason of every Reject and Needs review whose results changed since
+         *     its last one, in the background; each replaces its template Reason once written.
+         */
+        post: operations["post_reasons_api_reasons_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reference-labels": {
         parameters: {
             query?: never;
@@ -1658,6 +1679,12 @@ export interface components {
             phrases: components["schemas"]["PhraseResult"][];
             /** Reason */
             reason: components["schemas"]["TextSpan"][];
+            /**
+             * Reason Source
+             * @default template
+             * @enum {string}
+             */
+            reason_source: "template" | "spark";
             /** Rubric Version */
             rubric_version: number;
         };
@@ -2147,6 +2174,11 @@ export interface components {
             low: number | null;
             /** Of */
             of: number;
+        };
+        /** ReasonsStarted */
+        ReasonsStarted: {
+            /** Job Id */
+            job_id: number | null;
         };
         /** ReferenceLabel */
         ReferenceLabel: {
@@ -3823,6 +3855,33 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    post_reasons_api_reasons_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasonsStarted"];
+                };
+            };
+            /** @description The Meta API isn't configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

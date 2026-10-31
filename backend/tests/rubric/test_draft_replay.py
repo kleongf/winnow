@@ -52,11 +52,15 @@ def test_dragging_a_threshold_changes_the_counts_with_zero_meta_calls(
     # The anchor Episode's arm is never still, so a threshold dragged to 0 s makes it unsure.
     dragged = [pause_counts(t) for t in (5.0, 2.0, 1.0, 0.5, 0.0)]
     compiled.patch("/api/rubric/draft", json={"criteria": {pauses["id"]: {"threshold": 0.0}}})
-    compiled.post("/api/rubric/draft/run")
 
     assert dragged[0] == (1, 0, 0)
     assert dragged[-1] == (0, 0, 1)  # near threshold
     assert (transport.calls, settings.cost_log_path.read_text()) == (calls, costs)
+    asked = len(transport.formats)
+    compiled.post("/api/rubric/draft/run")
+    reasons = compiled.get("/api/jobs/latest", params={"kind": "reason"}).json()
+    wait_for_job(compiled, reasons["id"])
+    assert set(transport.formats[asked:]) <= {"reason"}  # Run asks Spark only for Reasons
 
 
 WITHIN_TWO = "grasps the object within two tries"
