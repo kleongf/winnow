@@ -5,7 +5,7 @@
 // closed (or lifted) at one anchor Episode's moment, one step of bisecting a grasp setting.
 import { Button } from "@/components/ui/button";
 
-import { ThresholdClip } from "./ThresholdClip";
+import { AnchorClip } from "./AnchorClip";
 import type { AnswerValue, Question, SettingQuestion, ThresholdQuestion } from "./useInterview";
 
 const KIND_LABELS: Record<Question["kind"], string> = {
@@ -23,7 +23,7 @@ function ThresholdDetails(props: { question: ThresholdQuestion }) {
       <p className="mt-1 text-xs text-muted-foreground">
         {question.episode_id} · {question.english}
       </p>
-      <ThresholdClip question={question} />
+      <AnchorClip question={question} />
       <p className="mt-1 text-[11px] text-muted-foreground">
         Question {question.asked + 1} of at most {question.max_questions}
         {question.near > 0 && ` · ${String(question.near)} anchor Episodes sit near it`}
@@ -39,7 +39,7 @@ function SettingDetails(props: { question: SettingQuestion }) {
       <p className="mt-1 text-xs text-muted-foreground">
         {question.episode_id} · {question.name} · {question.assumption}
       </p>
-      <ThresholdClip question={question} />
+      <AnchorClip question={question} />
       <p className="mt-1 text-[11px] text-muted-foreground">
         Question {question.asked + 1} of at most {question.max_questions}
       </p>

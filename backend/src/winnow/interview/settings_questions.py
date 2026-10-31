@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from winnow.criteria.english import english
 from winnow.criteria.models import Comparator
 from winnow.interview.anchor import AnchorResult
-from winnow.interview.apply import setting as draft_setting
+from winnow.interview.apply import draft_setting
 from winnow.interview.bisection import MAX_QUESTIONS, Point, next_point
 from winnow.interview.models import (
     SETTING_NAMES,

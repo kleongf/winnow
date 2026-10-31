@@ -5,7 +5,7 @@ import type { ThresholdQuestion } from "./useInterview";
 
 type Clipped = Pick<ThresholdQuestion, "episode_id" | "camera" | "clip" | "measurement">;
 
-export function ThresholdClip(props: { question: Clipped }) {
+export function AnchorClip(props: { question: Clipped }) {
   const { episode_id: episodeId, camera, clip, measurement } = props.question;
   if (!camera) return null;
   const src = `${clipUrl(episodeId, camera)}#t=${String(clip.start)},${String(clip.end)}`;

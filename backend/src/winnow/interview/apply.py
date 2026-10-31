@@ -66,7 +66,7 @@ def restore_criterion(
     return _replace(draft, current.model_copy(update=before.model_dump(include=set(fields))))
 
 
-def setting(draft: RubricDraft, name: SettingName) -> Setting:
+def draft_setting(draft: RubricDraft, name: SettingName) -> Setting:
     settings = draft.settings
     return (
         settings.gripper_closed_level if name == "gripper_closed_level" else settings.grasp_rise_m
@@ -85,7 +85,7 @@ def settle_setting(draft: RubricDraft, name: SettingName, resolution: Resolution
     changes: dict[str, object] = {"assumption": None}
     if resolution.outcome == "set":
         changes |= {"value": resolution.threshold, "margin": resolution.margin}
-    return _with_setting(draft, name, setting(draft, name).model_copy(update=changes))
+    return _with_setting(draft, name, draft_setting(draft, name).model_copy(update=changes))
 
 
 def undone(draft: RubricDraft, answer: StoredAnswer) -> RubricDraft:

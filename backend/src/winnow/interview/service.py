@@ -18,7 +18,6 @@ from winnow.interview.models import (
     SettingQuestion,
     StoredAnswer,
     ThresholdQuestion,
-    new_answer,
 )
 from winnow.interview.questions import asked_on, phrase_questions, threshold_questions
 from winnow.interview.settings_answers import answer_hard_soft, answer_setting
@@ -90,7 +89,7 @@ def current(ctx: AppContext) -> Interview:
 def _answer_phrase(
     ctx: AppContext, draft: RubricDraft, q: PhraseQuestion, value: AnswerValue
 ) -> StoredAnswer:
-    stored = new_answer(q.key, q.kind, q.text, value, phrase_effect(value, q.text))
+    stored = StoredAnswer.unchanged(q.key, q.kind, q.text, value, phrase_effect(value, q.text))
     if value != "context":
         return stored
     ctx.drafts.save(mark_context(draft, q.start, q.end))
@@ -102,7 +101,7 @@ def _answer_threshold(
     ctx: AppContext, state: _State, q: ThresholdQuestion, answer: AnswerValue
 ) -> StoredAnswer:
     if answer == "skip":
-        return new_answer(
+        return StoredAnswer.unchanged(
             q.key, "threshold", q.phrase, answer, "Skipped: the threshold stays assumed."
         )
     value = "pass" if answer == "pass" else "fail"  # its options are pass, fail and skip
@@ -112,7 +111,7 @@ def _answer_threshold(
     asked = [*asked_on(state.answers, q.key), Answered(q.episode_id, q.value, value == "pass")]
     found = criterion(state.draft, q.criterion_id)
     points = [Point(r.episode_id, r.value) for r in state.anchor[found.id]]
-    stored = new_answer(
+    stored = StoredAnswer.unchanged(
         q.key, "threshold", q.phrase, answer, label_effect(q.episode_id, value, q.phrase)
     )
     stored = stored.model_copy(

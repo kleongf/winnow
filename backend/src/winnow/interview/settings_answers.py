@@ -5,14 +5,13 @@ Neither leaves a label: neither judges an Episode on a Phrase."""
 from collections.abc import Sequence
 
 from winnow.interview.anchor import AnchorResult
-from winnow.interview.apply import criterion, set_hard, setting, settle_setting
+from winnow.interview.apply import criterion, draft_setting, set_hard, settle_setting
 from winnow.interview.bisection import Answered, Point, next_point, resolve
 from winnow.interview.models import (
     AnswerValue,
     HardSoftQuestion,
     SettingQuestion,
     StoredAnswer,
-    new_answer,
 )
 from winnow.interview.questions import asked_on
 from winnow.interview.settings_questions import SETTING_COMPARATORS
@@ -23,7 +22,9 @@ from winnow.rubric.models import RubricDraft
 def answer_hard_soft(
     draft: RubricDraft, q: HardSoftQuestion, answer: AnswerValue
 ) -> tuple[StoredAnswer, RubricDraft | None]:
-    stored = new_answer(q.key, "hard_soft", q.english, answer, hard_soft_effect(answer, q.hard))
+    stored = StoredAnswer.unchanged(
+        q.key, "hard_soft", q.english, answer, hard_soft_effect(answer, q.hard)
+    )
     if answer == "skip":
         return stored, None
     found = criterion(draft, q.criterion_id)
@@ -40,14 +41,14 @@ def answer_setting(
 ) -> tuple[StoredAnswer, RubricDraft | None]:
     """One step of bisecting the setting; the answer that settles it changes the draft."""
     effect = setting_answer_effect(q.setting, q.episode_id, answer)
-    stored = new_answer(q.key, "setting", q.name, answer, effect)
+    stored = StoredAnswer.unchanged(q.key, "setting", q.name, answer, effect)
     if answer == "skip":
         return stored, None
     stored = stored.model_copy(
         update={"episode_id": q.episode_id, "measurement": q.measurement, "value": q.value}
     )
     asked = [*asked_on(answers, q.key), Answered(q.episode_id, q.value, answer == "pass")]
-    before = setting(draft, q.setting)
+    before = draft_setting(draft, q.setting)
     comparator = SETTING_COMPARATORS[q.setting]
     candidates = [Point(p.episode_id, p.value) for p in points]
     if next_point(candidates, asked, before.value, comparator) is not None:

@@ -2,7 +2,7 @@
 and the answers, each kept with what undo needs to put back."""
 
 from datetime import UTC, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
 
 from pydantic import BaseModel, Field
 
@@ -16,7 +16,7 @@ QuestionKind = Literal["phrase", "words", "threshold", "hard_soft", "setting"]
 # Criterion rejects the Episode, or only lowers its quality; skip: leave it as assumed.
 AnswerValue = Literal["accept", "context", "pass", "fail", "hard", "soft", "skip"]
 SettingName = Literal["gripper_closed_level", "grasp_rise_m"]
-SETTING_NAMES: tuple[SettingName, ...] = ("gripper_closed_level", "grasp_rise_m")
+SETTING_NAMES: tuple[SettingName, ...] = get_args(SettingName)
 
 
 def hard_key(criterion_id: str) -> str:
@@ -148,28 +148,29 @@ class StoredAnswer(InterviewAnswer):
     # takes out of the Phrases again).
     criterion_before: Criterion | None = None
     setting_before: Setting | None = None
+
+    @classmethod
+    def unchanged(
+        cls, key: str, kind: QuestionKind, subject: str, answer: AnswerValue, effect: str
+    ) -> "StoredAnswer":
+        """An answer that changed nothing yet; callers add what it did."""
+        return cls(
+            id=0,
+            key=key,
+            kind=kind,
+            subject=subject,
+            episode_id=None,
+            measurement=None,
+            answer=answer,
+            effect=effect,
+            changed_criterion=None,
+            label_id=None,
+            resolution=None,
+            answered_at=datetime.now(UTC).isoformat(),
+        )
+
     context_at: int | None = None  # where the Phrase made Context starts
     phrase_before: DraftPhrase | None = None
-
-
-def new_answer(
-    key: str, kind: QuestionKind, subject: str, answer: AnswerValue, effect: str
-) -> StoredAnswer:
-    """An answer that changed nothing yet; callers add what it did."""
-    return StoredAnswer(
-        id=0,
-        key=key,
-        kind=kind,
-        subject=subject,
-        episode_id=None,
-        measurement=None,
-        answer=answer,
-        effect=effect,
-        changed_criterion=None,
-        label_id=None,
-        resolution=None,
-        answered_at=datetime.now(UTC).isoformat(),
-    )
 
 
 class Interview(BaseModel):
