@@ -1747,6 +1747,8 @@ export interface components {
             p_keep: number;
             /** Phrases */
             phrases: components["schemas"]["PhraseResult"][];
+            /** Quality */
+            quality?: number | null;
             /** Reason */
             reason: components["schemas"]["TextSpan"][];
             /**
@@ -2918,6 +2920,8 @@ export interface components {
             episode_id: string;
             /** Not Passed */
             not_passed: components["schemas"]["PhraseChip"][];
+            /** Quality */
+            quality: number | null;
             /** Reason */
             reason: string;
             /** Uncertainty */

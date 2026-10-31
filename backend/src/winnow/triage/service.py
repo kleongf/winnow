@@ -9,6 +9,7 @@ from winnow.rubric.models import RubricVersion
 from winnow.tracking.exterior import current_exterior_track
 from winnow.tracking.target import chosen_target_box
 from winnow.triage.models import EpisodeTriage, PhraseChip, Triage, TriageList, TriageRow
+from winnow.triage.quality import qualities
 from winnow.triage.scoring import score
 from winnow.triage.spark_reason import reason_key
 
@@ -59,10 +60,15 @@ def episode_triage(ctx: AppContext, episode: Episode) -> EpisodeTriage:
 
 
 def scored(ctx: AppContext, episodes: list[Episode]) -> tuple[RubricVersion, list[EpisodeTriage]]:
-    """Every one of `episodes` scored against the latest Rubric version, with its labels."""
+    """Every one of `episodes` scored against the latest Rubric version, with its labels, and
+    its quality within them: median and MAD need the whole run."""
     version = ctx.rubrics.latest()
     s = ctx.calibrations.s_for(version.version)
-    return version, [_triage(ctx, version, e, s) for e in episodes]
+    triages = [_triage(ctx, version, e, s) for e in episodes]
+    return version, [
+        t.model_copy(update={"quality": q})
+        for t, q in zip(triages, qualities(triages), strict=True)
+    ]
 
 
 def triage_list(ctx: AppContext, episodes: list[Episode]) -> TriageList:
@@ -86,4 +92,5 @@ def _row(triage: EpisodeTriage) -> TriageRow:
             if p.status is not None and p.status != "pass"
         ],
         uncertainty=list(dict.fromkeys(r.uncertainty for r in triage.criteria if r.uncertainty)),
+        quality=triage.quality,
     )
