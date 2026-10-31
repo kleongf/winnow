@@ -1,6 +1,6 @@
-// The Episodes table: one dense row per Episode with its Triage decision, confidence, chips for
-// the Phrases that didn't pass, and its Reason, or, until it has a Reference label, "Awaiting
-// Reference label". The confidence header sorts.
+// The Episodes table: one dense row per Episode with its Triage decision, confidence, quality,
+// chips for the Phrases that didn't pass, and its Reason, or, until it has a Reference label,
+// "Awaiting Reference label". The confidence and quality headers sort.
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
 import {
@@ -16,33 +16,43 @@ import { cn } from "@/lib/utils";
 import { AwaitingLabelTag } from "../referenceLabels/AwaitingLabel";
 import { SetTag } from "../sets/SetTag";
 import type { SetName } from "../sets/useSets";
+import { formatQuality, QUALITY_TITLE } from "../triage/formatQuality";
 import { STATUS_CHIP, TriageBadge } from "../triage/TriageBadge";
 import type { TriageRow } from "../triage/useTriage";
-import type { SortOrder } from "./episodeFilters";
+import { sortColumn, type SortColumn, type SortOrder } from "./episodeFilters";
 import type { Episode } from "./useEpisodes";
 
-const SORT_ICONS = { confidence: ArrowUp, "-confidence": ArrowDown } as const;
-const SORT_NAMES = {
+const SORT_NAMES: Record<NonNullable<SortOrder>, string> = {
   confidence: "least confident first",
   "-confidence": "most confident first",
-} as const;
+  "-quality": "best quality first",
+  quality: "worst quality first",
+};
 
-function ConfidenceHead(props: { sort: SortOrder; onSort: () => void }) {
-  const Icon = props.sort === null ? ArrowUpDown : SORT_ICONS[props.sort];
+function SortHead(props: {
+  column: SortColumn;
+  label: string;
+  title: string;
+  sort: SortOrder;
+  onSort: (column: SortColumn) => void;
+}) {
+  const sort = props.sort !== null && sortColumn(props.sort) === props.column ? props.sort : null;
+  const descending = sort?.startsWith("-") ?? false;
+  const Icon = sort === null ? ArrowUpDown : descending ? ArrowDown : ArrowUp;
   return (
     <TableHead
       className="w-24 text-right"
-      aria-sort={
-        props.sort === null ? "none" : props.sort === "confidence" ? "ascending" : "descending"
-      }
+      aria-sort={sort === null ? "none" : descending ? "descending" : "ascending"}
     >
       <button
         type="button"
-        onClick={props.onSort}
+        onClick={() => {
+          props.onSort(props.column);
+        }}
         className="inline-flex items-center gap-1 hover:text-foreground"
-        title={props.sort === null ? "Sort by confidence" : `Sorted ${SORT_NAMES[props.sort]}`}
+        title={sort === null ? props.title : `Sorted ${SORT_NAMES[sort]}`}
       >
-        Confidence
+        {props.label}
         <Icon className="size-3" />
       </button>
     </TableHead>
@@ -75,7 +85,7 @@ export function EpisodeTable(props: {
   triageOf: Map<string, TriageRow>;
   setOf: Map<string, SetName>;
   sort: SortOrder;
-  onSort: () => void;
+  onSort: (column: SortColumn) => void;
   onOpen: (id: string) => void;
 }) {
   return (
@@ -88,7 +98,20 @@ export function EpisodeTable(props: {
           <TableHead className="w-24">Source</TableHead>
           <TableHead className="w-20">Set</TableHead>
           <TableHead className="w-28">Triage decision</TableHead>
-          <ConfidenceHead sort={props.sort} onSort={props.onSort} />
+          <SortHead
+            column="confidence"
+            label="Confidence"
+            title="Sort by confidence"
+            sort={props.sort}
+            onSort={props.onSort}
+          />
+          <SortHead
+            column="quality"
+            label="Quality"
+            title={QUALITY_TITLE}
+            sort={props.sort}
+            onSort={props.onSort}
+          />
           <TableHead>Reason</TableHead>
         </TableRow>
       </TableHeader>
@@ -121,6 +144,9 @@ export function EpisodeTable(props: {
               </TableCell>
               <TableCell className="text-right tabular-nums" data-testid="confidence">
                 {row?.confidence.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums" data-testid="quality">
+                {row?.quality != null && formatQuality(row.quality)}
               </TableCell>
               <TableCell className="w-full max-w-0">
                 {row && <PhraseChips row={row} />}

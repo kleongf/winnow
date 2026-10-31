@@ -33,6 +33,7 @@ from winnow.episodes.store import episode_id
 from winnow.jobs.models import WorkItem
 from winnow.meta.audio import wav_duration_ms
 from winnow.meta.costs import CostEntry
+from winnow.meta.limits import DEFAULT_LIMITS
 from winnow.meta.models import MetaContent, Transcript
 from winnow.meta.openai_transport import OpenAITransport
 from winnow.meta.pricing import SAM, sam_cost, spark_cost, transcribe_cost
@@ -42,7 +43,7 @@ from winnow.rubric.service import compile_draft
 from winnow.tracking.exterior import box_items
 
 RECORDINGS = Path(__file__).parent / "recordings" / "fixture_episodes.jsonl"
-E2E_EPISODES = 21  # what scripts/e2e-server.ts writes
+E2E_EPISODES = 24  # what scripts/e2e-server.ts writes
 # e2e's Dev set (DEV_SET in e2e/helpers.ts), which compile's anchor-pool ranges come from.
 # Fixture Episode 0 has the same robot data, so backend tests compile against it as well.
 E2E_DEV_SET = (6,)
@@ -123,7 +124,7 @@ async def _run(ctx: AppContext, kind: str, items: list[WorkItem]) -> int:
 
 
 async def _record(settings: Settings, transport: Transport) -> int:
-    ctx = build_context(settings, transport)
+    ctx = build_context(settings, transport, DEFAULT_LIMITS)  # records from the real API
     try:
         indices = list(range(E2E_EPISODES))
         failed = await _run(ctx, "ingest", ingest_items("droid_100", indices, with_meta=True))
