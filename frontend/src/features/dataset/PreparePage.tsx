@@ -1,5 +1,5 @@
 // Prepare: Dataset-level work that no Description depends on: ingest, hand-drawn boxes, wrist
-// tracks, the Spark-alone baseline and (as they're built) exterior tracks and target boxes.
+// tracks, the Spark-alone baseline, and the exterior tracks and target boxes a box queues.
 import { Progress } from "@/components/ui/progress";
 
 import { NeedsBox } from "../boxes/NeedsBox";
@@ -8,9 +8,8 @@ import { useEpisodes } from "../episodes/useEpisodes";
 import { JobProgress } from "../jobs/JobProgress";
 import { useIngestProgress } from "../jobs/useIngestProgress";
 import { SetStatus } from "../sets/SetStatus";
+import { TargetBoxes } from "../tracking/TargetBoxes";
 import { useDatasetStatus, type DatasetStatus } from "./useDatasetStatus";
-
-const LATER_STAGES = ["Exterior tracks", "Target boxes"];
 
 export function PreparePage() {
   const status = useDatasetStatus();
@@ -33,6 +32,7 @@ export function PreparePage() {
         {job.data && <JobProgress job={job.data} />}
       </div>
       <NeedsBox episodes={episodeList.data ?? []} />
+      <TargetBoxes episodes={episodeList.data ?? []} />
     </div>
   );
 }
@@ -75,13 +75,37 @@ function StatusGrid(props: { status: DatasetStatus }) {
             {wristTracks}
           </Stat>
         )}
-        {LATER_STAGES.map((label) => (
-          <Stat key={label} label={label} muted>
-            —
-          </Stat>
-        ))}
+        <BoxStats status={props.status} />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">Meta API spend so far ${cost.toFixed(2)}</p>
+    </>
+  );
+}
+
+// What a hand-drawn box queues: the exterior track, and the target box SAM finds or the
+// curator draws.
+function BoxStats(props: { status: DatasetStatus }) {
+  const { boxes, exterior_tracks: exteriorTracks, target_boxes: targets } = props.status;
+  const missing = props.status.targets_missing;
+  return (
+    <>
+      {exteriorTracks === null ? (
+        <Stat label="Exterior tracks" muted note="needs MODEL_API_KEY">
+          —
+        </Stat>
+      ) : (
+        <Stat label="Exterior tracks" of={boxes} testId="exterior-tracks">
+          {exteriorTracks}
+        </Stat>
+      )}
+      <Stat
+        label="Target boxes"
+        of={boxes}
+        note={missing ? `${String(missing)} to draw by hand` : undefined}
+        testId="target-boxes"
+      >
+        {targets}
+      </Stat>
     </>
   );
 }
