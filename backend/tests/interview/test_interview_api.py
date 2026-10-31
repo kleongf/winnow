@@ -35,7 +35,7 @@ def test_phrases_come_first_in_description_order_then_thresholds_by_anchor_episo
         ("threshold", NO_PAUSES),
         ("threshold", ONE_GRASP),
     ]
-    assert interview(drafted)["question"] is None
+    assert interview(drafted)["question"]["kind"] == "hard_soft"  # then hard or soft
 
 
 def to_grasp_threshold(api: TestClient) -> None:
@@ -163,7 +163,7 @@ def test_answers_on_phrases_an_edit_left_alone_survive_it_and_can_be_undone(
     assert [(a["kind"], a["subject"], a["answer"]) for a in after["answered"]] == [
         (a["kind"], a["subject"], a["answer"]) for a in before
     ]
-    assert (after["question"], after["covered"]) == (None, True)
+    assert (after["question"]["kind"], after["covered"]) == ("hard_soft", True)
     assert criterion_of(drafted, ONE_GRASP)["threshold"] == 2.0
     by_subject = {a["subject"]: a for a in after["answered"]}
 

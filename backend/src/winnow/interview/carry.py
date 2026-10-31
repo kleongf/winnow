@@ -1,22 +1,23 @@
 """Which interview answers still hold after a recompile, which edits only part of the Description.
 
 An answer about a Phrase, or words in no Phrase, that the edit left alone still holds, moved to
-where its text now sits; so does every answer on a threshold of a Criterion whose Phrase was
-kept, so a bisection goes on where it was. Answers about text the edit changed or took out drop
-out of the interview: their questions are asked again, of the new text. Pure: the caller saves
-what it returns.
+where its text now sits; so does every answer on a threshold, or on whether a Criterion is hard,
+of a Criterion whose Phrase was kept, so a bisection goes on where it was. Answers on the grasp
+settings, which an edit never changes, always hold. Answers about text the edit changed or took
+out drop out of the interview: their questions are asked again, of the new text. Pure: the
+caller saves what it returns.
 """
 
 from winnow.interview.models import StoredAnswer
-from winnow.interview.questions import threshold_key
 from winnow.rubric.diff import DescriptionDiff
 from winnow.rubric.models import RubricDraft
 
 
 def _on_kept_criterion(answer: StoredAnswer, draft: RubricDraft, kept: set[str]) -> bool:
-    return answer.subject in kept and any(
-        threshold_key(c.id) == answer.key and c.phrase == answer.subject for c in draft.criteria
-    )
+    """Whether the Criterion a threshold or hard/soft answer is about (its key's
+    `<kind>:<criterion id>`) is still in the draft, on a kept Phrase."""
+    criterion_id = answer.key.partition(":")[2]
+    return any(c.id == criterion_id and c.phrase in kept for c in draft.criteria)
 
 
 def _moved(answer: StoredAnswer, diff: DescriptionDiff) -> StoredAnswer | None:
@@ -47,7 +48,9 @@ def carried(
     kept = {p.text for p in diff.kept}
     still: list[StoredAnswer] = []
     for answer in answers:
-        if answer.kind == "threshold":
+        if answer.kind == "setting":
+            moved = answer
+        elif answer.kind in ("threshold", "hard_soft"):
             moved = answer if _on_kept_criterion(answer, draft, kept) else None
         else:
             moved = _moved(answer, diff)

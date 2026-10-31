@@ -1,29 +1,28 @@
 """The Describe interview on the Rubric draft: code picks each question, an answer changes the
-draft and leaves an interview label, and undo puts both back. No model call anywhere."""
+draft and may leave an interview label, and undo puts both back. No model call anywhere."""
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
 from winnow.core.context import AppContext
-from winnow.interview.anchor import AnchorResult, anchor_results
-from winnow.interview.apply import (
-    criterion,
-    mark_context,
-    restore_criterion,
-    restore_phrase,
-    settle,
-)
+from winnow.interview.anchor import AnchorResult, anchor_results, anchor_setting_points
+from winnow.interview.apply import criterion, mark_context, settle, undone
 from winnow.interview.bisection import Answered, Point, next_point, resolve
 from winnow.interview.models import (
     AnswerDraw,
     AnswerValue,
+    HardSoftQuestion,
     Interview,
     PhraseQuestion,
-    QuestionKind,
+    Question,
+    SettingName,
+    SettingQuestion,
     StoredAnswer,
     ThresholdQuestion,
+    new_answer,
 )
 from winnow.interview.questions import asked_on, phrase_questions, threshold_questions
+from winnow.interview.settings_answers import answer_hard_soft, answer_setting
+from winnow.interview.settings_questions import hard_soft_questions, setting_questions
 from winnow.interview.wording import label_effect, phrase_effect, resolution_effect
 from winnow.labels.models import LabelDraw
 from winnow.labels.service import save_draft_label
@@ -44,12 +43,17 @@ class _State:
     draft: RubricDraft
     answers: list[StoredAnswer]
     anchor: dict[str, list[AnchorResult]]  # by Criterion id
+    moments: dict[SettingName, list[AnchorResult]]  # by grasp setting
     phrases: list[PhraseQuestion]
     thresholds: list[ThresholdQuestion]
+    hard_soft: list[HardSoftQuestion]
+    settings: list[SettingQuestion]
 
     @property
-    def asking(self) -> PhraseQuestion | ThresholdQuestion | None:
-        return next(iter([*self.phrases, *self.thresholds]), None)
+    def asking(self) -> Question | None:
+        """In order: Phrases, thresholds, hard or soft, grasp settings."""
+        asked = [*self.phrases, *self.thresholds, *self.hard_soft, *self.settings]
+        return next(iter(asked), None)
 
 
 def _state(ctx: AppContext) -> _State:
@@ -57,8 +61,17 @@ def _state(ctx: AppContext) -> _State:
     draft = current_draft(ctx)
     answers = ctx.interview.answers(draft.compiled_at)
     anchor = anchor_results(ctx, draft)
-    phrases = phrase_questions(draft, {a.key for a in answers})
-    return _State(draft, answers, anchor, phrases, threshold_questions(draft, anchor, answers))
+    moments = anchor_setting_points(ctx, draft.settings)
+    return _State(
+        draft,
+        answers,
+        anchor,
+        moments,
+        phrase_questions(draft, {a.key for a in answers}),
+        threshold_questions(draft, anchor, answers),
+        hard_soft_questions(draft, answers),
+        setting_questions(draft, moments, answers),
+    )
 
 
 def current(ctx: AppContext) -> Interview:
@@ -69,33 +82,15 @@ def current(ctx: AppContext) -> Interview:
         covered=not state.phrases,
         phrases_left=len(state.phrases),
         thresholds_left=len(state.thresholds),
-    )
-
-
-def _stored(
-    key: str, kind: QuestionKind, subject: str, answer: AnswerValue, effect: str
-) -> StoredAnswer:
-    """An answer that changed nothing yet; callers add what it did."""
-    return StoredAnswer(
-        id=0,
-        key=key,
-        kind=kind,
-        subject=subject,
-        episode_id=None,
-        measurement=None,
-        answer=answer,
-        effect=effect,
-        changed_criterion=None,
-        label_id=None,
-        resolution=None,
-        answered_at=datetime.now(UTC).isoformat(),
+        hard_soft_left=len(state.hard_soft),
+        settings_left=len(state.settings),
     )
 
 
 def _answer_phrase(
     ctx: AppContext, draft: RubricDraft, q: PhraseQuestion, value: AnswerValue
 ) -> StoredAnswer:
-    stored = _stored(q.key, q.kind, q.text, value, phrase_effect(value, q.text))
+    stored = new_answer(q.key, q.kind, q.text, value, phrase_effect(value, q.text))
     if value != "context":
         return stored
     ctx.drafts.save(mark_context(draft, q.start, q.end))
@@ -107,7 +102,7 @@ def _answer_threshold(
     ctx: AppContext, state: _State, q: ThresholdQuestion, answer: AnswerValue
 ) -> StoredAnswer:
     if answer == "skip":
-        return _stored(
+        return new_answer(
             q.key, "threshold", q.phrase, answer, "Skipped: the threshold stays assumed."
         )
     value = "pass" if answer == "pass" else "fail"  # its options are pass, fail and skip
@@ -117,7 +112,7 @@ def _answer_threshold(
     asked = [*asked_on(state.answers, q.key), Answered(q.episode_id, q.value, value == "pass")]
     found = criterion(state.draft, q.criterion_id)
     points = [Point(r.episode_id, r.value) for r in state.anchor[found.id]]
-    stored = _stored(
+    stored = new_answer(
         q.key, "threshold", q.phrase, answer, label_effect(q.episode_id, value, q.phrase)
     )
     stored = stored.model_copy(
@@ -143,21 +138,42 @@ def _answer_threshold(
     )
 
 
-def answer(ctx: AppContext, draw: AnswerDraw) -> Interview:
-    """Raises StaleQuestionError unless `draw` answers the question being asked, with one of
-    its options."""
-    state = _state(ctx)
+def _asked(state: _State, draw: AnswerDraw) -> Question:
+    """The question being asked, which `draw` must answer with one of its options."""
     asking = state.asking
     if asking is None or asking.key != draw.key:
         raise StaleQuestionError("That question isn't the one being asked")
     if draw.answer not in {o.answer for o in asking.options}:
         raise StaleQuestionError(f"“{draw.answer}” doesn't answer this question")
-    if isinstance(asking, PhraseQuestion):
-        stored = _answer_phrase(ctx, state.draft, asking, draw.answer)
-    elif draw.episode_id != asking.episode_id:
+    on_episode = isinstance(asking, ThresholdQuestion | SettingQuestion)
+    if on_episode and draw.episode_id != asking.episode_id:
         raise StaleQuestionError(f"The question is about {asking.episode_id} now")
-    else:
-        stored = _answer_threshold(ctx, state, asking, draw.answer)
+    return asking
+
+
+def _changed(ctx: AppContext, answered: tuple[StoredAnswer, RubricDraft | None]) -> StoredAnswer:
+    """Saves the draft an answer changed, if it did."""
+    stored, draft = answered
+    if draft is not None:
+        ctx.drafts.save(draft)
+    return stored
+
+
+def answer(ctx: AppContext, draw: AnswerDraw) -> Interview:
+    """Raises StaleQuestionError unless `draw` answers the question being asked, with one of
+    its options."""
+    state = _state(ctx)
+    value = draw.answer
+    match _asked(state, draw):
+        case PhraseQuestion() as q:
+            stored = _answer_phrase(ctx, state.draft, q, value)
+        case ThresholdQuestion() as q:
+            stored = _answer_threshold(ctx, state, q, value)
+        case HardSoftQuestion() as q:
+            stored = _changed(ctx, answer_hard_soft(state.draft, q, value))
+        case SettingQuestion() as q:
+            moments = state.moments[q.setting]
+            stored = _changed(ctx, answer_setting(state.draft, state.answers, moments, q, value))
     ctx.interview.add(state.draft.compiled_at, stored)
     return current(ctx)
 
@@ -170,14 +186,11 @@ def undo(ctx: AppContext, answer_id: int) -> Interview:
     target = next((a for a in answers if a.id == answer_id), None)
     if target is None:
         raise UnknownAnswerError(f"No answer {answer_id} in this interview")
-    undone = [a for a in answers if a.key == target.key and a.id >= target.id]
-    for a in reversed(undone):
-        if a.criterion_before is not None:
-            draft = restore_criterion(draft, a.criterion_before)
-        if a.context_at is not None:
-            draft = restore_phrase(draft, a.context_at, a.phrase_before)
+    later = [a for a in answers if a.key == target.key and a.id >= target.id]
+    for a in reversed(later):
+        draft = undone(draft, a)
         if a.label_id is not None:
             ctx.labels.withdraw(a.label_id)
     ctx.drafts.save(draft)
-    ctx.interview.remove([a.id for a in undone])
+    ctx.interview.remove([a.id for a in later])
     return current(ctx)

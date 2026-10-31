@@ -1,9 +1,11 @@
 """The interview's words, from templates: no model call."""
 
+from dataclasses import dataclass
+
 from winnow.criteria.english import format_value
-from winnow.criteria.models import Criterion
+from winnow.criteria.models import Criterion, Setting
 from winnow.interview.bisection import Resolution
-from winnow.interview.models import AnswerValue, Option
+from winnow.interview.models import AnswerValue, Option, SettingName
 
 PHRASE_OPTIONS = [
     Option(answer="accept", label="Leave it unchecked: it never fails an Episode"),
@@ -55,4 +57,80 @@ def resolution_effect(resolution: Resolution, before: Criterion) -> str:
     return (
         f"Threshold {format_value(before.threshold, unit)} → "
         f"{format_value(resolution.threshold, unit)}, margin ± {margin}."
+    )
+
+
+def hard_soft_prompt(english: str) -> str:
+    return (
+        f"If an Episode fails “{english}”, should it be rejected outright, or only lower its "
+        "quality?"
+    )
+
+
+def hard_soft_options(hard: bool) -> list[Option]:
+    return [
+        Option(answer="hard", label="Hard: reject it outright"),
+        Option(answer="soft", label="Soft: only lower its quality"),
+        Option(answer="skip", label=f"Skip: leave it {'hard' if hard else 'soft'}"),
+    ]
+
+
+def hard_soft_effect(answer: AnswerValue, hard: bool) -> str:
+    if answer == "hard":
+        return "Hard: failing it rejects the Episode."
+    if answer == "soft":
+        return "Soft: failing it only lowers the Episode's quality."
+    return f"Skipped: it stays {'hard' if hard else 'soft'}."
+
+
+@dataclass(frozen=True)
+class SettingWords:
+    title: str  # as the user reads it
+    unit: str  # as `format_value` reads it; "" for none
+    prompt: str  # the question asked of a moment
+    yes: str  # what pass means there
+    no: str
+
+
+SETTING_WORDS: dict[SettingName, SettingWords] = {
+    "gripper_closed_level": SettingWords(
+        "Gripper closed level", "", "Is the gripper closed at this moment?", "Closed", "Open"
+    ),
+    "grasp_rise_m": SettingWords(
+        "Grasp rise", "m", "Did the gripper lift the object here?", "Lifted", "Not lifted"
+    ),
+}
+
+
+def setting_options(name: SettingName) -> list[Option]:
+    words = SETTING_WORDS[name]
+    return [
+        Option(answer="pass", label=words.yes),
+        Option(answer="fail", label=words.no),
+        Option(answer="skip", label="Skip: leave this setting assumed"),
+    ]
+
+
+def _setting_value(name: SettingName, value: float) -> str:
+    unit = SETTING_WORDS[name].unit
+    return format_value(value, unit) if unit else f"{value:g}"
+
+
+def setting_answer_effect(name: SettingName, episode_id: str, answer: AnswerValue) -> str:
+    words = SETTING_WORDS[name]
+    if answer == "skip":
+        return "Skipped: the setting stays assumed."
+    return f"Marked {episode_id} {(words.yes if answer == 'pass' else words.no).lower()}."
+
+
+def setting_effect(name: SettingName, resolution: Resolution, before: Setting) -> str:
+    title = SETTING_WORDS[name].title
+    if resolution.outcome == "confirmed":
+        return f"{title} confirmed at {_setting_value(name, before.value)}."
+    if resolution.outcome == "unbracketed":
+        return "No anchor Episode on the other side brackets it, so the setting stays assumed."
+    margin = _setting_value(name, resolution.margin or 0.0)
+    return (
+        f"{title} {_setting_value(name, before.value)} → "
+        f"{_setting_value(name, resolution.threshold)}, margin ± {margin}."
     )
