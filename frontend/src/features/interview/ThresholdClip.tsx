@@ -1,9 +1,11 @@
-// The anchor Episode's clip trimmed to the stretch the Criterion measured, looping, with the
-// measured value labelled on it.
+// The anchor Episode's clip trimmed to the stretch the Criterion measured (or around the moment a
+// grasp setting is asked about), looping, with the measured value labelled on it.
 import { clipUrl } from "../episodes/useEpisodes";
 import type { ThresholdQuestion } from "./useInterview";
 
-export function ThresholdClip(props: { question: ThresholdQuestion }) {
+type Clipped = Pick<ThresholdQuestion, "episode_id" | "camera" | "clip" | "measurement">;
+
+export function ThresholdClip(props: { question: Clipped }) {
   const { episode_id: episodeId, camera, clip, measurement } = props.question;
   if (!camera) return null;
   const src = `${clipUrl(episodeId, camera)}#t=${String(clip.start)},${String(clip.end)}`;

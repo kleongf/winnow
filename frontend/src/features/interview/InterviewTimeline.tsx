@@ -1,6 +1,7 @@
 // The Describe interview, under the Description: answered cards collapsed to their effect, then
-// the one question code asks next. It is done once every Phrase is covered; assumed thresholds
-// can still be asked after that, and Run never waits for them.
+// the one question code asks next. It is done once every Phrase is covered; assumed thresholds,
+// hard or soft, and assumed grasp settings can still be asked after that, and Run never waits
+// for them.
 import { AnsweredCard } from "./AnsweredCard";
 import { QuestionCard } from "./QuestionCard";
 import { type Interview, useAnswer, useInterview, useUndo } from "./useInterview";
@@ -9,10 +10,19 @@ function plural(n: number, word: string): string {
   return `${String(n)} ${word}${n === 1 ? "" : "s"}`;
 }
 
+function stillAsked(interview: Interview): string {
+  const left = [
+    [interview.thresholds_left, "assumed threshold"],
+    [interview.hard_soft_left, "hard-or-soft question"],
+    [interview.settings_left, "assumed grasp setting"],
+  ] as const;
+  const counts = left.filter(([n]) => n > 0).map(([n, word]) => plural(n, word));
+  return counts.length > 0 ? ` Can still be asked: ${counts.join(", ")}.` : "";
+}
+
 function Status(props: { interview: Interview }) {
-  const { covered, phrases_left: phrases, thresholds_left: thresholds } = props.interview;
-  const left =
-    thresholds > 0 ? ` ${plural(thresholds, "assumed threshold")} can still be asked.` : "";
+  const { covered, phrases_left: phrases } = props.interview;
+  const left = stillAsked(props.interview);
   return (
     <p className="text-xs text-muted-foreground" data-testid="interview-status">
       {covered
@@ -64,7 +74,8 @@ export function InterviewTimeline(props: {
             onAnswer={(value) => {
               const question = data.question;
               if (!question) return;
-              const episodeId = question.kind === "threshold" ? question.episode_id : null;
+              const onEpisode = question.kind === "threshold" || question.kind === "setting";
+              const episodeId = onEpisode ? question.episode_id : null;
               answer.mutate(
                 { key: question.key, episode_id: episodeId, answer: value },
                 {

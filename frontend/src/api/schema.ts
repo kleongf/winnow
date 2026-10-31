@@ -1122,7 +1122,7 @@ export interface components {
              * Answer
              * @enum {string}
              */
-            answer: "accept" | "context" | "pass" | "fail" | "skip";
+            answer: "accept" | "context" | "pass" | "fail" | "hard" | "soft" | "skip";
             /** Episode Id */
             episode_id?: string | null;
             /** Key */
@@ -1827,6 +1827,31 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * HardSoftQuestion
+         * @description Should failing this Criterion reject an Episode outright, or only lower its quality?
+         */
+        HardSoftQuestion: {
+            /** Criterion Id */
+            criterion_id: string;
+            /** English */
+            english: string;
+            /** Hard */
+            hard: boolean;
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hard_soft";
+            /** Options */
+            options: components["schemas"]["Option"][];
+            /** Phrase */
+            phrase: string;
+            /** Prompt */
+            prompt: string;
+        };
         /** Health */
         Health: {
             /** Meta Api Key Configured */
@@ -1858,10 +1883,14 @@ export interface components {
             answered: components["schemas"]["InterviewAnswer"][];
             /** Covered */
             covered: boolean;
+            /** Hard Soft Left */
+            hard_soft_left: number;
             /** Phrases Left */
             phrases_left: number;
             /** Question */
-            question: (components["schemas"]["PhraseQuestion"] | components["schemas"]["ThresholdQuestion"]) | null;
+            question: (components["schemas"]["PhraseQuestion"] | components["schemas"]["ThresholdQuestion"] | components["schemas"]["HardSoftQuestion"] | components["schemas"]["SettingQuestion"]) | null;
+            /** Settings Left */
+            settings_left: number;
             /** Thresholds Left */
             thresholds_left: number;
         };
@@ -1874,7 +1903,7 @@ export interface components {
              * Answer
              * @enum {string}
              */
-            answer: "accept" | "context" | "pass" | "fail" | "skip";
+            answer: "accept" | "context" | "pass" | "fail" | "hard" | "soft" | "skip";
             /** Answered At */
             answered_at: string;
             /** Changed Criterion */
@@ -1891,7 +1920,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "phrase" | "words" | "threshold";
+            kind: "phrase" | "words" | "threshold" | "hard_soft" | "setting";
             /** Label Id */
             label_id: number | null;
             /** Measurement */
@@ -2073,7 +2102,7 @@ export interface components {
              * Answer
              * @enum {string}
              */
-            answer: "accept" | "context" | "pass" | "fail" | "skip";
+            answer: "accept" | "context" | "pass" | "fail" | "hard" | "soft" | "skip";
             /** Label */
             label: string;
         };
@@ -2405,6 +2434,46 @@ export interface components {
             assumption?: string | null;
             /** Margin */
             margin: number;
+            /** Value */
+            value: number;
+        };
+        /**
+         * SettingQuestion
+         * @description Is the gripper closed (or did it lift) at this anchor Episode's moment? One step of
+         *     bisecting an assumed grasp setting.
+         */
+        SettingQuestion: {
+            /** Asked */
+            asked: number;
+            /** Assumption */
+            assumption: string;
+            /** Camera */
+            camera: string | null;
+            clip: components["schemas"]["Clip"];
+            /** Episode Id */
+            episode_id: string;
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "setting";
+            /** Max Questions */
+            max_questions: number;
+            /** Measurement */
+            measurement: string;
+            /** Name */
+            name: string;
+            /** Options */
+            options: components["schemas"]["Option"][];
+            /** Prompt */
+            prompt: string;
+            /**
+             * Setting
+             * @enum {string}
+             */
+            setting: "gripper_closed_level" | "grasp_rise_m";
             /** Value */
             value: number;
         };
