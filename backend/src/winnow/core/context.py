@@ -145,9 +145,12 @@ def build_context(settings: Settings, transport: Transport | None = None) -> App
         runner,
         meta,
     )
+    # These steps score Episodes through the context, so they're added once that exists; the
+    # runner reads `steps` when an item runs.
+    from winnow.export.service import export_step
+
+    steps["export"] = export_step(ctx)
     if meta is not None:
-        # The step scores Episodes through the context, so it's added once that exists; the
-        # runner reads `steps` when an item runs.
         from winnow.triage.reason_steps import reason_step
 
         steps["reason"] = reason_step(meta, ctx)
