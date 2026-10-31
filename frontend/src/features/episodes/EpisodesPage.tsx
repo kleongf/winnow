@@ -1,9 +1,11 @@
 // Every ingested Episode in a dense table, sorted into Triage tabs with its Reason (only once it
 // has a Reference label; until then it's awaiting one and has no Triage decision), filterable by
-// Phrase, Uncertainty signal and set, and sortable by confidence; a row opens the full-page
-// Workstation. The tab, filters, sort, open Episode and its start time live in the URL; J/K
-// step through the Episodes shown.
+// Phrase, Uncertainty signal and set, and sortable by confidence or quality; a row opens the
+// full-page Workstation. The tab, filters, sort, open Episode and its start time live in the URL;
+// J/K step through the Episodes shown. Export writes out the kept ones.
 import { navigate, useSearchParams } from "../core/url";
+import { ExportButton } from "../export/ExportButton";
+import { ExportStatus } from "../export/ExportStatus";
 import { useRubric } from "../rubric/useRubric";
 import { setsByEpisode, useSets } from "../sets/useSets";
 import { countDecisions, parseTriageTab, TriageTabs, type TriageTab } from "../triage/TriageTabs";
@@ -92,9 +94,15 @@ export function EpisodesPage() {
 
   return (
     <div className="mx-auto max-w-6xl p-8">
-      <div className="text-xs text-muted-foreground">Project</div>
-      <h1 className="text-xl font-semibold">Episodes</h1>
-      <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-xs text-muted-foreground">Project</div>
+          <h1 className="text-xl font-semibold">Episodes</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
+        </div>
+        <ExportButton />
+      </div>
+      <ExportStatus />
       {episodes.length === 0 && loaded && (
         <p className="mt-6 text-sm text-muted-foreground">
           No Episodes yet: ingest some on the Prepare page.
@@ -117,8 +125,8 @@ export function EpisodesPage() {
             triageOf={triageOf}
             setOf={setOf}
             sort={filters.sort}
-            onSort={() => {
-              navigate({ sort: nextSort(filters.sort) });
+            onSort={(column) => {
+              navigate({ sort: nextSort(filters.sort, column) });
             }}
             onOpen={open}
           />

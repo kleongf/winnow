@@ -478,6 +478,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Export
+         * @description Export the kept Episodes in the background: a LeRobot v3.0 dataset per source, never the
+         *     Test set, with rejections.jsonl holding the Reason for each Episode not kept. The finished
+         *     job's item names the new folder under the data dir's exports/.
+         */
+        post: operations["post_export_api_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -1751,6 +1773,8 @@ export interface components {
             p_keep: number;
             /** Phrases */
             phrases: components["schemas"]["PhraseResult"][];
+            /** Quality */
+            quality?: number | null;
             /** Reason */
             reason: components["schemas"]["TextSpan"][];
             /**
@@ -1816,6 +1840,11 @@ export interface components {
              * @enum {string}
              */
             reason: "not pick-and-place" | "object too small to see";
+        };
+        /** ExportStarted */
+        ExportStarted: {
+            /** Job Id */
+            job_id: number;
         };
         /**
          * FailBenchCheck
@@ -2938,6 +2967,8 @@ export interface components {
             episode_id: string;
             /** Not Passed */
             not_passed: components["schemas"]["PhraseChip"][];
+            /** Quality */
+            quality: number | null;
             /** Reason */
             reason: string;
             /** Uncertainty */
@@ -3826,6 +3857,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TestRun"][];
+                };
+            };
+        };
+    };
+    post_export_api_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportStarted"];
                 };
             };
         };

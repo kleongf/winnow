@@ -1,11 +1,13 @@
-// The top of the Workstation's right panel: the Triage decision, its Reason (times in it seek,
-// marked when Spark wrote it), and the Criterion results, expandable to their Evidence and moments.
+// The top of the Workstation's right panel: the Triage decision, its confidence and quality, its
+// Reason (times in it seek, marked when Spark wrote it), and the Criterion results, expandable to
+// their Evidence and moments.
 import { Sparkles } from "lucide-react";
 
 import { CriterionResultRow } from "./CriterionResultRow";
+import { formatQuality, QUALITY_TITLE } from "./formatQuality";
 import { SeekableText } from "./SeekableText";
 import { TriageBadge } from "./TriageBadge";
-import type { CriterionResult, EpisodeTriage } from "./useTriage";
+import { useQuality, type CriterionResult, type EpisodeTriage } from "./useTriage";
 
 export function TriagePanel(props: {
   triage: EpisodeTriage;
@@ -17,6 +19,7 @@ export function TriagePanel(props: {
 }) {
   const { triage, openId } = props;
   const unchecked = triage.phrases.filter((p) => p.status === null);
+  const quality = useQuality(triage.episode_id);
   return (
     <section aria-label="Triage" className="mb-5">
       <div className="flex items-center gap-2">
@@ -28,6 +31,15 @@ export function TriagePanel(props: {
           Rubric v{triage.rubric_version}
         </span>
       </div>
+      {quality !== null && (
+        <p
+          className="mt-1 text-xs text-muted-foreground tabular-nums"
+          data-testid="quality"
+          title={QUALITY_TITLE}
+        >
+          Quality {formatQuality(quality)} · from soft Criteria, relative to the run
+        </p>
+      )}
       <p className="mt-2 text-[15px] leading-snug" data-testid="reason">
         <SeekableText spans={triage.reason} onSeek={props.onSeek} />
       </p>

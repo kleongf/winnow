@@ -1,0 +1,205 @@
+"""Exporting the kept Episodes as a LeRobot v3.0 dataset per source, with every rejection's
+Reason beside it. The Test set is never exported."""
+
+import json
+import subprocess
+from collections.abc import Iterator
+from pathlib import Path
+from typing import cast
+
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
+import pytest
+from fastapi.testclient import TestClient
+
+from tests.helpers import app_context, reference_label, wait_for_job
+from winnow.app import create_app
+from winnow.baseline.prompts import FROZEN
+from winnow.cli import main
+from winnow.core.settings import Settings
+from winnow.episodes.droid100 import CAMERAS
+from winnow.episodes.droid101 import Droid101
+from winnow.episodes.droid101_files import LocalFiles
+from winnow.episodes.fixtures import clip_path
+from winnow.episodes.models import EpisodeSignals
+from winnow.export.service import export_kept
+from winnow.labels.models import LabelDraw
+from winnow.labels.service import save_label
+from winnow.rubric.models import Rubric
+
+DROID100 = [0, 1, 2, 4]  # 0 grasps cleanly, 1 releases high, 2 regrasps, 4 never closes
+DROID101 = [0, 1, 2, 3]  # each grasps cleanly
+TEST_SET = ["droid_1.0.1:1", "droid_100:0"]  # kept, but never exported
+UNLABELLED = "droid_1.0.1:3"  # its Triage decision stays hidden, so it isn't exported
+NEVER_DROPS = FROZEN.phrases[1]
+
+
+@pytest.fixture(scope="module")
+def settings(
+    tmp_path_factory: pytest.TempPathFactory, droid100_root: Path, droid101_root: Path
+) -> Settings:
+    return Settings(
+        model_api_key=None,
+        data_dir=tmp_path_factory.mktemp("export") / "data",
+        droid100_root=droid100_root,
+        droid101_root=droid101_root,
+    )
+
+
+@pytest.fixture(scope="module")
+def api(settings: Settings) -> Iterator[TestClient]:
+    """Both sources ingested and labelled, scored on how the gripper grasps and releases: of
+    droid_100, 0 and 1 are kept (1 by a reviewer's label: it releases high), 2 and 4 rejected;
+    every droid_1.0.1 Episode is kept."""
+    with TestClient(create_app(settings)) as client:
+        for source, indices in (("droid_100", DROID100), ("droid_1.0.1", DROID101)):
+            job = client.post("/api/episodes/ingest", json={"source": source, "indices": indices})
+            wait_for_job(client, job.json()["job_id"])
+            for index in indices:
+                if f"{source}:{index}" != UNLABELLED:
+                    reference_label(client, f"{source}:{index}")
+        ctx = app_context(client)
+        ctx.sets.add("test", TEST_SET)
+        seeded = ctx.rubrics.latest().rubric
+        kept = [c for c in seeded.criteria if c.id in ("grasp-attempts", "release-height")]
+        ctx.rubrics.add(Rubric.model_validate({**seeded.model_dump(), "criteria": kept}))
+        draw = LabelDraw(phrase=NEVER_DROPS, value="pass", source="review")
+        save_label(ctx, "droid_100:1", draw)
+        yield client
+
+
+@pytest.fixture(scope="module")
+def exported(api: TestClient, tmp_path_factory: pytest.TempPathFactory) -> Path:
+    out = tmp_path_factory.mktemp("exports") / "kept"
+    export_kept(app_context(api), out)
+    return out
+
+
+def decoded(clip: Path) -> list[str]:
+    """Each decoded frame's checksum."""
+    out = subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-i", str(clip), "-f", "framemd5", "-"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return [line.rsplit(",", 1)[1].strip() for line in out.splitlines() if not line.startswith("#")]
+
+
+def assert_same_signals(exported: EpisodeSignals, source: EpisodeSignals) -> None:
+    assert exported.fps == source.fps
+    assert exported.dataset_outcome == source.dataset_outcome
+    for name in ("timestamps", "position", "gripper", "joint_positions"):
+        np.testing.assert_array_equal(getattr(exported, name), getattr(source, name))
+    assert exported.camera_extrinsics is not None and source.camera_extrinsics is not None
+    for camera, extrinsics in source.camera_extrinsics.items():
+        np.testing.assert_array_equal(exported.camera_extrinsics[camera], extrinsics)
+
+
+def test_droid101_exports_only_kept_episodes_the_reader_loads_unchanged(
+    exported: Path, droid101_root: Path, tmp_path: Path
+):
+    source = Droid101(LocalFiles(droid101_root))
+    export = Droid101(LocalFiles(exported / "droid_1.0.1"))
+
+    # 1 is in the Test set and 3 has no Reference label: kept 0 and 2 become 0 and 1.
+    assert sorted(export.index) == [0, 1]
+    for new, old in ((0, 0), (1, 2)):
+        ours, theirs = export.load(new), source.load(old)
+        assert ours.signals.episode_index == new
+        assert ours.instruction == theirs.instruction
+        assert_same_signals(ours.signals, theirs.signals)
+        assert export.meta(new).length == source.meta(old).length
+        for camera in export.cameras:
+            export.write_clip(new, camera, tmp_path / f"ours-{new}-{camera}.mp4")
+            source.write_clip(old, camera, tmp_path / f"theirs-{new}-{camera}.mp4")
+            frames = decoded(tmp_path / f"ours-{new}-{camera}.mp4")
+            assert len(frames) == source.meta(old).length
+            assert frames == decoded(tmp_path / f"theirs-{new}-{camera}.mp4")
+
+
+def test_droid100_exports_every_column_of_its_kept_episode_renumbered(
+    exported: Path, droid100_root: Path
+):
+    source = pq.read_table(droid100_root / "main" / "data" / "chunk-000" / "file-000.parquet")  # pyright: ignore[reportUnknownMemberType]
+    out = exported / "droid_100"
+    data = pq.read_table(out / "data" / "chunk-000" / "file-000.parquet")  # pyright: ignore[reportUnknownMemberType]
+
+    # 1 is the one kept (0 is in the Test set): it becomes Episode 0, and its task, task 0.
+    assert data.schema == source.schema
+    one = [i == 1 for i in source.column("episode_index").to_pylist()]
+    theirs = source.filter(pa.array(one, type=pa.bool_())).to_pylist()
+    ours = data.to_pylist()
+    assert len(ours) == 45
+    assert ours == [{**row, "episode_index": 0, "task_index": 0} for row in theirs]
+    task = "Move the black remote control to the left"
+    tasks = pq.read_table(out / "meta" / "tasks.parquet").to_pylist()  # pyright: ignore[reportUnknownMemberType]
+    assert tasks == [{"task_index": 0, "__index_level_0__": task}]
+    for camera in CAMERAS:
+        clip = out / "videos" / f"observation.images.{camera}" / "chunk-000" / "file-000.mp4"
+        assert clip.read_bytes() == clip_path(droid100_root, 1, camera).read_bytes()
+    episodes = pq.read_table(out / "meta" / "episodes" / "chunk-000" / "file-000.parquet")  # pyright: ignore[reportUnknownMemberType]
+    [row] = episodes.to_pylist()
+    assert (row["episode_index"], row["length"], row["tasks"]) == (0, 45, [task])
+    assert row["videos/observation.images.wrist_image_left/from_timestamp"] == 0.0
+    info = json.loads((out / "meta" / "info.json").read_text())
+    assert (info["codebase_version"], info["fps"]) == ("v3.0", 15.0)
+    assert (info["total_episodes"], info["total_frames"], info["total_tasks"]) == (1, 45, 1)
+    assert info["splits"] == {"train": "0:1"}
+    assert set(info["features"]) == {
+        *source.column_names,
+        *(f"observation.images.{c}" for c in CAMERAS),
+    }
+    assert info["features"]["observation.state"]["shape"] == [7]
+    wrist = info["features"]["observation.images.wrist_image_left"]
+    assert (wrist["dtype"], wrist["shape"]) == ("video", [180, 320, 3])
+
+
+def test_every_episode_not_kept_is_listed_with_its_reason(exported: Path):
+    lines = (exported / "rejections.jsonl").read_text().splitlines()
+
+    first_try = FROZEN.phrases[0]
+    assert [json.loads(line) for line in lines] == [
+        {
+            "episode_id": "droid_100:2",
+            "source_index": 2,
+            "decision": "reject",
+            "reason": f'Rejected: "{first_try}" failed. 2 failed grasp attempts, at 0.9 s and '
+            "1.3 s, before the grasp at 1.8 s.",
+        },
+        {
+            "episode_id": "droid_100:4",
+            "source_index": 4,
+            "decision": "reject",
+            "reason": f'Rejected: "{first_try}" failed. No grasp: the gripper never closed.',
+        },
+    ]
+
+
+def test_cli_exports_to_the_folder_given_and_never_over_another_export(
+    api: TestClient, settings: Settings, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    out = tmp_path / "kept"
+
+    assert main(["export", str(out)], settings=settings) == 0
+    written = f"3 kept Episodes, and the Reasons for 2 not kept, to {out}"
+    assert written in capsys.readouterr().out
+    assert sorted(p.name for p in out.iterdir()) == ["droid_1.0.1", "droid_100", "rejections.jsonl"]
+    assert main(["export", str(out)], settings=settings) == 1
+    assert "already exists" in capsys.readouterr().out
+
+
+def test_the_api_exports_in_the_background_to_a_new_folder_under_the_data_dir(
+    api: TestClient, settings: Settings
+):
+    started = api.post("/api/export")
+
+    assert started.status_code == 202
+    job = wait_for_job(api, started.json()["job_id"])
+    [item] = cast(list[dict[str, object]], job["items"])
+    assert item["status"] == "done", item["detail"]
+    out = Path(str(item["detail"]).rsplit(" to ", 1)[1])
+    assert out.parent == settings.data_dir / "exports"
+    assert (out / "droid_1.0.1" / "meta" / "info.json").exists()
+    assert api.get("/api/jobs/latest", params={"kind": "export"}).json()["id"] == job["id"]

@@ -36,6 +36,10 @@ _Avoid_: Filter, spec, checklist; never use for the hackathon's scoring
 One check within a Rubric, either hard (failing it rejects the Episode) or soft (it adds to a quality score), and either measured (from robot data), tracked (from object/gripper tracks), or visual (judged from video).
 _Avoid_: Rule, check, filter
 
+**Quality**:
+How an Episode compares with the rest of its run on the soft Criteria: the mean of their robust z's (median and MAD over the Episodes scored), higher being better. It ranks Episodes and never decides one.
+_Avoid_: Score, grade
+
 **Criterion result**:
 The outcome of one Criterion on one Episode (pass, fail, or unsure), with its Evidence.
 _Avoid_: Verdict, score

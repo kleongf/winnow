@@ -34,7 +34,7 @@ writeFileSync(
     .join(""),
 );
 const fixtures = ["run", "--project", "backend", "winnow", "fixtures", resolve(root, "droid_100")];
-execFileSync("uv", [...fixtures, "--episodes", "21"], { stdio: "inherit" });
+execFileSync("uv", [...fixtures, "--episodes", "24"], { stdio: "inherit" });
 
 const servers = await startServers({
   frontendPort: E2E_FRONTEND_PORT,

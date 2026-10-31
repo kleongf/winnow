@@ -47,3 +47,10 @@ export function useEpisodeTriage(episodeId: string, enabled = true) {
     },
   });
 }
+
+/** An Episode's quality, from its row in the triage list: quality is relative to the whole run,
+ * so scoring the Episode alone can't give it. Null until the list loads, or with no soft value. */
+export function useQuality(episodeId: string): number | null {
+  const list = useTriageList();
+  return list.data?.rows.find((r) => r.episode_id === episodeId)?.quality ?? null;
+}
