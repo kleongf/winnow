@@ -35,7 +35,7 @@ def _on_interview(act: Callable[[], Interview]) -> Interview:
         raise HTTPException(status_code=409, detail=str(error)) from error
 
 
-def _asking(ctx: AppContext) -> None:
+def _queue_dry_run(ctx: AppContext) -> None:
     """Asks Spark, in the background, what an answer left unanswered of the draft's visual
     Criteria on the anchor pool: a settled grasp setting, an undo or a recompile can each
     change what is asked."""
@@ -58,7 +58,7 @@ async def post_answer(draw: AnswerDraw, ctx: Context) -> Interview:
     """Answer the question being asked. A threshold answer is also an interview label on the
     anchor Episode's Phrase; the answer that settles a threshold changes the Criterion."""
     answered = _on_interview(lambda: answer(ctx, draw))
-    _asking(ctx)
+    _queue_dry_run(ctx)
     return answered
 
 
@@ -86,7 +86,7 @@ async def post_text(draw: TextDraw, ctx: Context) -> TextReply:
     except RuntimeError as error:  # the Meta API failed, or its answer couldn't be read
         detail = f"Reading your words failed: {error}"
         raise HTTPException(status_code=502, detail=detail) from error
-    _asking(ctx)
+    _queue_dry_run(ctx)
     return reply
 
 
@@ -95,5 +95,5 @@ async def delete_answer(answer_id: int, ctx: Context) -> Interview:
     """Undo an answer, and the later ones on the same question: the draft gets back what they
     changed, and their labels are withdrawn."""
     undone = _on_interview(lambda: undo(ctx, answer_id))
-    _asking(ctx)
+    _queue_dry_run(ctx)
     return undone

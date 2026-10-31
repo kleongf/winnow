@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from tests.helpers import ask_visual, reference_label, wait_for_job
 from tests.interview.scripted_text import ScriptedText
-from tests.rubric.scripted import criterion, phrase
+from tests.rubric.scripted import phrase, video_criterion
 from tests.visual.answers import PARAPHRASES, QUESTION
 from tests.visual.scripted import CompileAndAsk, ScriptedVisual
 from winnow.app import create_app
@@ -21,19 +21,8 @@ DESCRIPTION = f"Tidy place: {ON_SAUCER}, and {UPRIGHT}."
 EPISODE = "droid_100:0"
 
 
-def visual(question: str, paraphrases: list[str]) -> dict[str, object]:
-    asked: dict[str, object] = {
-        "window": {"kind": "after_release", "seconds": None},
-        "views": ["exterior_image_1_left"],
-        "question": question,
-        "paraphrases": paraphrases,
-        "crop": "view",
-    }
-    return criterion("ask_video", ">=", 3, **asked)
-
-
 def stays(word: str) -> dict[str, object]:
-    return visual(
+    return video_criterion(
         f"Does the cup stay {word} throughout?",
         [f"Is the cup kept {word} the whole time?", f"Does the cup remain {word} all along?"],
     )
@@ -62,7 +51,7 @@ def compile_and_run(api: TestClient, spark: CompileAndAsk, description: str, ans
 
 
 def test_only_the_edited_visual_criterion_calls_spark(api: TestClient, spark: CompileAndAsk):
-    on_saucer = phrase(ON_SAUCER, criteria=[visual(QUESTION, PARAPHRASES)])
+    on_saucer = phrase(ON_SAUCER, criteria=[video_criterion(QUESTION, PARAPHRASES)])
     first = compile_and_run(
         api,
         spark,

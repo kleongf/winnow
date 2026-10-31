@@ -16,6 +16,7 @@ from winnow.app import create_app
 from winnow.core.settings import Settings
 from winnow.episodes.fixtures import write_fixture_source
 from winnow.meta.replay import ReplayTransport
+from winnow.visual.service import DRY_RUN
 
 DEV = [f"droid_100:{i}" for i in E2E_DEV_SET]
 
@@ -40,7 +41,7 @@ def replay_api(settings: Settings, tmp_path: Path) -> Iterator[TestClient]:
 
 
 def dry_run(api: TestClient) -> Any:
-    job = api.get("/api/jobs/latest", params={"kind": "visual-dry-run"}).json()
+    job = api.get("/api/jobs/latest", params={"kind": DRY_RUN}).json()
     assert job is not None, "no dry run was queued"
     return wait_for_job(api, job["id"])
 

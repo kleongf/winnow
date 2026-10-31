@@ -13,37 +13,26 @@ from fastapi.testclient import TestClient
 from tests.helpers import app_context, reference_label, wait_for_job
 from tests.interview.client import answer, interview, say, skip_to
 from tests.interview.scripted_text import ScriptedText
-from tests.rubric.scripted import criterion, phrase
+from tests.rubric.scripted import phrase, video_criterion
 from tests.visual.answers import PARAPHRASES, QUESTION
 from tests.visual.scripted import CompileAndAsk, ScriptedVisual, response_format
 from winnow.app import create_app
 from winnow.core.settings import Settings
 from winnow.meta.models import MetaContent
 from winnow.meta.transport import Reply
+from winnow.visual.service import DRY_RUN
 
 ON_SAUCER = "puts the cup on the saucer"
 DESCRIPTION = f"Tidy place: {ON_SAUCER}."
 DEV = ["droid_100:0", "droid_100:1", "droid_100:2"]  # the anchor pool; Episode 4 is outside it
 OPEN_GRIPPER = "droid_100:4"  # never grasps, so has no window after a release
-DRY_RUN = "visual-dry-run"
-
-
-def visual(question: str, paraphrases: list[str]) -> dict[str, object]:
-    asked: dict[str, object] = {
-        "window": {"kind": "after_release", "seconds": None},
-        "views": ["exterior_image_1_left"],
-        "question": question,
-        "paraphrases": paraphrases,
-        "crop": "view",
-    }
-    return criterion("ask_video", ">=", 3, **asked)
 
 
 def compile_answer() -> dict[str, object]:
     return {
         "phrases": [
             phrase("Tidy place", "context", reason="Names the task."),
-            phrase(ON_SAUCER, criteria=[visual(QUESTION, PARAPHRASES)]),
+            phrase(ON_SAUCER, criteria=[video_criterion(QUESTION, PARAPHRASES)]),
         ]
     }
 
@@ -201,6 +190,8 @@ def test_over_budget_the_items_fail_and_the_criterion_stays_not_asked(
     assert [i["status"] for i in visual] == ["failed"] * 3
     assert all("budget" in i["detail"] for i in visual)
     assert preview(api)["unsure"] == 3
+    api.patch("/api/rubric/draft", json={"grasp_rise_m": 0.03})
+    assert latest_dry_run(api)["id"] == job["id"]  # with the budget spent, it isn't asked again
     assert api.post("/api/rubric/draft/run").status_code == 201
     triage = api.get("/api/episodes/droid_100:0/triage").json()
     found = next(c for c in triage["criteria"] if c["criterion_id"] == placed["id"])
@@ -208,18 +199,15 @@ def test_over_budget_the_items_fail_and_the_criterion_stays_not_asked(
 
 
 def test_without_the_meta_api_an_edit_queues_nothing(
-    api: TestClient, spark: HeldVisual, settings: Settings
+    api: TestClient, spark: CompileAndAsk, settings: Settings
 ):
-    spark.answering.clear()
-    compile_draft(api, spark)  # its dry run never gets an answer from this app
+    compile_draft(api, spark)
+    asked = finished_dry_run(api)
     with TestClient(create_app(settings)) as offline:  # the same data dir, no Meta API
-        asking = latest_dry_run(offline)
-
         edited = offline.patch("/api/rubric/draft", json={"grasp_rise_m": 0.03})
 
         assert edited.status_code == 200, edited.text
-        assert latest_dry_run(offline)["id"] == asking["id"]
-    spark.answering.set()
+        assert latest_dry_run(offline)["id"] == asked["id"]
 
 
 def test_an_anchor_episode_with_no_window_is_not_asked_again(api: TestClient, spark: HeldVisual):
@@ -264,7 +252,9 @@ def test_words_that_edit_the_description_ask_its_new_visual_criterion(
     upright = "keeps it upright"
     edited = DESCRIPTION.replace(".", f", and {upright}.")
     spark.compile.texts.append({"description": edited, "reply": "Added it."})
-    asked = visual("Does the cup stay upright?", ["Is it kept upright?", "Does it stay upright?"])
+    asked = video_criterion(
+        "Does the cup stay upright?", ["Is it kept upright?", "Does it stay upright?"]
+    )
     spark.compile.answers.append({"phrases": [phrase(upright, criteria=[asked])]})
 
     say(api, "It should also keep the cup upright.", None)

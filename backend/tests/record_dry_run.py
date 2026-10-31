@@ -18,10 +18,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-from tests.meta.fakes import NoTranscribe
 from tests.record_meta import E2E_DEV_SET, E2E_EPISODES, RECORDINGS
 from tests.record_visual import ScriptedAnswers
-from tests.rubric.scripted import criterion, phrase
+from tests.rubric.scripted import phrase, video_criterion
 from tests.visual.scripted import response_format
 from winnow.core.context import AppContext, build_context
 from winnow.core.settings import get_settings
@@ -33,6 +32,7 @@ from winnow.meta.models import MetaContent
 from winnow.meta.replay import RecordingTransport, ReplayTransport
 from winnow.meta.transport import Reply
 from winnow.rubric.service import compile_draft
+from winnow.visual.service import DRY_RUN
 from winnow.visual.steps import draft_visual_items
 
 DRY_RUN_ANSWERS = Path(__file__).parent / "recordings" / "dry_run_answers.jsonl"
@@ -47,43 +47,27 @@ USAGE = {"input_tokens": 6000, "output_tokens": 400}
 
 
 def placed_compile() -> dict[str, object]:
-    asked: dict[str, object] = {
-        "window": {"kind": "after_release", "seconds": None},
-        "views": ["exterior_image_1_left"],
-        "question": QUESTION,
-        "paraphrases": PARAPHRASES,
-        "crop": "view",
-    }
     return {
         "phrases": [
             phrase("Neat place", "context", reason="Names the task."),
-            phrase(IN_BOWL, criteria=[criterion("ask_video", ">=", 3, **asked)]),
+            phrase(IN_BOWL, criteria=[video_criterion(QUESTION, PARAPHRASES)]),
         ]
     }
 
 
-class ScriptedDryRun(NoTranscribe):
+class ScriptedDryRun(ScriptedAnswers):
     """Answers PLACED's compile with placed_compile, and every visual sample as
     `tests.record_visual` does; replays RECORDINGS else."""
-
-    def __init__(self, replay: ReplayTransport) -> None:
-        self._answers = ScriptedAnswers(replay)
-
-    async def upload(self, path: Path) -> str:
-        return await self._answers.upload(path)
-
-    async def count_tokens(self, model: str, content: MetaContent) -> int:
-        return await self._answers.count_tokens(model, content)
 
     async def respond(self, model: str, content: MetaContent, options: dict[str, object]) -> Reply:
         asked = "\n".join(str(part.get("text")) for part in content)
         if response_format(options) == "rubric" and json.dumps(PLACED) in asked:
             return Reply(json.dumps(placed_compile()), USAGE)
-        return await self._answers.respond(model, content, options)
+        return await super().respond(model, content, options)
 
 
 async def _run(ctx: AppContext, items: list[WorkItem]) -> None:
-    job_id = ctx.jobs.create("visual-dry-run", items)
+    job_id = ctx.jobs.create(DRY_RUN, items)
     await ctx.runner.run(job_id)
     job = ctx.jobs.get(job_id)
     assert job is not None

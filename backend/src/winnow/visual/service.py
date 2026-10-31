@@ -56,10 +56,11 @@ def _unasked(ctx: AppContext, draft: RubricDraft) -> list[tuple[str, Criterion]]
 def dry_run(ctx: AppContext, draft: RubricDraft) -> int | None:
     """Asks Spark, in the background, the draft's visual Criteria that the anchor pool has no
     answers to yet, so the Describe page's preview shows their pass rates before Run. Returns
-    the job's id, or None without the Meta API or when there's nothing to ask. Must be called
-    with an event loop running, as from a route."""
-    if ctx.meta is None:
-        return None
+    the job's id, or None without the Meta API, with the Meta budget spent, or when there's
+    nothing to ask. Must be called with an event loop running, as from a route."""
+    costs = None if ctx.meta is None else ctx.meta.costs
+    if costs is None or costs.spent_usd() >= costs.budget_usd:
+        return None  # over budget, every item would fail again: it stays not asked
     items = draft_visual_items(draft, _unasked(ctx, draft))
     return ctx.runner.submit(DRY_RUN, items) if items else None
 

@@ -49,6 +49,12 @@ class VisualSources:
     answers: VisualStore
 
 
+def _crop_then_ask(items: list[WorkItem], args: Mapping[str, object], criterion_id: str) -> None:
+    label = f"{args['episode_id']} {criterion_id}"
+    items.append(WorkItem("crop", args, label))
+    items.append(WorkItem("visual", args, label, after=len(items) - 1))
+
+
 def visual_items(version: RubricVersion, episode_ids: list[str]) -> list[WorkItem]:
     """A crop, then a visual item after it, per visual Criterion and Episode."""
     items: list[WorkItem] = []
@@ -61,9 +67,7 @@ def visual_items(version: RubricVersion, episode_ids: list[str]) -> list[WorkIte
                 "rubric_version": version.version,
                 "criterion_id": criterion.id,
             }
-            label = f"{episode_id} {criterion.id}"
-            items.append(WorkItem("crop", args, label))
-            items.append(WorkItem("visual", args, label, after=len(items) - 1))
+            _crop_then_ask(items, args, criterion.id)
     return items
 
 
@@ -79,9 +83,7 @@ def draft_visual_items(draft: RubricDraft, asks: list[tuple[str, Criterion]]) ->
             "criterion": criterion.model_dump(mode="json"),
             "settings": settings,
         }
-        label = f"{episode_id} {criterion.id}"
-        items.append(WorkItem("crop", args, label))
-        items.append(WorkItem("visual", args, label, after=len(items) - 1))
+        _crop_then_ask(items, args, criterion.id)
     return items
 
 
@@ -93,7 +95,8 @@ class _Asked:
     key: str
 
 
-def _inline(args: Mapping[str, object]) -> tuple[Criterion, RubricSettings]:
+def _carried(args: Mapping[str, object]) -> tuple[Criterion, RubricSettings]:
+    """The draft's Criterion and Rubric settings a `draft_visual_items` item carries."""
     return Criterion.model_validate(args["criterion"]), RubricSettings.model_validate(
         args["settings"]
     )
@@ -101,7 +104,7 @@ def _inline(args: Mapping[str, object]) -> tuple[Criterion, RubricSettings]:
 
 def draft_item_ask(args: Mapping[str, object]) -> tuple[str, str]:
     """The Episode id and ask key a `draft_visual_items` item is about."""
-    return str(args["episode_id"]), ask_key(*_inline(args))
+    return str(args["episode_id"]), ask_key(*_carried(args))
 
 
 def _asked(sources: VisualSources, args: Mapping[str, object]) -> _Asked:
@@ -109,7 +112,7 @@ def _asked(sources: VisualSources, args: Mapping[str, object]) -> _Asked:
     if episode is None:
         raise LookupError(f"No Episode {args['episode_id']}")
     if "criterion" in args:  # a draft's, carried inline
-        criterion, settings = _inline(args)
+        criterion, settings = _carried(args)
         return _Asked(episode, criterion, settings, ask_key(criterion, settings))
     version = sources.rubrics.get(int(str(args["rubric_version"])))
     criteria = version.rubric.criteria if version else []
